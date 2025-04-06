@@ -1,0 +1,1001 @@
+Employee_ID,Age,Department,Work_Arrangement,Weekly_Hours,Productivity_Score,Years_at_Company,Education_Level,Gender,Job_Level,Satisfaction_Score,Training_Hours
+1,60,HR,Remote,50,9.6,12,Master,Male,Senior,8.4,40
+2,50,HR,In-Office,41,10.0,5,Bachelor,Male,Mid,1.3,8
+3,36,HR,In-Office,38,7.4,4,High School,Male,Mid,6.7,42
+4,64,HR,Remote,30,9.8,8,Bachelor,Female,Mid,4.1,42
+5,29,Marketing,In-Office,47,6.1,15,Bachelor,Female,Mid,3.6,6
+6,42,Sales,Remote,50,3.3,1,High School,Female,Entry,4.5,41
+7,60,Finance,Remote,33,4.9,0,High School,Other,Senior,4.1,3
+8,40,IT,Remote,39,6.3,7,High School,Male,Entry,8.5,4
+9,44,Sales,In-Office,36,1.7,18,Master,Male,Mid,3.5,4
+10,32,HR,In-Office,30,6.6,10,High School,Male,Entry,7.6,10
+11,32,Sales,Remote,46,9.8,11,Bachelor,Male,Mid,1.8,40
+12,45,Finance,Remote,31,2.7,11,Bachelor,Male,Mid,9.6,27
+13,57,IT,Remote,40,8.1,6,Bachelor,Male,Mid,6.6,15
+14,61,IT,Remote,38,9.2,12,Master,Female,Entry,7.4,40
+15,45,Finance,Remote,36,9.5,7,High School,Female,Mid,3.7,29
+16,24,Finance,In-Office,46,9.6,8,Bachelor,Female,Manager,4.7,3
+17,43,HR,Remote,46,5.7,6,Bachelor,Female,Senior,3.0,1
+18,23,IT,In-Office,31,9.8,20,Master,Male,Entry,9.4,45
+19,45,Sales,Remote,35,7.8,14,Bachelor,Female,Entry,5.4,2
+20,65,Marketing,In-Office,43,2.5,1,Master,Female,Senior,6.7,49
+21,51,Marketing,In-Office,35,5.3,19,High School,Female,Mid,7.6,20
+22,59,Finance,In-Office,31,7.5,11,Bachelor,Male,Mid,4.3,5
+23,23,HR,In-Office,30,3.2,0,Bachelor,Male,Senior,7.5,42
+24,42,Marketing,In-Office,39,6.8,7,Master,Male,Senior,7.1,17
+25,54,IT,In-Office,50,7.0,4,High School,Female,Mid,7.4,43
+26,33,Finance,Remote,34,2.5,14,High School,Female,Mid,5.4,4
+27,43,Sales,In-Office,31,6.1,0,Bachelor,Female,Entry,4.4,8
+28,65,Finance,Remote,45,7.9,0,High School,Male,Mid,3.0,19
+29,46,Sales,In-Office,31,5.5,9,High School,Female,Entry,8.4,27
+30,48,Finance,In-Office,39,1.1,9,PhD,Female,Entry,6.5,25
+31,63,Finance,Remote,31,1.1,20,Bachelor,Male,Entry,5.0,17
+32,49,Finance,In-Office,45,4.2,14,Bachelor,Male,Entry,9.5,18
+33,37,Sales,Remote,45,9.3,16,Master,Female,Mid,1.4,2
+34,36,Sales,Remote,48,3.1,5,Bachelor,Male,Mid,8.7,8
+35,65,Finance,Remote,36,6.7,2,High School,Female,Mid,10.0,35
+36,24,Marketing,Remote,41,3.0,12,Bachelor,Other,Entry,9.0,30
+37,58,HR,In-Office,44,3.9,15,Bachelor,Female,Senior,8.3,48
+38,28,HR,In-Office,37,8.6,7,Bachelor,Female,Entry,4.4,16
+39,42,HR,Remote,35,7.6,14,Bachelor,Female,Senior,3.1,22
+40,30,Sales,In-Office,39,1.9,16,High School,Female,Senior,7.6,33
+41,60,Sales,In-Office,32,4.9,16,Bachelor,Male,Mid,3.7,40
+42,39,Marketing,Remote,48,1.3,12,Master,Male,Mid,2.6,40
+43,25,HR,In-Office,46,5.3,16,Master,Male,Senior,8.1,4
+44,46,HR,Remote,36,7.0,5,Master,Female,Entry,3.8,14
+45,35,Finance,Remote,50,2.1,16,Master,Male,Mid,9.2,46
+46,30,Sales,In-Office,49,3.6,15,Bachelor,Male,Mid,8.6,2
+47,47,HR,In-Office,33,4.6,13,Master,Male,Entry,8.6,18
+48,23,Marketing,In-Office,43,9.3,12,High School,Female,Senior,7.9,27
+49,41,Marketing,Remote,49,9.9,5,Bachelor,Other,Senior,8.9,2
+50,49,HR,Remote,44,1.4,2,Bachelor,Other,Senior,8.3,37
+51,28,Sales,In-Office,37,7.8,13,High School,Female,Entry,6.4,3
+52,65,Marketing,In-Office,50,4.3,13,Master,Female,Entry,3.7,23
+53,29,Finance,In-Office,44,4.5,14,Master,Female,Mid,9.0,30
+54,56,Marketing,In-Office,49,7.8,7,Bachelor,Female,Entry,8.6,44
+55,35,IT,Remote,43,9.3,14,Master,Female,Mid,5.3,44
+56,38,IT,In-Office,38,9.6,12,High School,Male,Mid,1.4,10
+57,57,Sales,Remote,37,6.2,16,Bachelor,Female,Mid,6.7,36
+58,61,HR,Remote,46,4.2,20,Bachelor,Male,Mid,1.5,0
+59,25,Sales,In-Office,31,8.1,2,Bachelor,Male,Mid,9.3,8
+60,23,Sales,In-Office,32,3.3,5,Master,Female,Entry,9.7,16
+61,27,Sales,In-Office,37,6.1,4,Master,Male,Entry,2.7,0
+62,63,Sales,Remote,41,4.2,16,Master,Male,Mid,7.1,2
+63,25,Finance,In-Office,30,6.9,1,Bachelor,Female,Mid,1.8,46
+64,50,Finance,In-Office,39,3.2,14,Master,Male,Senior,7.6,25
+65,39,Marketing,Remote,49,2.7,4,High School,Female,Senior,4.1,30
+66,47,IT,In-Office,32,9.3,19,Master,Female,Manager,7.1,25
+67,65,Sales,Remote,35,1.9,5,Bachelor,Female,Entry,4.4,22
+68,55,Marketing,In-Office,36,5.6,5,High School,Female,Entry,2.3,29
+69,31,IT,Remote,49,3.0,17,Bachelor,Female,Entry,4.7,9
+70,57,HR,In-Office,47,1.4,17,Bachelor,Female,Mid,2.0,7
+71,35,Finance,In-Office,40,1.3,3,Bachelor,Female,Mid,6.2,43
+72,52,IT,Remote,48,2.6,16,Bachelor,Female,Senior,1.4,24
+73,36,HR,Remote,34,8.8,13,High School,Female,Mid,5.7,21
+74,29,IT,In-Office,48,3.5,13,High School,Female,Senior,9.0,14
+75,35,Finance,Remote,40,9.6,12,High School,Male,Senior,8.5,40
+76,44,Finance,Remote,41,6.2,6,Bachelor,Male,Entry,8.9,9
+77,61,Marketing,Remote,39,4.9,11,High School,Female,Mid,9.3,19
+78,42,Sales,Remote,37,6.2,14,Bachelor,Male,Mid,1.9,40
+79,37,IT,In-Office,38,5.7,18,Bachelor,Male,Entry,2.2,46
+80,39,IT,In-Office,33,7.8,10,Master,Female,Mid,6.0,22
+81,45,HR,Remote,34,3.5,14,Master,Male,Mid,9.0,0
+82,47,Finance,Remote,50,4.2,11,Bachelor,Male,Entry,9.8,1
+83,46,IT,Remote,37,9.0,2,Master,Other,Mid,1.4,18
+84,62,Finance,Remote,38,9.5,16,Master,Female,Mid,4.2,13
+85,50,IT,In-Office,44,9.0,2,PhD,Male,Entry,2.9,7
+86,36,Marketing,In-Office,44,4.8,18,Bachelor,Other,Mid,7.8,37
+87,22,Sales,Remote,45,8.0,19,High School,Other,Entry,6.8,11
+88,46,IT,Remote,43,5.3,3,Bachelor,Male,Mid,2.1,25
+89,28,Finance,Remote,37,5.5,2,Bachelor,Male,Entry,5.4,26
+90,30,Marketing,In-Office,47,2.8,15,Bachelor,Female,Senior,7.2,28
+91,45,IT,Remote,39,6.3,11,Bachelor,Female,Mid,8.0,14
+92,22,HR,In-Office,49,2.7,7,Master,Female,Entry,1.2,45
+93,65,Sales,Remote,35,4.0,16,PhD,Female,Mid,9.0,0
+94,29,IT,In-Office,41,8.7,6,Bachelor,Female,Mid,6.1,42
+95,45,Marketing,Remote,31,2.9,10,High School,Male,Mid,8.3,27
+96,32,HR,In-Office,36,1.6,17,High School,Female,Mid,8.3,2
+97,38,Marketing,Remote,45,1.6,0,Master,Male,Mid,2.7,50
+98,29,Marketing,Remote,32,9.5,2,Bachelor,Female,Entry,2.0,17
+99,56,HR,Remote,42,5.6,3,Bachelor,Female,Entry,7.5,33
+100,56,Marketing,In-Office,32,4.7,12,Bachelor,Male,Mid,2.4,31
+101,54,HR,Remote,47,8.3,5,Bachelor,Female,Mid,8.6,28
+102,26,IT,In-Office,40,8.5,13,Bachelor,Male,Entry,7.5,24
+103,63,HR,In-Office,37,4.0,4,Bachelor,Male,Senior,8.6,25
+104,60,HR,Remote,35,7.2,15,Master,Female,Entry,3.7,38
+105,62,Sales,Remote,30,7.9,14,PhD,Male,Senior,3.8,7
+106,49,HR,Remote,30,6.9,14,Master,Female,Entry,7.0,18
+107,28,HR,In-Office,37,2.4,3,Master,Male,Entry,1.3,46
+108,30,IT,Remote,34,8.9,7,Bachelor,Female,Senior,7.5,41
+109,29,Sales,In-Office,45,5.9,15,Bachelor,Female,Entry,8.5,21
+110,33,Finance,In-Office,40,3.5,15,Master,Female,Senior,4.7,28
+111,55,IT,Remote,34,4.8,3,Master,Female,Entry,7.9,32
+112,54,IT,Remote,33,1.3,12,High School,Female,Mid,2.6,37
+113,44,Finance,Remote,35,2.2,12,Bachelor,Male,Senior,3.9,44
+114,45,HR,Remote,43,7.9,1,High School,Male,Entry,9.8,45
+115,58,Marketing,Remote,48,1.0,2,Bachelor,Male,Senior,9.9,34
+116,56,Sales,Remote,38,4.7,7,Bachelor,Male,Mid,5.6,42
+117,65,Marketing,In-Office,41,5.7,14,Bachelor,Female,Mid,9.4,2
+118,61,Finance,In-Office,40,1.5,10,High School,Male,Mid,5.7,18
+119,43,IT,In-Office,43,9.8,8,Bachelor,Female,Senior,3.6,9
+120,48,IT,Remote,45,3.0,6,Master,Female,Entry,3.4,26
+121,56,Sales,In-Office,30,3.7,12,Bachelor,Male,Entry,9.4,14
+122,22,IT,In-Office,42,3.7,1,Bachelor,Female,Senior,2.6,10
+123,56,IT,In-Office,50,3.1,7,Bachelor,Male,Senior,6.2,46
+124,58,Sales,In-Office,50,1.0,6,Master,Female,Entry,6.0,25
+125,35,Sales,In-Office,42,7.6,11,High School,Male,Mid,7.7,23
+126,24,Finance,Remote,31,9.7,18,PhD,Female,Mid,5.5,12
+127,22,IT,Remote,33,3.0,6,Bachelor,Other,Mid,3.5,31
+128,26,IT,In-Office,35,7.0,9,PhD,Male,Entry,2.5,36
+129,47,Finance,In-Office,34,7.7,15,Master,Male,Mid,6.6,3
+130,35,HR,In-Office,32,8.6,2,Bachelor,Female,Entry,7.5,12
+131,60,HR,Remote,30,4.8,9,High School,Male,Senior,6.1,8
+132,48,HR,Remote,33,3.7,5,Bachelor,Female,Senior,7.6,48
+133,30,Finance,In-Office,49,3.9,17,Bachelor,Female,Mid,2.3,33
+134,36,IT,Remote,31,7.4,17,High School,Male,Entry,8.9,36
+135,36,Finance,Remote,34,8.4,4,High School,Female,Entry,6.2,47
+136,47,Finance,In-Office,32,2.6,20,Bachelor,Female,Mid,2.1,6
+137,63,HR,Remote,38,4.3,6,High School,Female,Mid,5.2,0
+138,34,Marketing,Remote,49,9.1,1,High School,Female,Entry,8.6,11
+139,53,IT,In-Office,35,8.3,10,Bachelor,Male,Mid,9.1,20
+140,60,HR,Remote,47,9.9,12,High School,Male,Entry,3.4,10
+141,53,Marketing,Remote,35,7.8,4,Bachelor,Other,Entry,7.4,43
+142,25,Marketing,In-Office,48,4.5,5,Bachelor,Female,Entry,1.9,50
+143,51,Sales,Remote,41,6.3,13,Bachelor,Male,Entry,1.3,43
+144,58,IT,Remote,40,6.9,11,Master,Female,Entry,6.0,43
+145,44,Marketing,In-Office,31,1.7,3,Bachelor,Male,Mid,7.3,13
+146,60,HR,In-Office,44,5.9,5,Bachelor,Male,Senior,8.2,33
+147,36,Sales,In-Office,41,7.4,9,Bachelor,Female,Senior,4.1,33
+148,64,IT,Remote,41,2.5,17,Master,Male,Entry,1.1,24
+149,50,Finance,In-Office,38,8.0,14,Master,Female,Entry,5.3,3
+150,57,HR,Remote,50,6.3,7,Master,Male,Entry,1.1,25
+151,34,Marketing,In-Office,31,9.6,8,Bachelor,Female,Entry,1.8,15
+152,53,Marketing,Remote,32,1.4,4,High School,Male,Mid,3.9,9
+153,28,HR,In-Office,41,3.4,9,Bachelor,Female,Mid,4.9,44
+154,43,Marketing,In-Office,45,6.4,19,High School,Female,Entry,3.5,1
+155,49,Sales,In-Office,50,3.7,5,Master,Male,Entry,6.2,34
+156,23,IT,In-Office,30,7.4,15,Bachelor,Female,Entry,1.5,18
+157,63,Sales,Remote,50,7.8,2,Master,Male,Entry,2.3,5
+158,27,Marketing,In-Office,32,1.9,9,Bachelor,Male,Mid,7.3,18
+159,49,Finance,In-Office,49,5.6,10,Master,Female,Entry,2.3,50
+160,49,IT,Remote,31,5.6,10,Bachelor,Male,Mid,6.8,7
+161,65,IT,In-Office,38,4.3,16,High School,Female,Mid,1.5,13
+162,65,HR,Remote,48,9.4,3,Bachelor,Female,Senior,4.7,9
+163,41,HR,In-Office,44,8.4,3,Bachelor,Female,Senior,2.6,2
+164,51,Finance,In-Office,47,7.3,16,Bachelor,Male,Mid,2.0,37
+165,32,IT,In-Office,40,7.4,8,Master,Male,Entry,6.1,28
+166,49,Finance,Remote,45,5.2,18,High School,Male,Mid,9.4,14
+167,46,HR,In-Office,46,9.3,4,Bachelor,Female,Senior,1.5,22
+168,60,HR,In-Office,34,7.3,5,Bachelor,Female,Entry,4.8,22
+169,54,IT,In-Office,41,7.6,2,Bachelor,Female,Mid,7.4,17
+170,22,Sales,Remote,40,8.8,0,Master,Male,Senior,5.2,45
+171,48,Marketing,Remote,44,3.5,19,Master,Male,Mid,8.3,18
+172,34,HR,In-Office,32,8.3,15,Master,Male,Entry,2.6,27
+173,62,HR,Remote,30,2.8,10,Master,Male,Entry,9.6,25
+174,24,Sales,In-Office,49,4.1,12,Master,Male,Mid,4.5,9
+175,60,Sales,In-Office,45,4.0,9,Bachelor,Male,Entry,4.1,46
+176,27,Finance,In-Office,31,9.8,2,Master,Male,Mid,8.9,3
+177,29,Finance,In-Office,31,8.7,8,Bachelor,Male,Mid,6.1,1
+178,48,Marketing,In-Office,32,7.3,11,Bachelor,Male,Entry,5.6,2
+179,30,Marketing,In-Office,37,7.5,13,High School,Male,Senior,7.5,6
+180,58,IT,In-Office,44,6.1,0,Master,Male,Mid,6.2,15
+181,54,Finance,Remote,36,9.5,17,Master,Male,Entry,2.5,30
+182,63,HR,Remote,35,5.5,16,Bachelor,Female,Senior,7.1,9
+183,65,Finance,Remote,38,4.4,8,Master,Male,Senior,2.2,18
+184,45,HR,Remote,49,2.5,8,Master,Male,Mid,8.3,27
+185,36,Sales,Remote,30,8.1,9,High School,Male,Senior,9.9,16
+186,53,Finance,Remote,37,7.6,18,Bachelor,Male,Mid,4.4,27
+187,53,Sales,Remote,32,4.5,14,Master,Male,Senior,5.0,18
+188,45,Marketing,In-Office,33,1.2,4,Bachelor,Male,Mid,1.4,36
+189,62,Marketing,In-Office,44,8.6,14,Bachelor,Female,Mid,1.1,22
+190,33,IT,In-Office,35,1.1,19,High School,Male,Manager,9.3,19
+191,60,Finance,In-Office,44,7.3,1,Bachelor,Male,Mid,2.2,12
+192,23,Sales,Remote,50,9.7,12,Master,Female,Entry,5.0,12
+193,24,HR,Remote,32,4.9,15,Bachelor,Male,Mid,8.3,42
+194,58,Marketing,In-Office,50,3.1,14,Master,Male,Mid,9.0,10
+195,38,Marketing,In-Office,50,7.3,9,Master,Female,Entry,5.7,47
+196,23,HR,Remote,43,8.4,13,Master,Female,Manager,6.1,14
+197,23,Sales,In-Office,49,5.9,9,Bachelor,Male,Entry,7.0,16
+198,49,Sales,In-Office,43,9.7,13,High School,Female,Entry,9.7,49
+199,44,Finance,In-Office,33,1.5,8,Bachelor,Male,Senior,6.4,27
+200,58,Finance,In-Office,41,5.5,13,High School,Male,Mid,6.0,18
+201,53,IT,Remote,46,7.5,2,Master,Female,Entry,1.1,3
+202,54,Marketing,In-Office,36,8.8,19,Bachelor,Male,Mid,1.7,21
+203,22,Finance,In-Office,38,2.6,15,Bachelor,Male,Mid,6.2,21
+204,40,Sales,Remote,32,8.2,1,Bachelor,Female,Entry,9.4,36
+205,23,HR,Remote,42,6.0,9,Master,Female,Manager,8.8,38
+206,65,Sales,In-Office,44,4.6,2,Master,Male,Mid,9.8,33
+207,47,Marketing,Remote,47,2.2,10,Bachelor,Female,Mid,5.8,32
+208,53,Sales,In-Office,48,8.8,10,Master,Male,Mid,8.1,43
+209,27,IT,In-Office,30,2.4,20,Bachelor,Female,Mid,8.6,41
+210,53,Marketing,Remote,35,3.8,20,Bachelor,Male,Entry,6.8,39
+211,25,HR,In-Office,31,3.6,12,Master,Male,Entry,4.0,32
+212,32,IT,In-Office,43,8.8,6,Bachelor,Male,Mid,5.2,11
+213,38,Marketing,In-Office,35,7.1,16,PhD,Male,Senior,8.7,1
+214,59,HR,In-Office,43,8.2,1,High School,Male,Entry,3.7,27
+215,45,IT,Remote,33,3.3,11,High School,Female,Mid,9.3,9
+216,26,IT,Remote,50,6.6,9,Master,Female,Senior,3.1,21
+217,55,Marketing,In-Office,37,6.1,17,High School,Male,Entry,7.7,16
+218,27,Finance,Remote,32,8.5,10,PhD,Male,Entry,6.7,25
+219,43,IT,In-Office,48,9.2,15,PhD,Male,Entry,7.7,2
+220,32,IT,In-Office,43,1.1,16,High School,Female,Mid,4.9,6
+221,37,HR,In-Office,49,7.1,18,Bachelor,Female,Entry,9.4,43
+222,54,Sales,In-Office,46,1.5,17,High School,Other,Mid,6.7,7
+223,30,Marketing,In-Office,37,5.9,2,Bachelor,Female,Mid,3.6,19
+224,27,Marketing,Remote,43,3.6,20,High School,Male,Mid,6.7,11
+225,37,Finance,In-Office,35,3.8,15,Bachelor,Male,Entry,3.6,34
+226,50,Finance,Remote,45,4.2,5,Bachelor,Female,Mid,3.6,16
+227,24,Marketing,Remote,48,6.6,11,Bachelor,Female,Senior,4.6,27
+228,41,Finance,In-Office,43,4.0,10,PhD,Male,Senior,8.7,40
+229,57,HR,In-Office,48,7.6,14,Master,Male,Senior,5.5,9
+230,40,Marketing,In-Office,32,4.6,14,Master,Female,Mid,7.1,21
+231,47,Finance,In-Office,39,1.6,15,Bachelor,Male,Mid,4.5,37
+232,24,Marketing,In-Office,48,8.1,9,Master,Male,Entry,3.4,32
+233,40,Sales,Remote,38,3.6,11,Bachelor,Female,Entry,9.6,21
+234,41,IT,In-Office,49,4.9,12,Master,Male,Entry,6.4,43
+235,53,Marketing,In-Office,42,7.2,3,PhD,Male,Mid,9.4,36
+236,28,IT,Remote,36,4.0,6,Bachelor,Female,Entry,2.8,12
+237,62,Finance,Remote,43,1.5,1,Bachelor,Female,Entry,2.3,26
+238,54,IT,In-Office,38,4.4,14,Master,Other,Manager,8.7,14
+239,61,Marketing,Remote,48,9.5,7,Master,Male,Entry,7.1,21
+240,60,Sales,In-Office,44,6.8,6,Master,Male,Entry,2.7,29
+241,39,Finance,Remote,49,7.0,14,Bachelor,Female,Entry,3.4,42
+242,61,Marketing,Remote,43,6.7,13,Bachelor,Female,Mid,8.2,39
+243,22,Finance,In-Office,35,2.8,7,High School,Male,Mid,5.1,36
+244,32,HR,Remote,50,4.8,11,Master,Female,Entry,7.0,33
+245,49,IT,Remote,33,7.8,12,High School,Male,Mid,3.9,43
+246,46,HR,Remote,37,1.9,10,Master,Male,Senior,4.4,33
+247,44,Marketing,Remote,46,3.5,16,High School,Male,Senior,9.9,47
+248,52,Sales,Remote,38,3.5,16,High School,Male,Manager,3.2,34
+249,51,Finance,Remote,30,4.9,3,Bachelor,Male,Senior,5.6,41
+250,63,IT,In-Office,49,9.8,20,Master,Female,Mid,8.6,18
+251,56,Finance,In-Office,43,1.6,7,High School,Female,Entry,3.2,7
+252,28,Marketing,Remote,40,5.7,4,Bachelor,Female,Entry,4.7,38
+253,37,Finance,In-Office,50,2.6,15,Bachelor,Male,Entry,6.5,32
+254,47,IT,In-Office,32,9.7,3,Bachelor,Male,Mid,5.3,43
+255,23,Marketing,In-Office,38,2.0,14,High School,Male,Senior,5.1,27
+256,22,Finance,Remote,43,4.6,11,Master,Male,Mid,4.3,36
+257,33,Sales,In-Office,38,7.6,4,Bachelor,Female,Entry,6.3,47
+258,26,Marketing,Remote,33,7.3,15,High School,Female,Mid,6.6,24
+259,58,Marketing,In-Office,33,4.8,13,Master,Female,Senior,6.9,35
+260,53,Sales,Remote,37,4.1,9,PhD,Male,Mid,1.6,16
+261,30,HR,Remote,31,4.6,6,Bachelor,Male,Senior,6.7,23
+262,62,IT,In-Office,38,3.4,12,Bachelor,Female,Senior,9.6,20
+263,56,HR,In-Office,43,2.8,19,Master,Male,Senior,5.9,1
+264,40,Finance,Remote,38,5.3,4,PhD,Female,Senior,7.4,30
+265,37,Sales,In-Office,45,3.4,2,Master,Other,Mid,6.0,43
+266,24,HR,In-Office,46,3.6,14,Bachelor,Male,Entry,8.7,32
+267,41,Marketing,In-Office,45,6.9,3,Bachelor,Female,Entry,9.4,29
+268,45,Finance,Remote,41,9.7,14,Master,Female,Mid,2.7,11
+269,54,Finance,Remote,32,6.4,13,High School,Male,Entry,4.9,43
+270,45,HR,In-Office,40,1.7,19,Bachelor,Female,Manager,4.5,11
+271,32,HR,In-Office,43,1.7,18,Master,Male,Entry,4.6,50
+272,29,Sales,In-Office,47,9.6,12,Bachelor,Male,Senior,2.1,48
+273,57,IT,Remote,50,3.7,9,Bachelor,Female,Entry,8.3,23
+274,59,HR,Remote,50,1.8,20,Bachelor,Female,Entry,1.3,23
+275,61,HR,In-Office,34,6.4,4,High School,Male,Senior,5.8,10
+276,41,Marketing,In-Office,45,6.6,19,Bachelor,Male,Entry,7.0,12
+277,56,Finance,In-Office,49,6.8,19,Master,Female,Entry,2.9,26
+278,46,IT,In-Office,34,3.4,5,Bachelor,Female,Entry,9.2,7
+279,56,Marketing,In-Office,32,1.1,3,High School,Female,Mid,8.5,9
+280,46,Sales,In-Office,41,9.7,1,PhD,Male,Entry,5.2,7
+281,50,Sales,Remote,30,3.3,15,Bachelor,Female,Mid,4.7,19
+282,39,HR,In-Office,50,7.1,17,Bachelor,Male,Mid,3.1,7
+283,39,HR,Remote,38,7.4,4,PhD,Female,Mid,7.6,8
+284,23,Sales,In-Office,38,6.5,3,Master,Male,Mid,2.2,6
+285,56,HR,In-Office,33,3.8,12,Bachelor,Female,Mid,7.1,13
+286,37,IT,Remote,32,3.4,18,Master,Male,Entry,8.6,27
+287,62,HR,Remote,46,6.4,1,High School,Male,Senior,3.1,1
+288,57,Finance,Remote,31,8.8,12,Master,Male,Entry,8.8,42
+289,54,HR,Remote,30,9.5,10,Bachelor,Male,Mid,1.3,7
+290,25,Marketing,In-Office,37,2.0,3,Master,Female,Mid,9.2,12
+291,54,IT,Remote,42,2.4,19,Bachelor,Female,Senior,2.1,20
+292,35,Marketing,In-Office,44,9.5,19,Bachelor,Female,Mid,6.8,46
+293,42,Marketing,Remote,37,7.6,14,Bachelor,Male,Entry,3.3,27
+294,41,Finance,In-Office,41,8.9,3,Bachelor,Female,Mid,8.5,34
+295,29,IT,In-Office,41,2.8,8,Master,Female,Mid,5.6,22
+296,28,IT,In-Office,43,6.3,6,Bachelor,Male,Entry,2.2,45
+297,24,IT,In-Office,44,7.3,18,Bachelor,Male,Mid,6.1,14
+298,38,IT,In-Office,44,7.1,18,Bachelor,Female,Mid,4.7,1
+299,54,IT,In-Office,38,4.7,5,Bachelor,Female,Manager,7.0,50
+300,33,Finance,Remote,48,1.1,5,Master,Female,Mid,8.9,11
+301,43,HR,In-Office,49,6.2,19,Master,Male,Entry,4.7,35
+302,43,Marketing,Remote,37,3.3,14,Bachelor,Female,Entry,3.6,2
+303,51,IT,Remote,50,5.1,14,Master,Male,Senior,1.1,4
+304,59,HR,In-Office,48,9.6,19,Master,Female,Senior,6.2,2
+305,59,HR,Remote,35,4.6,8,Bachelor,Female,Entry,4.6,46
+306,29,Marketing,In-Office,49,8.6,3,Bachelor,Male,Entry,4.4,18
+307,48,Finance,Remote,48,2.7,17,Master,Female,Mid,2.6,1
+308,48,Sales,In-Office,33,7.1,17,Bachelor,Male,Entry,4.9,43
+309,55,Sales,Remote,36,9.8,4,Master,Other,Entry,9.9,36
+310,42,HR,In-Office,33,1.9,19,Bachelor,Male,Entry,3.7,16
+311,51,Marketing,In-Office,41,1.1,10,Bachelor,Male,Entry,6.4,13
+312,54,Sales,In-Office,42,4.9,4,Bachelor,Male,Mid,8.0,27
+313,49,HR,In-Office,32,1.8,3,Bachelor,Male,Mid,7.7,26
+314,54,Finance,Remote,41,7.7,11,PhD,Male,Entry,4.0,9
+315,26,Sales,In-Office,31,9.2,1,Bachelor,Female,Entry,6.5,2
+316,40,HR,Remote,31,4.9,12,Bachelor,Female,Entry,8.8,35
+317,25,HR,Remote,38,3.3,9,Master,Female,Mid,1.1,37
+318,56,IT,Remote,30,4.9,8,Bachelor,Male,Entry,4.9,24
+319,38,Finance,In-Office,37,7.5,9,Bachelor,Female,Mid,3.0,21
+320,65,IT,Remote,35,1.1,6,Master,Male,Mid,4.5,47
+321,49,Marketing,Remote,35,6.3,3,Master,Female,Entry,4.7,38
+322,51,IT,Remote,47,6.5,18,High School,Male,Entry,7.7,46
+323,50,IT,In-Office,46,6.7,9,Bachelor,Female,Entry,1.8,29
+324,27,Sales,In-Office,41,3.2,2,Bachelor,Female,Mid,5.6,20
+325,56,HR,Remote,35,7.4,20,Bachelor,Female,Senior,6.1,29
+326,62,Finance,In-Office,37,1.8,18,Bachelor,Male,Entry,5.4,27
+327,58,IT,In-Office,48,2.8,20,Bachelor,Male,Senior,7.6,30
+328,45,Finance,Remote,39,8.9,1,High School,Male,Entry,4.5,25
+329,50,IT,Remote,30,7.6,19,Bachelor,Female,Senior,9.5,42
+330,52,Marketing,In-Office,42,1.1,9,High School,Female,Mid,5.3,21
+331,56,IT,Remote,46,3.2,1,Bachelor,Male,Mid,6.1,20
+332,54,Sales,In-Office,32,2.9,1,Master,Female,Mid,8.4,0
+333,42,HR,In-Office,37,3.4,16,Master,Female,Mid,3.5,36
+334,53,Marketing,In-Office,43,3.2,15,Bachelor,Female,Senior,1.7,12
+335,44,IT,In-Office,32,1.6,15,High School,Male,Senior,7.4,20
+336,54,Finance,In-Office,45,5.1,13,Bachelor,Male,Mid,5.3,45
+337,24,Marketing,In-Office,42,7.6,6,Bachelor,Male,Entry,9.1,8
+338,39,Marketing,Remote,49,6.5,20,Bachelor,Female,Entry,9.8,16
+339,46,IT,Remote,46,7.1,10,Bachelor,Male,Senior,4.6,46
+340,63,Marketing,In-Office,42,1.7,0,Bachelor,Female,Mid,4.7,20
+341,52,Finance,In-Office,35,9.6,10,Master,Female,Mid,4.7,30
+342,24,Marketing,In-Office,46,8.5,20,Bachelor,Female,Mid,3.9,38
+343,61,Finance,Remote,43,8.2,3,Bachelor,Female,Senior,8.0,21
+344,45,IT,In-Office,46,8.4,6,Master,Male,Mid,7.8,11
+345,53,HR,Remote,37,9.4,14,Bachelor,Male,Senior,5.3,5
+346,43,Marketing,In-Office,40,5.9,17,High School,Female,Senior,1.4,15
+347,44,HR,In-Office,49,2.8,11,Bachelor,Male,Entry,3.8,25
+348,23,Finance,Remote,30,6.6,16,Bachelor,Male,Entry,3.6,4
+349,48,Marketing,Remote,36,7.7,0,Master,Male,Senior,8.3,8
+350,63,Sales,In-Office,50,7.6,10,Bachelor,Male,Entry,1.8,45
+351,23,HR,In-Office,50,5.7,0,Bachelor,Male,Senior,8.3,39
+352,47,Marketing,In-Office,46,1.6,14,Bachelor,Female,Entry,7.0,13
+353,38,HR,Remote,39,4.3,20,High School,Female,Entry,7.6,43
+354,61,Marketing,Remote,40,9.3,9,Master,Female,Senior,4.9,41
+355,54,IT,Remote,38,6.3,6,Master,Male,Mid,7.1,29
+356,30,HR,Remote,38,5.8,1,Bachelor,Male,Entry,6.5,25
+357,64,Sales,Remote,34,3.4,9,Bachelor,Male,Senior,7.9,44
+358,60,Sales,Remote,46,4.3,3,Bachelor,Female,Mid,5.0,28
+359,50,Finance,In-Office,38,9.1,11,Master,Male,Mid,5.3,18
+360,63,Marketing,In-Office,46,7.0,18,High School,Female,Entry,6.8,46
+361,47,HR,Remote,50,8.1,10,High School,Female,Senior,2.0,7
+362,56,Finance,In-Office,48,5.1,7,Bachelor,Male,Senior,4.9,22
+363,46,HR,In-Office,36,6.7,17,Bachelor,Male,Entry,9.7,41
+364,45,Marketing,Remote,38,3.2,10,Bachelor,Other,Senior,1.3,34
+365,34,Sales,In-Office,36,7.3,10,High School,Other,Senior,3.8,30
+366,28,IT,Remote,42,4.8,12,Bachelor,Male,Mid,3.8,34
+367,57,Sales,Remote,40,5.0,2,Bachelor,Male,Mid,6.7,31
+368,41,Finance,In-Office,43,6.8,11,Bachelor,Other,Entry,2.0,4
+369,22,IT,Remote,48,9.4,2,Master,Male,Entry,6.7,15
+370,29,Finance,Remote,40,1.6,9,High School,Male,Mid,1.9,16
+371,37,Marketing,Remote,42,8.4,16,Bachelor,Male,Senior,1.9,31
+372,35,IT,Remote,43,3.6,1,Bachelor,Female,Mid,7.6,37
+373,33,Finance,Remote,42,5.0,16,Bachelor,Male,Mid,3.9,31
+374,44,Marketing,Remote,30,1.2,15,Bachelor,Male,Entry,9.8,19
+375,36,Sales,Remote,37,3.7,1,Master,Male,Entry,1.3,47
+376,49,Marketing,Remote,41,5.5,19,High School,Female,Mid,5.0,1
+377,55,HR,In-Office,48,1.5,5,Master,Other,Entry,2.0,19
+378,23,Marketing,In-Office,41,5.4,9,Bachelor,Female,Mid,4.2,46
+379,53,Marketing,In-Office,37,9.3,9,Bachelor,Female,Entry,10.0,17
+380,44,HR,Remote,37,1.9,7,Bachelor,Female,Senior,9.0,0
+381,43,Finance,Remote,50,7.9,0,Bachelor,Male,Entry,1.4,28
+382,46,Finance,In-Office,42,4.7,12,Master,Male,Mid,6.1,28
+383,43,Marketing,In-Office,41,6.9,8,Master,Female,Mid,6.8,18
+384,43,HR,In-Office,45,3.3,9,Master,Male,Entry,2.9,43
+385,63,HR,Remote,30,2.4,14,PhD,Male,Entry,2.3,39
+386,27,Sales,In-Office,42,2.4,4,Master,Female,Entry,9.1,5
+387,36,Finance,In-Office,36,1.6,15,Bachelor,Male,Senior,9.7,43
+388,64,IT,Remote,34,2.7,12,Bachelor,Male,Entry,9.9,38
+389,58,Finance,In-Office,37,7.0,19,Bachelor,Other,Mid,8.1,49
+390,54,Finance,Remote,43,8.9,17,High School,Female,Manager,7.0,45
+391,29,Sales,Remote,42,8.3,10,Master,Male,Senior,4.1,7
+392,65,IT,Remote,44,7.2,8,Bachelor,Other,Entry,2.5,23
+393,65,Sales,In-Office,46,2.0,15,High School,Female,Senior,1.7,19
+394,26,IT,In-Office,44,3.6,1,High School,Female,Entry,7.2,13
+395,60,Marketing,Remote,49,3.8,1,Bachelor,Male,Mid,8.1,4
+396,25,IT,In-Office,47,3.2,11,Bachelor,Male,Senior,8.4,40
+397,27,Sales,In-Office,47,5.6,7,Bachelor,Female,Mid,9.2,39
+398,53,Finance,In-Office,31,5.8,8,Bachelor,Female,Mid,8.9,33
+399,51,IT,In-Office,33,4.2,11,Bachelor,Female,Entry,10.0,15
+400,56,IT,Remote,30,4.2,8,Bachelor,Male,Entry,3.2,44
+401,61,HR,In-Office,33,8.5,9,Bachelor,Male,Mid,7.9,6
+402,37,Finance,Remote,47,8.1,1,High School,Female,Entry,6.3,15
+403,34,Marketing,Remote,34,3.8,15,Bachelor,Male,Manager,3.4,6
+404,63,Sales,In-Office,48,9.2,19,Bachelor,Female,Senior,9.8,26
+405,51,Marketing,Remote,44,9.6,6,High School,Male,Senior,9.1,13
+406,40,Finance,In-Office,37,3.9,1,Bachelor,Male,Mid,2.2,13
+407,38,IT,In-Office,49,4.2,0,High School,Female,Mid,1.2,43
+408,40,IT,Remote,46,5.6,18,Bachelor,Female,Senior,7.2,32
+409,49,Finance,Remote,30,9.5,3,Bachelor,Male,Senior,6.4,32
+410,47,IT,Remote,41,8.9,1,Bachelor,Male,Mid,9.4,43
+411,58,IT,Remote,48,1.9,13,Master,Female,Entry,3.1,19
+412,47,IT,In-Office,44,4.5,1,Bachelor,Male,Entry,1.8,46
+413,44,Sales,In-Office,38,6.0,14,PhD,Female,Mid,3.3,35
+414,30,Sales,In-Office,36,5.5,11,Bachelor,Other,Mid,1.2,6
+415,33,HR,Remote,31,2.7,4,Bachelor,Male,Senior,1.3,31
+416,22,Marketing,Remote,38,8.7,19,Bachelor,Female,Entry,9.2,47
+417,22,Finance,Remote,39,7.1,6,Bachelor,Male,Entry,4.2,2
+418,55,Finance,In-Office,31,8.5,20,Bachelor,Female,Entry,4.7,38
+419,53,Finance,Remote,48,8.7,9,Bachelor,Male,Entry,1.2,28
+420,46,HR,In-Office,40,7.7,13,High School,Other,Entry,3.4,23
+421,61,Sales,Remote,42,5.0,13,High School,Male,Mid,8.2,21
+422,22,HR,In-Office,39,6.5,4,Bachelor,Male,Mid,6.5,5
+423,37,Finance,In-Office,43,2.4,17,Bachelor,Other,Mid,7.8,47
+424,60,Marketing,Remote,47,7.1,13,Bachelor,Female,Entry,5.0,23
+425,26,IT,Remote,48,2.6,1,High School,Female,Entry,3.8,39
+426,43,Sales,In-Office,38,7.2,11,Master,Male,Mid,5.3,22
+427,50,Sales,In-Office,36,3.1,5,Master,Female,Senior,3.9,37
+428,24,HR,Remote,32,2.1,3,Master,Male,Entry,8.6,9
+429,33,Sales,Remote,49,2.5,12,Bachelor,Male,Senior,3.7,15
+430,47,Finance,In-Office,35,1.0,3,Master,Female,Entry,6.9,10
+431,37,Finance,Remote,50,7.5,13,Master,Male,Senior,2.2,31
+432,58,HR,In-Office,31,7.6,15,Bachelor,Female,Senior,7.2,44
+433,43,Finance,In-Office,35,5.6,3,Bachelor,Female,Entry,9.2,5
+434,50,Marketing,Remote,32,2.5,0,Master,Female,Mid,6.5,23
+435,35,HR,Remote,45,1.8,12,Bachelor,Female,Entry,6.0,32
+436,49,Marketing,Remote,37,1.2,3,Bachelor,Female,Senior,9.7,50
+437,26,IT,Remote,31,2.5,19,High School,Male,Mid,6.6,11
+438,51,Marketing,Remote,46,9.0,17,High School,Female,Mid,3.3,26
+439,26,IT,In-Office,38,3.2,5,Master,Male,Mid,3.6,37
+440,33,IT,In-Office,41,4.2,2,Bachelor,Male,Senior,7.3,17
+441,37,Marketing,Remote,32,1.9,12,Bachelor,Female,Entry,7.6,44
+442,47,HR,Remote,40,3.0,15,High School,Female,Mid,3.7,38
+443,47,Finance,Remote,30,5.7,4,Bachelor,Female,Entry,4.1,12
+444,42,Finance,In-Office,42,6.5,3,Bachelor,Male,Entry,9.9,39
+445,60,IT,Remote,44,3.2,20,Bachelor,Female,Mid,1.9,29
+446,57,IT,Remote,34,1.5,7,Master,Male,Entry,4.6,48
+447,54,HR,In-Office,50,4.5,18,High School,Female,Entry,1.6,40
+448,51,Sales,In-Office,46,3.1,13,Bachelor,Female,Senior,8.4,12
+449,58,Marketing,Remote,35,3.0,6,Bachelor,Female,Entry,1.8,33
+450,44,IT,Remote,50,9.6,13,Bachelor,Male,Mid,7.1,35
+451,31,Finance,Remote,40,6.5,5,Master,Male,Entry,1.5,29
+452,26,HR,In-Office,47,6.0,11,Master,Male,Entry,7.1,24
+453,57,Marketing,Remote,33,4.7,15,Master,Female,Entry,8.6,1
+454,55,HR,Remote,32,4.9,16,High School,Female,Mid,4.6,35
+455,52,Marketing,Remote,42,5.9,12,High School,Male,Mid,5.7,17
+456,31,Marketing,In-Office,38,7.3,13,Bachelor,Female,Entry,4.6,4
+457,40,IT,In-Office,50,7.3,6,Bachelor,Female,Entry,3.7,18
+458,53,HR,Remote,35,2.5,13,Master,Female,Senior,8.2,41
+459,22,HR,Remote,41,5.5,14,Master,Female,Entry,3.4,17
+460,26,Finance,In-Office,31,4.7,11,Master,Female,Senior,7.5,31
+461,25,Finance,In-Office,32,8.8,16,Master,Male,Entry,2.9,20
+462,37,IT,In-Office,32,6.7,8,Master,Male,Mid,3.2,9
+463,45,IT,In-Office,41,5.8,14,Bachelor,Male,Entry,4.0,36
+464,37,Sales,In-Office,44,2.0,11,Bachelor,Other,Senior,6.3,48
+465,23,Finance,In-Office,38,6.5,1,Bachelor,Female,Mid,5.1,21
+466,49,Marketing,In-Office,37,2.1,4,High School,Female,Mid,7.7,12
+467,53,HR,In-Office,40,4.0,12,High School,Male,Entry,2.9,16
+468,48,IT,In-Office,45,2.3,19,Bachelor,Male,Mid,1.1,8
+469,41,HR,Remote,33,7.2,7,Master,Male,Mid,8.0,23
+470,45,HR,Remote,30,2.9,13,High School,Male,Entry,8.4,43
+471,33,Sales,Remote,36,4.5,14,Master,Female,Entry,1.5,13
+472,56,Finance,In-Office,31,9.1,10,Master,Other,Senior,6.5,45
+473,54,IT,Remote,34,2.8,0,Bachelor,Female,Entry,4.4,7
+474,54,HR,In-Office,36,5.6,20,High School,Female,Mid,8.1,36
+475,64,IT,In-Office,33,4.8,2,High School,Male,Mid,8.9,18
+476,58,Marketing,Remote,34,1.2,16,Master,Male,Senior,8.7,27
+477,33,Sales,In-Office,30,8.1,18,Master,Male,Senior,8.0,45
+478,24,Marketing,Remote,30,1.6,13,Master,Female,Manager,3.4,40
+479,22,IT,Remote,44,5.3,7,Bachelor,Female,Entry,8.3,29
+480,54,IT,Remote,49,6.0,12,High School,Male,Senior,5.8,6
+481,61,Finance,In-Office,48,6.7,19,High School,Male,Entry,1.5,25
+482,31,HR,Remote,39,7.2,2,Master,Male,Mid,5.1,39
+483,64,HR,In-Office,47,3.3,4,High School,Male,Mid,9.5,45
+484,65,Marketing,Remote,32,1.1,8,Bachelor,Male,Entry,9.0,45
+485,50,Sales,Remote,40,7.5,5,Bachelor,Male,Senior,1.9,10
+486,34,HR,Remote,44,5.8,1,High School,Male,Entry,7.7,13
+487,33,Finance,In-Office,40,8.5,12,Bachelor,Female,Mid,8.3,20
+488,52,Marketing,In-Office,46,8.4,4,Bachelor,Female,Senior,3.4,7
+489,23,Marketing,In-Office,46,8.6,7,Bachelor,Male,Senior,5.2,2
+490,56,Finance,Remote,35,5.4,0,High School,Male,Entry,7.4,27
+491,44,Sales,Remote,34,4.0,19,Master,Male,Mid,5.0,28
+492,38,Finance,In-Office,37,8.1,11,Master,Male,Senior,2.0,22
+493,47,Sales,In-Office,31,5.1,10,Bachelor,Male,Entry,7.4,17
+494,29,Finance,In-Office,45,2.7,6,Master,Female,Mid,9.2,34
+495,50,Finance,In-Office,49,8.7,14,Bachelor,Female,Entry,6.9,12
+496,47,IT,In-Office,41,8.9,10,Bachelor,Female,Mid,8.0,11
+497,31,Marketing,In-Office,35,5.2,15,Master,Male,Senior,4.2,46
+498,47,Finance,Remote,30,1.7,2,Master,Female,Mid,2.6,49
+499,55,Finance,In-Office,33,4.5,19,Master,Male,Mid,6.8,4
+500,62,HR,Remote,46,8.2,13,High School,Male,Mid,3.9,38
+501,28,Marketing,Remote,42,9.1,2,High School,Female,Mid,8.7,10
+502,25,HR,In-Office,47,2.8,0,Master,Female,Entry,2.1,10
+503,32,Marketing,In-Office,34,1.6,20,Bachelor,Female,Entry,4.9,46
+504,50,HR,Remote,32,8.9,14,Bachelor,Female,Mid,4.6,41
+505,57,Finance,In-Office,40,4.5,0,Master,Female,Mid,9.4,46
+506,46,Finance,In-Office,42,5.9,16,Master,Female,Mid,2.4,30
+507,42,IT,Remote,33,9.7,1,Master,Female,Entry,1.1,30
+508,57,HR,Remote,43,1.6,19,Bachelor,Female,Entry,3.1,12
+509,31,Sales,Remote,40,6.8,5,Master,Female,Entry,8.4,13
+510,58,IT,In-Office,39,1.7,7,High School,Other,Senior,2.9,48
+511,30,HR,Remote,48,4.4,15,High School,Female,Mid,3.2,44
+512,45,HR,In-Office,47,8.2,18,Bachelor,Male,Entry,2.2,41
+513,56,IT,Remote,35,4.9,0,High School,Female,Entry,7.4,24
+514,56,Finance,Remote,44,10.0,2,Bachelor,Male,Manager,1.6,32
+515,57,HR,Remote,50,6.0,2,Bachelor,Male,Entry,4.0,32
+516,39,Finance,In-Office,39,3.9,4,Bachelor,Male,Senior,3.5,14
+517,60,IT,In-Office,34,3.0,11,High School,Female,Entry,6.0,15
+518,53,Finance,Remote,34,4.2,11,Bachelor,Female,Senior,7.6,43
+519,45,Marketing,Remote,39,4.4,19,Bachelor,Male,Senior,5.8,37
+520,44,Sales,Remote,34,1.6,12,Bachelor,Male,Mid,9.4,5
+521,53,HR,In-Office,32,4.3,19,Master,Male,Entry,9.6,43
+522,58,Sales,Remote,35,5.2,8,Master,Female,Entry,4.3,24
+523,33,Finance,In-Office,33,7.5,6,Bachelor,Male,Mid,8.0,14
+524,34,HR,Remote,47,6.9,3,Master,Male,Mid,7.6,3
+525,44,Finance,Remote,38,7.4,18,High School,Male,Entry,9.0,3
+526,46,Marketing,Remote,46,1.1,18,Bachelor,Female,Entry,5.0,29
+527,56,IT,Remote,42,3.0,5,Master,Male,Mid,5.8,33
+528,62,HR,Remote,44,7.0,12,Bachelor,Female,Mid,4.7,26
+529,51,Marketing,Remote,49,5.4,10,PhD,Male,Entry,8.7,30
+530,38,Marketing,In-Office,46,1.0,12,Bachelor,Female,Entry,3.1,31
+531,41,HR,Remote,42,8.2,12,Master,Male,Manager,3.2,43
+532,46,Finance,In-Office,45,8.0,19,Bachelor,Female,Mid,4.4,38
+533,43,Marketing,Remote,33,5.9,14,Bachelor,Male,Senior,3.1,8
+534,34,Sales,Remote,34,1.6,20,Bachelor,Female,Mid,6.0,40
+535,40,Marketing,In-Office,34,7.9,12,Master,Female,Entry,2.2,7
+536,57,Finance,Remote,38,6.3,10,Bachelor,Female,Entry,3.9,13
+537,33,Finance,In-Office,46,8.0,18,Master,Female,Entry,9.2,32
+538,62,Sales,In-Office,42,7.8,7,Bachelor,Male,Senior,4.7,22
+539,40,Marketing,Remote,31,8.2,19,High School,Female,Mid,7.7,20
+540,33,Finance,In-Office,42,5.7,7,Bachelor,Female,Entry,2.0,11
+541,30,HR,In-Office,50,2.3,9,Bachelor,Male,Manager,3.2,1
+542,28,IT,Remote,48,7.0,15,Master,Female,Entry,8.3,12
+543,49,IT,In-Office,32,6.6,18,Bachelor,Male,Manager,7.9,3
+544,35,IT,Remote,39,7.7,10,Bachelor,Male,Manager,4.5,19
+545,52,Marketing,Remote,31,2.5,12,Bachelor,Male,Entry,9.6,49
+546,40,Sales,Remote,42,2.8,8,Bachelor,Male,Entry,9.2,50
+547,37,Finance,Remote,48,9.0,19,Master,Female,Mid,9.7,47
+548,26,HR,In-Office,46,7.7,18,Bachelor,Male,Mid,4.9,13
+549,56,HR,Remote,50,9.2,15,Bachelor,Male,Mid,2.8,29
+550,33,Marketing,Remote,43,7.8,6,PhD,Male,Manager,6.6,28
+551,46,IT,In-Office,41,6.4,18,Master,Female,Mid,7.2,7
+552,42,Marketing,Remote,50,6.9,11,Bachelor,Female,Entry,2.1,11
+553,57,Sales,Remote,41,9.0,14,Bachelor,Male,Entry,8.1,40
+554,44,Sales,In-Office,40,6.2,13,Bachelor,Male,Mid,1.2,37
+555,37,Finance,In-Office,36,6.7,10,Bachelor,Male,Entry,5.3,25
+556,60,Finance,In-Office,33,2.4,9,Master,Female,Senior,4.0,49
+557,63,Sales,In-Office,48,5.3,10,Bachelor,Female,Entry,7.7,1
+558,60,Sales,In-Office,30,7.4,5,Bachelor,Male,Entry,3.8,39
+559,35,Sales,In-Office,32,3.4,1,Bachelor,Male,Entry,8.4,13
+560,52,Marketing,In-Office,42,2.8,10,Bachelor,Female,Mid,6.4,5
+561,26,Sales,Remote,44,3.8,18,High School,Female,Entry,8.1,41
+562,56,HR,In-Office,31,3.2,5,High School,Male,Senior,9.9,39
+563,44,IT,In-Office,40,2.9,13,Bachelor,Male,Mid,7.1,30
+564,50,Sales,In-Office,33,4.8,19,High School,Male,Senior,9.9,16
+565,64,IT,Remote,48,9.2,5,High School,Female,Mid,1.3,24
+566,32,Marketing,Remote,46,5.6,16,Bachelor,Female,Entry,4.0,31
+567,39,IT,In-Office,32,2.7,9,High School,Female,Senior,2.0,11
+568,33,Marketing,In-Office,47,1.7,0,High School,Female,Entry,3.4,48
+569,30,HR,In-Office,37,7.3,2,Bachelor,Male,Mid,8.5,12
+570,31,Marketing,Remote,48,4.4,7,Bachelor,Female,Entry,1.3,18
+571,65,Marketing,Remote,34,8.4,7,Bachelor,Female,Senior,5.7,43
+572,38,Finance,In-Office,36,6.9,19,High School,Male,Senior,6.1,47
+573,59,Sales,Remote,50,8.2,14,Master,Female,Mid,6.1,24
+574,28,Sales,In-Office,37,3.4,6,Master,Male,Mid,5.3,30
+575,34,HR,Remote,34,7.2,10,Master,Male,Senior,8.1,36
+576,61,HR,Remote,46,3.4,6,Bachelor,Female,Entry,2.2,24
+577,63,Sales,In-Office,34,9.5,3,Master,Female,Senior,3.8,15
+578,30,Finance,In-Office,33,6.7,11,Bachelor,Female,Entry,6.5,37
+579,48,Sales,In-Office,48,3.9,5,High School,Male,Manager,7.2,42
+580,23,Finance,In-Office,50,3.4,13,Bachelor,Female,Mid,4.6,48
+581,26,HR,Remote,31,2.7,11,Master,Female,Senior,8.9,22
+582,50,IT,Remote,40,7.3,10,Bachelor,Male,Mid,4.7,13
+583,58,HR,Remote,42,3.0,18,High School,Other,Mid,4.6,5
+584,59,HR,In-Office,44,6.4,20,Master,Female,Mid,1.3,24
+585,40,Marketing,Remote,41,3.4,4,Master,Male,Entry,6.0,22
+586,29,Marketing,In-Office,50,7.0,13,High School,Female,Mid,7.4,42
+587,22,Marketing,Remote,40,8.3,20,Bachelor,Male,Mid,2.0,11
+588,43,Marketing,In-Office,36,8.0,15,High School,Male,Senior,3.7,12
+589,38,Finance,In-Office,34,7.8,12,Master,Male,Mid,8.0,35
+590,28,Sales,Remote,46,2.7,19,Bachelor,Other,Entry,4.3,38
+591,46,IT,In-Office,49,1.8,3,Bachelor,Male,Entry,3.2,33
+592,25,HR,In-Office,38,7.3,10,Master,Female,Mid,7.0,5
+593,57,Finance,Remote,43,4.3,16,Bachelor,Male,Entry,2.8,37
+594,27,IT,In-Office,41,4.9,6,Bachelor,Female,Entry,9.1,49
+595,52,Finance,In-Office,35,1.3,13,Bachelor,Female,Senior,2.0,39
+596,40,Finance,In-Office,46,3.3,10,Bachelor,Female,Mid,7.4,7
+597,65,HR,Remote,48,1.3,8,Bachelor,Male,Mid,5.5,7
+598,60,Sales,Remote,48,8.9,12,High School,Female,Entry,8.8,39
+599,48,Marketing,In-Office,45,3.2,17,Bachelor,Other,Mid,2.1,32
+600,31,Sales,Remote,41,6.0,10,Bachelor,Female,Entry,7.1,33
+601,47,HR,In-Office,41,1.4,14,Bachelor,Female,Mid,6.1,43
+602,40,HR,In-Office,49,7.0,18,Master,Female,Entry,5.3,14
+603,60,HR,In-Office,35,3.9,0,PhD,Male,Senior,5.4,35
+604,24,IT,In-Office,33,9.1,3,Bachelor,Female,Mid,7.5,34
+605,34,Sales,In-Office,35,9.0,13,Bachelor,Female,Mid,9.4,45
+606,49,Sales,Remote,40,3.9,13,Bachelor,Male,Mid,1.8,21
+607,41,Finance,In-Office,30,9.1,2,Master,Male,Mid,1.2,22
+608,49,Finance,Remote,44,10.0,16,Bachelor,Male,Entry,8.3,39
+609,29,Finance,Remote,40,8.4,2,PhD,Female,Senior,2.0,44
+610,62,HR,In-Office,48,8.6,15,Bachelor,Female,Entry,9.9,50
+611,60,Sales,In-Office,47,3.2,13,PhD,Male,Senior,6.6,21
+612,22,HR,Remote,46,6.2,19,Master,Male,Senior,6.9,4
+613,24,IT,Remote,48,1.6,12,Master,Male,Entry,2.8,30
+614,34,Finance,Remote,50,1.9,14,Bachelor,Male,Senior,3.2,12
+615,49,HR,In-Office,43,10.0,13,High School,Male,Entry,6.9,27
+616,46,HR,Remote,47,3.9,18,Bachelor,Female,Entry,9.2,19
+617,54,IT,In-Office,48,7.7,5,Bachelor,Male,Manager,9.8,32
+618,59,Marketing,In-Office,44,8.3,9,High School,Female,Mid,2.8,15
+619,27,Sales,In-Office,44,8.7,14,Bachelor,Female,Mid,2.2,28
+620,65,Marketing,Remote,33,10.0,20,Bachelor,Male,Entry,1.5,22
+621,53,Finance,In-Office,36,3.2,19,Bachelor,Female,Entry,8.8,23
+622,42,HR,In-Office,42,1.4,5,Bachelor,Female,Manager,3.7,33
+623,37,IT,In-Office,32,4.7,9,High School,Female,Entry,1.0,6
+624,42,IT,In-Office,45,2.2,6,PhD,Male,Entry,3.0,37
+625,32,Sales,In-Office,38,1.2,16,High School,Male,Mid,4.1,36
+626,58,Marketing,Remote,37,4.2,17,Bachelor,Male,Mid,9.9,3
+627,57,Sales,In-Office,49,8.1,16,Bachelor,Male,Mid,5.7,33
+628,56,HR,In-Office,42,6.1,8,Master,Male,Entry,2.8,41
+629,40,Sales,Remote,46,3.8,9,High School,Male,Entry,4.0,21
+630,41,IT,In-Office,46,6.9,9,Bachelor,Male,Entry,4.0,4
+631,39,IT,Remote,46,3.1,6,Bachelor,Male,Senior,1.2,49
+632,62,Finance,In-Office,30,1.1,15,Bachelor,Male,Entry,2.2,41
+633,35,Finance,Remote,37,7.9,17,Bachelor,Male,Senior,7.3,22
+634,36,HR,Remote,48,6.6,5,Master,Other,Senior,2.1,14
+635,52,Marketing,In-Office,35,7.9,19,PhD,Male,Senior,3.1,30
+636,22,Sales,In-Office,32,1.4,0,High School,Female,Senior,4.2,8
+637,24,HR,In-Office,34,8.5,0,Bachelor,Male,Entry,7.8,42
+638,37,Finance,Remote,42,6.6,11,Bachelor,Female,Entry,6.2,24
+639,44,Sales,Remote,44,6.1,20,Bachelor,Male,Mid,7.2,24
+640,32,Finance,Remote,43,6.6,1,Bachelor,Female,Entry,6.1,48
+641,33,Sales,In-Office,45,8.8,3,Bachelor,Female,Mid,7.2,20
+642,31,Marketing,Remote,47,6.3,16,PhD,Male,Mid,1.0,8
+643,53,HR,Remote,40,6.2,3,Master,Female,Senior,9.4,47
+644,37,Sales,In-Office,32,9.9,10,High School,Female,Entry,2.0,37
+645,29,IT,Remote,39,7.8,3,Bachelor,Male,Senior,4.7,21
+646,59,IT,Remote,39,5.0,0,Bachelor,Female,Entry,7.9,42
+647,33,Sales,In-Office,50,7.4,6,Bachelor,Female,Mid,4.9,22
+648,45,Sales,Remote,45,4.5,17,Bachelor,Female,Mid,9.5,48
+649,49,Sales,In-Office,41,3.1,8,Bachelor,Male,Senior,5.2,3
+650,29,IT,In-Office,31,6.4,2,Master,Female,Mid,8.9,28
+651,49,IT,In-Office,38,9.4,7,Master,Female,Senior,8.3,14
+652,57,Sales,In-Office,32,9.4,18,Bachelor,Female,Senior,9.8,0
+653,47,Finance,In-Office,44,4.1,3,Bachelor,Female,Senior,9.3,29
+654,29,Finance,Remote,32,5.7,17,Bachelor,Male,Entry,9.1,28
+655,49,Marketing,Remote,48,2.9,19,Bachelor,Female,Senior,7.6,19
+656,49,HR,In-Office,47,10.0,10,Bachelor,Male,Senior,4.3,32
+657,58,Finance,In-Office,37,9.8,13,High School,Male,Entry,2.0,40
+658,62,IT,Remote,46,6.8,17,Bachelor,Female,Entry,7.2,43
+659,57,Finance,In-Office,37,8.2,15,Bachelor,Female,Entry,9.8,35
+660,48,Marketing,In-Office,36,7.4,2,Master,Male,Entry,7.5,21
+661,38,Marketing,In-Office,36,6.3,14,Bachelor,Female,Mid,9.4,12
+662,30,HR,Remote,32,1.5,3,Bachelor,Male,Manager,8.2,6
+663,54,Finance,Remote,30,5.1,4,Bachelor,Male,Mid,2.5,7
+664,41,IT,In-Office,33,7.1,16,Bachelor,Female,Mid,3.2,27
+665,34,IT,In-Office,34,7.1,6,High School,Male,Manager,4.1,44
+666,49,Sales,Remote,30,4.4,15,PhD,Male,Entry,2.5,42
+667,50,IT,Remote,44,9.5,13,Master,Male,Senior,6.2,8
+668,34,HR,In-Office,34,2.5,15,Bachelor,Female,Mid,9.8,24
+669,56,HR,In-Office,42,5.5,6,Bachelor,Male,Mid,7.9,15
+670,27,IT,Remote,37,7.2,8,High School,Male,Entry,4.8,9
+671,39,IT,Remote,37,7.3,3,Bachelor,Female,Mid,1.0,10
+672,26,Sales,Remote,34,6.8,10,Master,Female,Entry,3.8,30
+673,46,IT,In-Office,38,3.5,1,High School,Male,Senior,5.7,11
+674,23,Sales,Remote,30,2.4,11,Bachelor,Female,Entry,3.9,30
+675,31,Sales,In-Office,33,6.7,11,Bachelor,Male,Senior,2.0,13
+676,51,IT,Remote,32,6.4,3,Bachelor,Other,Entry,5.0,50
+677,26,Marketing,Remote,31,2.6,17,Master,Male,Entry,3.3,43
+678,54,Marketing,Remote,37,7.3,20,High School,Male,Mid,9.2,31
+679,22,Sales,Remote,38,5.1,6,Master,Male,Entry,1.9,49
+680,39,IT,In-Office,31,7.0,0,Bachelor,Male,Senior,1.4,16
+681,53,Marketing,In-Office,43,8.5,12,Master,Female,Manager,1.0,34
+682,32,IT,Remote,43,2.5,5,Bachelor,Male,Senior,4.0,0
+683,42,IT,In-Office,33,1.2,5,Bachelor,Male,Entry,6.9,28
+684,47,IT,Remote,35,8.0,11,Master,Female,Mid,7.6,50
+685,46,Finance,Remote,40,6.5,7,Bachelor,Female,Mid,5.1,3
+686,43,IT,Remote,32,7.3,18,Bachelor,Male,Senior,7.2,22
+687,48,Finance,Remote,37,8.5,4,Bachelor,Male,Entry,4.2,27
+688,34,Sales,In-Office,32,8.2,17,Master,Male,Mid,7.0,15
+689,54,Marketing,Remote,43,9.6,4,Bachelor,Male,Mid,1.4,11
+690,55,Marketing,Remote,42,5.8,9,Master,Male,Entry,4.5,20
+691,62,Marketing,In-Office,42,5.4,0,Bachelor,Female,Entry,8.1,44
+692,56,Marketing,Remote,31,4.6,9,Bachelor,Female,Mid,8.2,16
+693,22,Marketing,Remote,42,2.4,4,Master,Male,Senior,7.4,39
+694,42,Marketing,Remote,48,6.2,11,Bachelor,Male,Senior,2.8,12
+695,27,Marketing,In-Office,35,3.5,6,Master,Male,Mid,3.2,31
+696,49,Sales,Remote,45,9.3,8,PhD,Male,Entry,10.0,36
+697,38,IT,In-Office,31,6.2,20,Bachelor,Male,Entry,1.9,49
+698,26,HR,Remote,37,6.3,11,High School,Female,Manager,2.6,14
+699,52,Finance,Remote,46,4.2,0,High School,Female,Manager,2.2,11
+700,26,HR,In-Office,31,1.5,10,Master,Other,Senior,3.9,48
+701,59,HR,Remote,39,1.3,20,Master,Female,Senior,2.9,14
+702,24,IT,Remote,45,4.8,14,Bachelor,Male,Entry,5.5,33
+703,44,IT,In-Office,35,1.8,1,High School,Female,Senior,5.3,5
+704,58,IT,In-Office,31,6.5,19,High School,Male,Mid,9.1,16
+705,58,Marketing,In-Office,31,8.9,6,Master,Male,Entry,1.3,47
+706,31,Sales,In-Office,42,8.9,20,Bachelor,Female,Mid,3.9,48
+707,31,Marketing,In-Office,44,6.9,11,Bachelor,Male,Entry,6.4,19
+708,40,Sales,Remote,31,2.9,17,Bachelor,Female,Entry,6.4,8
+709,38,Sales,In-Office,36,8.8,2,Master,Male,Mid,5.3,4
+710,42,HR,Remote,32,9.0,6,Bachelor,Female,Mid,8.3,22
+711,35,HR,Remote,37,2.8,10,Bachelor,Female,Senior,1.6,32
+712,30,Sales,Remote,43,7.6,17,High School,Female,Entry,8.3,37
+713,22,Sales,In-Office,36,3.6,11,Bachelor,Female,Entry,5.5,13
+714,34,Marketing,In-Office,50,8.2,5,Master,Male,Entry,2.2,16
+715,25,Marketing,Remote,36,10.0,4,PhD,Female,Entry,9.0,18
+716,22,HR,In-Office,30,1.3,0,Bachelor,Other,Entry,6.8,32
+717,61,IT,In-Office,46,9.1,11,High School,Female,Mid,2.5,0
+718,53,Sales,In-Office,38,6.6,10,High School,Female,Mid,1.3,12
+719,55,Marketing,In-Office,50,9.8,3,Bachelor,Female,Senior,2.3,45
+720,49,HR,Remote,42,5.2,17,Master,Female,Manager,6.5,26
+721,52,Marketing,Remote,50,8.6,3,High School,Female,Mid,2.6,5
+722,29,Sales,In-Office,48,1.6,16,Bachelor,Female,Entry,3.0,5
+723,60,Sales,Remote,50,4.0,1,Bachelor,Female,Entry,1.2,32
+724,47,Finance,In-Office,48,1.6,1,High School,Male,Senior,7.5,29
+725,55,IT,In-Office,46,9.8,11,Bachelor,Male,Mid,8.3,45
+726,24,Finance,Remote,39,8.4,5,Bachelor,Male,Senior,8.2,34
+727,33,HR,Remote,39,8.7,9,Bachelor,Male,Senior,2.1,22
+728,22,Marketing,Remote,33,9.4,20,Master,Male,Senior,9.1,9
+729,65,HR,In-Office,37,1.8,15,Bachelor,Female,Senior,7.1,50
+730,26,Sales,Remote,49,4.5,13,High School,Male,Mid,9.1,18
+731,51,Finance,In-Office,49,1.6,6,PhD,Male,Entry,5.0,50
+732,51,Finance,Remote,47,2.9,18,Bachelor,Female,Manager,4.9,27
+733,38,Finance,Remote,43,3.1,16,Master,Other,Mid,8.1,22
+734,44,HR,In-Office,47,5.2,8,High School,Female,Entry,1.8,3
+735,36,Sales,In-Office,43,3.4,12,High School,Other,Mid,5.7,19
+736,58,Marketing,In-Office,49,1.9,4,High School,Female,Mid,8.5,18
+737,42,Marketing,In-Office,50,2.5,4,High School,Male,Senior,8.5,41
+738,35,HR,In-Office,44,2.3,9,Bachelor,Female,Mid,9.6,26
+739,23,Finance,In-Office,33,9.8,20,Master,Female,Entry,7.3,33
+740,32,IT,In-Office,42,7.8,9,Bachelor,Male,Manager,2.9,3
+741,60,HR,In-Office,37,9.7,6,Bachelor,Male,Senior,1.2,37
+742,59,HR,Remote,47,5.0,14,Bachelor,Female,Mid,5.3,6
+743,55,Sales,In-Office,41,3.5,6,High School,Male,Entry,5.6,47
+744,59,Marketing,In-Office,43,8.2,14,Bachelor,Female,Entry,3.2,6
+745,55,HR,Remote,31,3.9,2,Bachelor,Male,Mid,2.1,49
+746,39,HR,In-Office,47,3.7,18,Master,Female,Entry,6.3,25
+747,51,Finance,Remote,31,3.1,9,PhD,Female,Entry,7.9,25
+748,36,Finance,Remote,40,2.2,14,Bachelor,Male,Mid,9.9,18
+749,48,IT,In-Office,38,3.3,2,Bachelor,Male,Mid,7.8,8
+750,55,Sales,Remote,41,4.2,5,Master,Female,Mid,8.1,19
+751,59,IT,In-Office,46,7.1,11,Master,Female,Entry,6.5,41
+752,54,Finance,Remote,44,1.6,14,Bachelor,Female,Mid,9.9,44
+753,45,Marketing,Remote,46,2.9,5,Master,Female,Senior,6.8,49
+754,36,Finance,Remote,47,8.3,12,High School,Female,Entry,8.7,15
+755,51,Sales,In-Office,35,2.3,18,Master,Male,Entry,9.5,16
+756,63,Finance,In-Office,46,4.1,2,High School,Male,Mid,9.4,21
+757,38,Sales,Remote,47,8.8,7,Bachelor,Male,Manager,4.4,12
+758,26,Sales,Remote,37,2.4,7,Master,Female,Mid,1.7,11
+759,50,Sales,In-Office,38,1.7,19,Bachelor,Male,Entry,2.5,9
+760,25,Sales,In-Office,35,5.4,14,Bachelor,Male,Entry,1.5,0
+761,31,Sales,Remote,34,3.7,3,Bachelor,Female,Senior,1.9,31
+762,38,Marketing,Remote,41,6.1,18,PhD,Female,Entry,2.7,29
+763,31,IT,In-Office,40,8.2,20,Master,Male,Mid,4.1,7
+764,38,HR,In-Office,30,2.2,2,Master,Male,Mid,5.9,20
+765,41,IT,In-Office,40,6.2,12,Bachelor,Male,Entry,7.4,21
+766,45,Sales,In-Office,48,5.5,7,Master,Male,Senior,2.9,17
+767,26,Marketing,In-Office,38,2.3,15,Bachelor,Female,Mid,7.1,1
+768,55,Finance,Remote,31,6.6,12,Bachelor,Male,Mid,7.3,47
+769,27,Marketing,In-Office,41,3.5,2,Master,Female,Entry,6.0,43
+770,23,Sales,Remote,33,5.4,15,Bachelor,Female,Entry,9.1,8
+771,34,Marketing,In-Office,33,1.7,8,High School,Male,Mid,2.0,2
+772,64,Marketing,Remote,47,5.1,13,High School,Other,Mid,2.6,25
+773,64,Sales,In-Office,44,3.8,12,High School,Male,Entry,4.9,20
+774,32,Marketing,In-Office,48,8.4,20,Master,Male,Entry,2.1,29
+775,44,HR,Remote,42,1.5,6,Bachelor,Male,Entry,6.1,27
+776,37,HR,Remote,48,4.8,14,Master,Male,Manager,4.6,35
+777,52,Marketing,In-Office,46,5.1,6,Bachelor,Male,Senior,3.6,25
+778,32,Finance,In-Office,35,7.5,5,Bachelor,Male,Senior,2.5,33
+779,37,Sales,In-Office,45,6.2,1,Bachelor,Female,Entry,4.0,7
+780,29,HR,In-Office,41,7.0,8,Master,Female,Manager,6.5,9
+781,25,Finance,In-Office,48,8.0,16,Bachelor,Female,Entry,6.2,47
+782,61,Marketing,Remote,34,8.8,4,Master,Male,Mid,2.5,42
+783,25,Finance,Remote,46,3.8,11,Bachelor,Female,Senior,2.1,49
+784,46,IT,In-Office,30,5.8,0,Bachelor,Female,Entry,1.2,13
+785,24,HR,Remote,39,8.6,9,Bachelor,Female,Mid,1.1,39
+786,53,Marketing,Remote,44,9.9,10,Master,Female,Entry,8.9,14
+787,24,Sales,Remote,50,9.0,15,Master,Female,Entry,1.4,16
+788,48,Marketing,In-Office,50,4.3,13,High School,Male,Mid,7.6,17
+789,50,Sales,Remote,40,2.8,7,Bachelor,Female,Mid,8.8,31
+790,53,Marketing,In-Office,42,5.4,16,Bachelor,Male,Senior,1.9,37
+791,40,Finance,Remote,34,7.7,17,Master,Other,Mid,4.9,22
+792,42,Finance,In-Office,30,5.4,11,Bachelor,Male,Mid,9.7,45
+793,26,Finance,Remote,41,5.3,16,Master,Male,Entry,8.5,22
+794,39,IT,In-Office,40,8.5,13,PhD,Male,Entry,5.4,34
+795,49,Sales,In-Office,46,4.3,15,Bachelor,Female,Manager,7.9,38
+796,63,Finance,Remote,33,8.7,13,Master,Male,Entry,8.5,14
+797,43,IT,In-Office,44,4.7,8,High School,Male,Mid,4.1,23
+798,42,Sales,In-Office,38,4.0,3,High School,Female,Entry,9.0,27
+799,27,Marketing,In-Office,50,5.1,10,High School,Female,Mid,5.2,15
+800,22,IT,In-Office,49,7.9,5,High School,Male,Mid,5.8,15
+801,26,HR,In-Office,48,2.1,14,Master,Male,Entry,10.0,39
+802,62,IT,In-Office,48,2.8,4,High School,Female,Entry,8.6,38
+803,33,IT,In-Office,41,9.6,10,Bachelor,Female,Mid,4.3,5
+804,47,Sales,In-Office,34,2.6,17,High School,Female,Entry,1.1,1
+805,55,Marketing,Remote,39,6.1,12,Bachelor,Female,Entry,6.6,12
+806,35,HR,Remote,46,6.2,10,High School,Male,Mid,7.3,43
+807,47,Finance,In-Office,34,5.4,13,Bachelor,Female,Entry,6.9,46
+808,48,Finance,In-Office,45,6.8,17,High School,Female,Senior,9.7,8
+809,30,IT,Remote,36,3.1,18,Master,Female,Mid,8.8,33
+810,47,Sales,Remote,38,6.0,14,Master,Male,Entry,5.0,16
+811,43,Sales,Remote,32,4.3,8,High School,Female,Mid,1.6,26
+812,51,Finance,In-Office,44,7.0,7,Master,Female,Mid,5.3,28
+813,64,HR,Remote,45,2.3,19,High School,Male,Entry,7.2,36
+814,38,Marketing,In-Office,47,6.1,0,Bachelor,Female,Mid,6.5,42
+815,47,HR,In-Office,43,2.7,3,High School,Female,Entry,5.8,21
+816,57,Marketing,Remote,32,3.5,13,Bachelor,Female,Entry,5.2,50
+817,22,Finance,In-Office,41,3.0,1,Bachelor,Female,Entry,3.6,23
+818,29,Marketing,In-Office,38,2.6,15,Master,Female,Entry,3.5,6
+819,56,Sales,In-Office,36,8.4,2,Bachelor,Female,Entry,5.5,33
+820,36,IT,In-Office,38,3.6,7,Master,Male,Mid,2.4,47
+821,43,IT,Remote,42,9.3,5,High School,Male,Mid,4.1,11
+822,35,Finance,Remote,47,9.7,15,Master,Male,Mid,3.9,22
+823,47,Sales,In-Office,34,6.1,15,Bachelor,Female,Senior,6.3,14
+824,49,HR,In-Office,42,2.3,6,High School,Female,Senior,1.6,32
+825,44,Sales,Remote,33,4.4,12,High School,Female,Mid,8.5,12
+826,35,IT,In-Office,31,8.2,12,High School,Female,Mid,6.1,22
+827,45,IT,Remote,45,4.3,4,Bachelor,Female,Entry,7.0,37
+828,23,Sales,In-Office,38,1.8,19,Master,Other,Senior,7.3,31
+829,47,Sales,In-Office,38,6.0,17,High School,Male,Entry,3.6,44
+830,35,IT,Remote,35,8.6,14,Master,Female,Entry,5.2,49
+831,28,HR,Remote,40,8.2,17,Bachelor,Male,Mid,9.6,34
+832,24,Finance,Remote,30,2.6,1,Master,Female,Entry,7.9,0
+833,44,Finance,Remote,33,7.1,9,Bachelor,Female,Entry,9.7,46
+834,64,Sales,In-Office,42,3.0,12,Bachelor,Female,Mid,7.7,44
+835,39,Finance,Remote,42,3.0,17,Master,Male,Mid,2.6,4
+836,59,IT,In-Office,42,8.9,14,Bachelor,Male,Mid,1.6,12
+837,56,IT,Remote,31,3.2,11,Bachelor,Female,Senior,6.2,4
+838,36,Sales,Remote,38,3.4,14,High School,Female,Entry,4.2,31
+839,46,Sales,In-Office,37,1.0,12,Bachelor,Male,Entry,3.5,50
+840,58,Sales,Remote,36,8.8,17,Bachelor,Female,Mid,8.3,20
+841,49,HR,Remote,33,8.1,14,Master,Male,Entry,4.3,23
+842,31,Finance,Remote,47,6.6,10,High School,Female,Mid,3.9,17
+843,60,Sales,Remote,32,7.8,18,Bachelor,Female,Entry,8.6,20
+844,38,Marketing,In-Office,35,2.4,2,Bachelor,Female,Mid,8.6,9
+845,60,Marketing,In-Office,41,5.1,6,Bachelor,Other,Mid,4.2,23
+846,43,IT,Remote,41,4.2,20,Bachelor,Female,Mid,8.5,39
+847,47,Finance,Remote,50,1.8,13,Master,Female,Mid,8.7,46
+848,65,Sales,Remote,37,5.4,13,Bachelor,Male,Mid,4.8,20
+849,46,Marketing,In-Office,30,9.3,12,Master,Male,Entry,1.6,24
+850,38,Finance,In-Office,33,1.4,11,High School,Male,Entry,1.0,22
+851,34,IT,In-Office,50,3.6,8,High School,Female,Entry,5.7,21
+852,41,HR,In-Office,40,2.9,0,Bachelor,Male,Mid,4.1,3
+853,46,Finance,Remote,32,3.1,18,High School,Male,Entry,10.0,33
+854,25,Finance,Remote,42,9.2,10,Bachelor,Male,Mid,8.0,5
+855,31,HR,Remote,46,5.2,18,High School,Male,Entry,7.9,27
+856,24,Finance,In-Office,39,5.2,17,Master,Male,Mid,9.6,30
+857,62,IT,Remote,50,7.8,11,High School,Female,Senior,9.0,34
+858,39,IT,In-Office,41,2.4,0,Master,Female,Entry,3.9,38
+859,57,HR,In-Office,44,5.4,18,High School,Female,Entry,2.5,41
+860,43,Sales,Remote,50,4.9,19,Master,Female,Entry,7.7,22
+861,55,Marketing,Remote,39,6.4,16,Master,Male,Mid,4.4,5
+862,29,Sales,Remote,43,10.0,4,High School,Female,Mid,5.3,15
+863,61,Finance,In-Office,42,7.9,2,Master,Male,Entry,6.7,1
+864,65,Marketing,In-Office,34,4.6,1,Bachelor,Male,Mid,9.2,23
+865,40,HR,Remote,35,8.4,2,Master,Female,Entry,4.8,16
+866,63,HR,Remote,31,2.5,7,Bachelor,Male,Mid,8.0,44
+867,62,Marketing,In-Office,46,1.3,15,Bachelor,Female,Mid,3.4,0
+868,58,IT,Remote,33,2.8,5,Master,Male,Mid,7.3,5
+869,27,Marketing,In-Office,43,4.1,12,Bachelor,Female,Entry,1.0,4
+870,47,Finance,In-Office,39,5.6,15,High School,Female,Senior,8.8,44
+871,55,IT,Remote,32,6.5,15,Master,Male,Mid,1.3,49
+872,27,HR,Remote,32,9.2,2,Bachelor,Female,Entry,7.4,28
+873,58,Marketing,Remote,44,5.6,12,Bachelor,Male,Entry,1.4,11
+874,54,Sales,Remote,35,5.5,13,High School,Female,Mid,3.4,38
+875,43,Sales,In-Office,46,1.5,7,Bachelor,Male,Senior,5.5,46
+876,42,Finance,In-Office,41,1.3,11,PhD,Female,Senior,4.8,2
+877,27,Sales,In-Office,49,6.0,20,Bachelor,Female,Mid,2.7,47
+878,27,Marketing,Remote,40,4.9,7,Bachelor,Male,Senior,4.0,0
+879,25,Marketing,In-Office,33,8.6,20,Bachelor,Female,Entry,7.5,26
+880,51,Sales,Remote,35,2.4,8,Master,Female,Entry,7.0,47
+881,32,Marketing,Remote,30,1.2,0,Bachelor,Female,Senior,1.6,23
+882,51,Finance,Remote,49,5.0,5,Bachelor,Female,Senior,7.7,43
+883,52,IT,Remote,45,3.1,18,Master,Male,Mid,1.5,18
+884,45,Finance,Remote,44,1.4,10,Bachelor,Female,Senior,5.9,7
+885,30,Finance,Remote,46,7.5,10,High School,Male,Manager,3.3,43
+886,24,Marketing,In-Office,37,2.0,12,High School,Male,Senior,6.3,46
+887,52,IT,Remote,41,6.5,10,Bachelor,Other,Senior,3.4,1
+888,61,Marketing,In-Office,50,3.5,17,Bachelor,Female,Senior,9.9,29
+889,58,HR,In-Office,39,2.6,14,Bachelor,Male,Entry,3.8,29
+890,57,Marketing,Remote,44,4.4,0,Master,Male,Senior,3.2,48
+891,45,Marketing,Remote,38,8.2,20,High School,Female,Entry,3.5,38
+892,52,Marketing,Remote,31,4.5,6,Master,Male,Senior,9.1,44
+893,27,IT,In-Office,34,7.8,12,Bachelor,Male,Mid,6.7,31
+894,23,Marketing,Remote,35,2.1,11,Master,Male,Mid,7.6,0
+895,41,IT,In-Office,36,8.0,17,Master,Female,Mid,9.3,37
+896,49,Sales,Remote,50,3.1,18,High School,Female,Entry,9.2,12
+897,32,HR,Remote,30,7.1,14,Bachelor,Male,Entry,7.7,10
+898,25,IT,In-Office,36,6.1,7,High School,Female,Manager,2.8,9
+899,36,Sales,In-Office,49,9.4,18,Master,Male,Manager,8.6,47
+900,27,IT,Remote,41,4.5,9,Master,Female,Entry,2.8,25
+901,51,IT,In-Office,45,1.6,6,Bachelor,Other,Manager,7.7,19
+902,59,HR,In-Office,45,1.2,17,Bachelor,Female,Senior,7.2,16
+903,23,Finance,In-Office,40,8.4,15,Bachelor,Female,Mid,7.8,16
+904,36,Finance,In-Office,50,5.7,19,Master,Female,Entry,5.8,3
+905,32,IT,In-Office,33,8.0,5,Bachelor,Female,Senior,6.7,4
+906,29,Marketing,Remote,42,3.1,8,Bachelor,Female,Mid,9.6,22
+907,47,Sales,Remote,36,4.1,20,Bachelor,Female,Senior,1.9,45
+908,65,Marketing,In-Office,33,1.3,12,High School,Male,Senior,3.8,9
+909,26,Marketing,Remote,44,9.7,20,Master,Male,Senior,6.5,45
+910,27,IT,Remote,48,7.0,7,High School,Female,Mid,9.7,27
+911,47,IT,In-Office,38,9.4,15,Bachelor,Female,Entry,1.9,32
+912,25,IT,Remote,40,3.4,12,High School,Male,Entry,1.2,42
+913,40,IT,In-Office,37,6.5,12,Bachelor,Male,Entry,1.5,25
+914,41,Finance,In-Office,30,7.1,16,Bachelor,Female,Entry,1.5,49
+915,54,IT,Remote,37,3.9,19,PhD,Female,Mid,9.2,47
+916,41,Finance,In-Office,42,8.6,4,Master,Female,Mid,7.5,28
+917,33,Finance,In-Office,33,9.5,20,Bachelor,Female,Senior,7.1,26
+918,22,IT,In-Office,37,9.0,16,High School,Female,Entry,5.7,17
+919,47,HR,In-Office,32,7.7,8,Master,Female,Mid,8.0,39
+920,35,Sales,In-Office,38,3.5,1,Bachelor,Female,Entry,2.4,9
+921,59,Marketing,Remote,31,3.5,17,High School,Female,Entry,4.5,41
+922,58,Finance,Remote,31,9.7,8,Master,Female,Entry,5.4,4
+923,32,Sales,In-Office,42,1.1,5,Master,Male,Mid,2.0,9
+924,57,HR,In-Office,44,7.4,10,PhD,Male,Entry,4.8,49
+925,34,Marketing,Remote,41,7.4,5,Master,Other,Mid,3.8,20
+926,64,Marketing,In-Office,33,6.6,5,Master,Male,Entry,1.3,23
+927,24,Finance,Remote,37,9.9,12,High School,Male,Senior,2.2,37
+928,54,IT,In-Office,38,3.8,10,High School,Female,Senior,7.9,2
+929,27,HR,In-Office,34,4.1,13,Bachelor,Female,Manager,1.2,39
+930,31,Finance,In-Office,49,1.7,1,Bachelor,Male,Senior,9.4,30
+931,26,HR,In-Office,47,5.0,7,Bachelor,Male,Senior,1.8,40
+932,44,IT,In-Office,40,3.3,2,Bachelor,Male,Senior,8.2,36
+933,31,IT,In-Office,44,4.1,20,Bachelor,Female,Mid,9.1,1
+934,65,Finance,In-Office,38,8.5,2,Bachelor,Male,Entry,9.5,1
+935,23,IT,Remote,46,9.4,0,High School,Male,Entry,8.8,38
+936,34,Sales,Remote,41,2.7,18,Bachelor,Male,Entry,3.6,48
+937,61,Marketing,Remote,36,4.4,17,Bachelor,Female,Mid,4.0,41
+938,23,Finance,In-Office,39,9.4,16,Master,Male,Mid,4.8,43
+939,41,HR,In-Office,39,1.6,19,High School,Male,Senior,2.3,33
+940,22,Sales,In-Office,42,1.8,12,Bachelor,Female,Manager,1.2,41
+941,58,Finance,In-Office,48,2.5,2,Master,Other,Mid,8.8,19
+942,30,IT,In-Office,40,6.4,0,Bachelor,Female,Mid,6.0,32
+943,38,IT,In-Office,42,2.4,3,High School,Other,Manager,6.5,3
+944,30,IT,In-Office,50,9.7,12,Bachelor,Female,Entry,9.3,44
+945,32,IT,Remote,37,5.0,16,Bachelor,Male,Senior,7.0,43
+946,36,HR,In-Office,37,5.5,10,Master,Female,Entry,7.2,10
+947,45,Sales,Remote,33,3.2,1,High School,Male,Mid,8.1,41
+948,59,Marketing,Remote,44,5.2,15,Bachelor,Female,Entry,2.0,46
+949,56,HR,In-Office,40,7.0,1,High School,Male,Senior,4.2,4
+950,51,HR,In-Office,40,7.8,18,Bachelor,Male,Mid,9.7,24
+951,52,Marketing,Remote,30,7.8,18,Bachelor,Female,Entry,9.3,48
+952,26,Marketing,Remote,46,6.2,15,Bachelor,Male,Entry,9.0,36
+953,65,IT,In-Office,44,9.1,18,Bachelor,Female,Mid,5.1,33
+954,35,HR,In-Office,49,8.4,8,High School,Male,Manager,8.7,8
+955,32,Finance,Remote,35,7.8,0,Bachelor,Male,Senior,1.4,5
+956,30,Marketing,In-Office,44,1.5,9,Bachelor,Female,Mid,2.3,17
+957,55,Marketing,In-Office,38,1.1,18,Bachelor,Female,Entry,4.7,13
+958,33,Sales,In-Office,43,2.9,0,Master,Female,Mid,5.4,18
+959,56,Finance,Remote,47,7.0,1,Bachelor,Male,Mid,3.4,13
+960,56,Finance,Remote,46,4.7,15,Bachelor,Female,Senior,4.2,39
+961,22,Marketing,Remote,47,4.6,11,High School,Female,Entry,2.5,16
+962,61,IT,In-Office,34,9.0,7,Bachelor,Female,Mid,5.4,34
+963,43,Sales,In-Office,49,9.1,17,Master,Male,Mid,8.1,28
+964,50,Finance,Remote,49,9.2,1,Bachelor,Female,Manager,7.0,41
+965,29,Marketing,Remote,38,3.8,12,Master,Female,Senior,2.0,16
+966,32,Finance,Remote,40,7.2,5,Bachelor,Female,Senior,5.4,42
+967,62,Sales,In-Office,30,3.4,20,Master,Female,Mid,7.3,7
+968,58,Sales,Remote,47,2.7,5,High School,Female,Entry,5.8,0
+969,35,HR,Remote,35,2.7,8,Master,Male,Senior,4.5,44
+970,51,Marketing,In-Office,31,4.1,15,Bachelor,Male,Mid,6.6,35
+971,56,Sales,In-Office,44,4.9,10,Bachelor,Female,Entry,9.7,6
+972,42,HR,In-Office,50,8.5,6,Bachelor,Male,Entry,1.9,45
+973,58,HR,Remote,43,2.1,9,Bachelor,Male,Senior,4.5,4
+974,26,Finance,In-Office,34,7.6,9,PhD,Male,Entry,4.7,23
+975,40,Finance,In-Office,35,5.8,19,Bachelor,Male,Mid,6.2,27
+976,35,HR,Remote,35,3.6,17,High School,Female,Mid,2.4,42
+977,47,Finance,In-Office,47,5.4,19,Bachelor,Female,Entry,2.6,16
+978,25,Sales,Remote,43,3.7,8,Bachelor,Female,Entry,3.6,36
+979,46,IT,Remote,39,6.4,14,Bachelor,Male,Senior,9.6,19
+980,63,Sales,In-Office,43,4.9,3,Bachelor,Female,Senior,7.6,2
+981,46,HR,In-Office,42,2.5,7,Bachelor,Female,Entry,7.0,36
+982,39,HR,In-Office,32,2.0,8,Master,Other,Senior,8.4,25
+983,61,Sales,In-Office,35,5.9,12,Bachelor,Female,Senior,2.1,14
+984,29,Finance,In-Office,37,9.1,8,High School,Male,Mid,8.7,50
+985,60,Finance,In-Office,41,4.1,3,Master,Female,Mid,6.4,47
+986,61,HR,Remote,42,7.6,16,Bachelor,Other,Manager,4.0,7
+987,35,Marketing,Remote,40,6.9,15,Bachelor,Female,Mid,8.3,12
+988,53,Finance,In-Office,41,9.4,14,Bachelor,Female,Entry,8.2,47
+989,59,Sales,Remote,30,8.4,2,Bachelor,Male,Senior,8.6,2
+990,54,Finance,In-Office,46,6.1,19,Bachelor,Female,Mid,2.0,0
+991,44,Sales,Remote,45,6.9,4,Master,Female,Entry,9.7,8
+992,36,HR,Remote,40,9.1,4,High School,Male,Mid,9.6,30
+993,54,Finance,Remote,42,4.6,19,Bachelor,Female,Mid,4.2,40
+994,46,Sales,In-Office,47,3.9,14,Master,Male,Senior,1.6,25
+995,38,HR,Remote,40,1.1,17,PhD,Male,Mid,2.5,16
+996,54,Marketing,In-Office,41,8.4,14,Bachelor,Male,Entry,9.9,33
+997,23,Sales,Remote,35,8.2,1,Bachelor,Male,Mid,6.1,8
+998,35,Marketing,Remote,38,1.9,12,Bachelor,Female,Mid,4.2,50
+999,61,Marketing,Remote,45,6.2,3,Master,Male,Entry,3.6,12
+1000,61,IT,Remote,33,5.2,9,Master,Male,Mid,3.3,4

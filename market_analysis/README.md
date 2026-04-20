@@ -4,7 +4,6 @@
 
 This project analyses historical stock market data across multiple sectors to evaluate company performance and risk. Using MySQL and Python, key financial metrics such as daily returns and volatility are computed and visualised to explore the relationship between risk and return.
 
----
 
 ## Objective
 
@@ -14,7 +13,6 @@ The objective of this project is to:
 * Measure risk using volatility
 * Analyse the relationship between risk and return
 
----
 
 ## Data Source
 
@@ -25,7 +23,6 @@ The objective of this project is to:
   * Open, High, Low, Close prices
   * Volume
 
----
 
 ## Methodology
 
@@ -55,7 +52,6 @@ A relational schema was used:
 * Data retrieved using SQLAlchemy
 * Visualised using `matplotlib`
 
----
 
 ## Key Metrics
 
@@ -63,7 +59,6 @@ A relational schema was used:
 * **Average Daily Return (%)** → overall performance
 * **Volatility (%)** → measure of risk
 
----
 
 ## Visualisations
 
@@ -75,7 +70,6 @@ A relational schema was used:
 
 ![Risk vs Return](outputs/charts/risk_vs_return.png)
 
----
 
 ## Key Findings
 
@@ -83,7 +77,6 @@ A relational schema was used:
 * There is a clear trade-off between risk and return
 * Some companies offer more balanced performance with moderate returns and lower volatility
 
----
 
 ## Limitations
 
@@ -91,7 +84,6 @@ A relational schema was used:
 * Transaction costs and external market factors are not considered
 * Historical data does not guarantee future performance
 
----
 
 ## Project Structure
 
@@ -109,7 +101,6 @@ market_analysis/
 └── README.md
 ```
 
----
 
 ## Tools & Technologies
 
@@ -119,7 +110,6 @@ market_analysis/
 * matplotlib
 * SQLAlchemy
 
----
 
 ## Conclusion
 

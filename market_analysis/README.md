@@ -1,12 +1,12 @@
-# 📊 Sector-Based Stock Market Analysis (MySQL + Python)
+# Sector-Based Stock Market Analysis (MySQL + Python)
 
-## 📌 Overview
+## Overview
 
 This project analyses historical stock market data across multiple sectors to evaluate company performance and risk. Using MySQL and Python, key financial metrics such as daily returns and volatility are computed and visualised to explore the relationship between risk and return.
 
 ---
 
-## 🎯 Objective
+## Objective
 
 The objective of this project is to:
 
@@ -16,7 +16,7 @@ The objective of this project is to:
 
 ---
 
-## 🗂️ Data Source
+## Data Source
 
 * Historical stock data obtained from **Stooq**
 * Data includes:
@@ -27,7 +27,7 @@ The objective of this project is to:
 
 ---
 
-## ⚙️ Methodology
+## Methodology
 
 ### 1. Data Cleaning (Python)
 
@@ -57,7 +57,7 @@ A relational schema was used:
 
 ---
 
-## 📊 Key Metrics
+## Key Metrics
 
 * **Daily Return (%)** → percentage change in price
 * **Average Daily Return (%)** → overall performance
@@ -65,7 +65,7 @@ A relational schema was used:
 
 ---
 
-## 📈 Visualisations
+## Visualisations
 
 ### Average Daily Return by Company
 
@@ -77,7 +77,7 @@ A relational schema was used:
 
 ---
 
-## 🔍 Key Findings
+## Key Findings
 
 * Companies with higher returns often exhibit higher volatility
 * There is a clear trade-off between risk and return
@@ -85,7 +85,7 @@ A relational schema was used:
 
 ---
 
-## ⚠️ Limitations
+## Limitations
 
 * Analysis is based only on closing prices (no dividends included)
 * Transaction costs and external market factors are not considered
@@ -93,7 +93,7 @@ A relational schema was used:
 
 ---
 
-## 🧱 Project Structure
+## Project Structure
 
 ```
 market_analysis/
@@ -111,7 +111,7 @@ market_analysis/
 
 ---
 
-## 🚀 Tools & Technologies
+## Tools & Technologies
 
 * MySQL
 * Python
@@ -121,6 +121,6 @@ market_analysis/
 
 ---
 
-## 📌 Conclusion
+## Conclusion
 
 This project demonstrates how SQL and Python can be combined to analyse financial data and evaluate the relationship between risk and return. The findings highlight the importance of considering both performance and volatility when analysing investment opportunities.

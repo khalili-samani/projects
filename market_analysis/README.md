@@ -96,7 +96,7 @@ A relational schema was used:
 ## 🧱 Project Structure
 
 ```
-market_project/
+market_analysis/
 │
 ├── data_raw/
 ├── data_cleaned/

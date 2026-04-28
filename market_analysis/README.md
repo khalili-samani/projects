@@ -93,11 +93,12 @@ market_analysis/
 ├── data_raw/
 ├── data_cleaned/
 ├── sql/
-├── python/
+├── scripts/
 ├── outputs/
 │   └── charts/
 │       ├── avg_daily_return.png
 │       └── risk_vs_return.png
+├── requirements.txt
 └── README.md
 ```
 

@@ -83,6 +83,7 @@ A relational schema was used:
 * Analysis is based only on closing prices (no dividends included)
 * Transaction costs and external market factors are not considered
 * Historical data does not guarantee future performance
+* External macroeconomic factors are not incorporated
 
 
 ## Project Structure
@@ -112,6 +113,32 @@ market_analysis/
 * SQLAlchemy
 
 
+## How to Run
+
+1. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+2. Load data into MySQL using the provided SQL scripts
+
+3. Run Python scripts for analysis and visualisation
+
+---
+
 ## Conclusion
 
-This project demonstrates how SQL and Python can be combined to analyse financial data and evaluate the relationship between risk and return. The findings highlight the importance of considering both performance and volatility when analysing investment opportunities.
+This project demonstrates how SQL and Python can be combined to analyse financial data and evaluate the relationship between risk and return. The results reinforce the importance of considering both performance and volatility when making investment decisions.
+
+---
+
+## Future Improvements
+
+* Incorporate dividend-adjusted returns
+* Extend analysis to more companies and sectors
+* Include time-series analysis and rolling metrics
+* Integrate additional data sources for broader market context
+* Build an interactive dashboard for exploration
+
+---

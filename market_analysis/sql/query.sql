@@ -131,7 +131,7 @@ ORDER BY total_return_pct DESC;
 CREATE OR REPLACE VIEW vw_company_summary AS
 SELECT
     c.company_id,
-    c.company_name,vw_company_summarycompany_id
+    c.company_name,
     s.sector_name,
     ROUND(AVG(v.daily_return_pct), 4) AS avg_daily_return_pct,
     ROUND(STDDEV(v.daily_return_pct), 4) AS volatility_pct

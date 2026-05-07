@@ -1,7 +1,6 @@
-pandas
-numpy
-matplotlib
-sqlalchemy
-pymysql
-requests
-certifi
+pandas>=2.0.0
+matplotlib>=3.7.0
+sqlalchemy>=2.0.0
+pymysql>=1.1.0
+requests>=2.31.0
+certifi>=2024.1.1

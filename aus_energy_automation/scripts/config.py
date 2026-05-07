@@ -1,18 +1,54 @@
-from pathlib import Path
+"""
+config.py
+---------
+Centralised configuration for the Australian Energy Market pipeline.
+
+All runtime settings are sourced from environment variables where sensitive,
+with safe defaults for non-sensitive values. Modify this file to extend
+regions, paths, or database targets.
+"""
+
 import os
-import urllib.parse
+from pathlib import Path
 
-BASE_URL = "https://www.aemo.com.au/aemo/data/nem/priceanddemand"
-REGIONS = ["NSW1", "QLD1", "VIC1"]
+# ---------------------------------------------------------------------------
+# AEMO data source
+# ---------------------------------------------------------------------------
 
-RAW_DIR = Path("data/raw")
-PROCESSED_DIR = Path("data/processed")
-CHARTS_DIR = Path("outputs/charts")
+BASE_URL: str = "https://www.aemo.com.au/aemo/data/nem/priceanddemand"
 
-MYSQL_USER = os.getenv("MYSQL_USER", "root")
-RAW_PASSWORD = os.getenv("MYSQL_PASSWORD", "your_password")
-MYSQL_PASSWORD = urllib.parse.quote_plus(RAW_PASSWORD)
-MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
-MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "aus_energy_automation")
+REGIONS: list[str] = ["NSW1", "QLD1", "VIC1"]
 
-TABLE_NAME = "fact_nem_price_demand"
+# ---------------------------------------------------------------------------
+# Local filesystem paths
+# ---------------------------------------------------------------------------
+
+BASE_DIR: Path = Path(__file__).resolve().parent.parent
+
+RAW_DIR: Path = BASE_DIR / "data" / "raw"
+PROCESSED_DIR: Path = BASE_DIR / "data" / "processed"
+CHARTS_DIR: Path = BASE_DIR / "outputs" / "charts"
+
+# ---------------------------------------------------------------------------
+# MySQL connection (sourced from environment variables)
+# ---------------------------------------------------------------------------
+
+MYSQL_USER: str = os.environ.get("MYSQL_USER", "root")
+MYSQL_PASSWORD: str | None = os.environ.get("MYSQL_PASSWORD")
+MYSQL_HOST: str = os.environ.get("MYSQL_HOST", "localhost")
+MYSQL_DATABASE: str = os.environ.get("MYSQL_DATABASE", "aus_energy_automation")
+
+# ---------------------------------------------------------------------------
+# Database objects
+# ---------------------------------------------------------------------------
+
+TABLE_NAME: str = "fact_nem_price_demand"
+VIEW_NAME: str = "vw_nem_daily_summary"
+
+# ---------------------------------------------------------------------------
+# Chart settings
+# ---------------------------------------------------------------------------
+
+CHART_DPI: int = 300
+HISTOGRAM_BINS: int = 40
+PRICE_SPIKE_THRESHOLD_AUD: float = 300.0  # AUD/MWh — used for spike flagging

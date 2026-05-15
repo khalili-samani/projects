@@ -12,7 +12,7 @@ Data covers **752 trading days from March 2023 to February 2026** across 12 comp
 
 ![Risk vs Return](outputs/charts/risk_vs_return.png)
 
-NVDA stands out with the highest average daily return and the highest volatility — consistent with its position as a high-growth AI-driven stock over this period. Healthcare stocks cluster at the lower-risk, lower-return end of the spectrum. Finance stocks show moderate volatility with positive returns, while energy companies sit in the mid-range on both axes.
+Nvidia stands out with the highest average daily return and the highest volatility — consistent with its position as a high-growth AI-driven stock over this period. Healthcare stocks cluster at the lower-risk, lower-return end of the spectrum. Finance stocks show moderate volatility with positive returns, while energy companies sit in the mid-range on both axes.
 
 ---
 
@@ -20,7 +20,7 @@ NVDA stands out with the highest average daily return and the highest volatility
 
 ![Average Daily Return](outputs/charts/avg_daily_return_by_company.png)
 
-NVDA leads significantly, followed by JPM and GS. PFE is the only company with a negative average daily return over the analysis period, reflecting its post-COVID earnings headwinds. The spread across companies highlights meaningful differentiation in performance even within the same sector.
+Nvidia leads significantly, followed by JPM and GS. PFE is the only company with a negative average daily return over the analysis period, reflecting its post-COVID earnings headwinds. The spread across companies highlights meaningful differentiation in performance even within the same sector.
 
 ---
 

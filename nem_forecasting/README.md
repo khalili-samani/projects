@@ -282,7 +282,3 @@ Regions without a mapped BOM station fall back to Melbourne monthly climate aver
 - **Bureau of Meteorology** — [bom.gov.au](https://www.bom.gov.au) (open access JSON observations)
 
 ---
-
-## Licence
-
-MIT

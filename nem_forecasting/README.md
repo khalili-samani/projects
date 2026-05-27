@@ -1,4 +1,4 @@
-# 🔌 Australian NEM Price Forecasting
+# Australian NEM Price Forecasting
 
 An end-to-end machine learning pipeline that ingests live and historical data from the Australian Energy Market Operator (AEMO) and the Bureau of Meteorology (BOM), engineers leakage-safe features, and trains an XGBoost model to forecast National Electricity Market (NEM) dispatch prices 30 minutes ahead. A Streamlit dashboard lets you explore historical market data and run live what-if scenarios.
 

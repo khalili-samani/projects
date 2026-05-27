@@ -16,6 +16,7 @@ An end-to-end machine learning pipeline that ingests live and historical data fr
 - [Feature Engineering](#feature-engineering)
 - [Model](#model)
 - [Extending to Other Regions](#extending-to-other-regions)
+- [Next Steps](#next-steps)
 - [Known Limitations](#known-limitations)
 
 ---
@@ -129,11 +130,11 @@ All configuration lives in `src/config.py` and is driven by environment variable
 | `DB_HOST` | `localhost` | MySQL host |
 | `DB_PORT` | `3306` | MySQL port |
 | `DB_USER` | `root` | MySQL user |
-| `DB_PASSWORD` | _(empty)_ | MySQL password |
+| `DB_PASSWORD` | _(empty)_ | MySQL password (special characters are handled safely) |
 | `DB_NAME` | `nem_forecasting` | Database name |
 | `AEMO_ARCHIVE_MONTHS` | Last 3 completed months | Comma-separated YYYYMM list, e.g. `202602,202603,202604` |
 | `AEMO_ARCHIVE_DAYS_PER_MONTH` | `30` | Days to sample per archive month |
-| `WEATHER_MERGE_TOLERANCE` | `24h` | Max gap between NEM and BOM timestamps |
+| `WEATHER_MERGE_TOLERANCE` | `24h` | Max gap between NEM and BOM timestamps for alignment |
 
 ### Key constants in `config.py`
 
@@ -154,7 +155,7 @@ All configuration lives in `src/config.py` and is driven by environment variable
 python run_pipeline.py --historical
 ```
 
-This pulls the last 3 completed months of AEMO archive data (~130,000 rows) before training. The archive lives at `https://nemweb.com.au/Reports/Archive/DispatchIS_Reports/` as daily zip files, each containing 288 five-minute interval zips.
+Pulls the last 3 completed months of AEMO archive data before training. The archive lives at `https://nemweb.com.au/Reports/Archive/DispatchIS_Reports/` as daily zip files, each containing 288 five-minute interval zips (~126,000 rows across 3 months).
 
 ### Subsequent runs
 
@@ -162,14 +163,14 @@ This pulls the last 3 completed months of AEMO archive data (~130,000 rows) befo
 python run_pipeline.py
 ```
 
-Pulls the latest ~100 live dispatch files from NEMWeb CURRENT and retrains the model on the accumulated database.
+Pulls the latest live dispatch files from NEMWeb CURRENT and retrains the model on the accumulated database. Schedule this daily with Windows Task Scheduler or cron to keep the model fresh.
 
 ### Pipeline stages
 
 1. **Initialise** — creates the MySQL database and tables if they don't exist
-2. **Ingest AEMO** — downloads and parses DispatchIS zip files (archive or live)
+2. **Ingest AEMO** — downloads and parses DispatchIS zip files (archive or live). Each daily archive zip is a zip-of-zips containing one CSV per 5-minute dispatch interval
 3. **Ingest BOM** — fetches current observations from the configured BOM JSON endpoint
-4. **Clean** — filters prices to the valid dispatch range (−$1,000 to $20,000/MWh), aligns NEM and weather data via `merge_asof`, and fills any missing temperature values using Melbourne monthly climate averages
+4. **Clean** — filters prices to the valid dispatch range (−$1,000 to $20,000/MWh), aligns NEM and weather data via `merge_asof`, and fills any missing temperature with Melbourne monthly climate averages so no rows are dropped
 5. **Feature engineering** — builds lag features, rolling means, and cyclical time encodings; creates the forecast target
 6. **Train** — fits XGBoost on a chronological 70/15/15 split and saves the model bundle
 
@@ -201,7 +202,7 @@ Features are engineered in `src/feature_engineering.py`. All lags are shifted by
 | `temperature_c` | BOM air temperature at the mapped station (or Melbourne monthly mean as fallback) |
 | `hour`, `day_of_week`, `month` | Calendar features |
 | `is_weekend` | Binary weekend flag |
-| `hour_sin`, `hour_cos` | Cyclical hour encoding |
+| `hour_sin`, `hour_cos` | Cyclical hour encoding — prevents the model treating hour 23 as far from hour 0 |
 | `day_sin`, `day_cos` | Cyclical day-of-week encoding |
 | `demand_lag_1h` | Demand 30 min ago (leakage-safe) |
 | `demand_lag_24h` | Demand 24 hours ago |
@@ -210,7 +211,7 @@ Features are engineered in `src/feature_engineering.py`. All lags are shifted by
 | `demand_rolling_mean_4h` | 4-hour rolling mean of demand |
 | `price_rolling_mean_4h` | 4-hour rolling mean of price |
 
-**Target:** `target_price_mwh` — dispatch price `FORECAST_HORIZON_STEPS` intervals (30 min) in the future.
+**Target:** `target_price_mwh` — dispatch price 30 minutes in the future.
 
 ---
 
@@ -218,16 +219,18 @@ Features are engineered in `src/feature_engineering.py`. All lags are shifted by
 
 - **Algorithm:** XGBoost (`reg:squarederror`)
 - **Split:** Chronological 70 % train / 15 % validation / 15 % test — data is never shuffled
-- **Validation:** Validation set passed to `eval_set` for early stopping
+- **Validation:** Validation set passed to `eval_set` for monitoring during training
 - **Output:** A `joblib` bundle containing the trained model, feature list, target name, and hold-out metrics
 
-### Baseline results (3 months of archive data, VIC1 + 4 other regions)
+### Results (3 months of archive data · all 5 NEM regions)
 
 | Metric | Value |
 |---|---|
-| MAE | $13.19 /MWh |
-| RMSE | $23.57 /MWh |
-| R² | 0.727 |
+| MAE | $11.70 /MWh |
+| RMSE | $19.97 /MWh |
+| R² | 0.774 |
+
+The model explains ~77% of dispatch price variance on unseen data. The gap between MAE and RMSE reflects occasional larger errors during price spike events, which are rare but high-magnitude.
 
 The model bundle is loaded by the dashboard at startup and cached with `@st.cache_resource`.
 
@@ -235,7 +238,7 @@ The model bundle is loaded by the dashboard at startup and cached with `@st.cach
 
 ## Extending to Other Regions
 
-The pipeline runs across all 5 NEM regions (NSW1, QLD1, SA1, TAS1, VIC1) automatically from the AEMO data. To add real weather for additional regions:
+The pipeline ingests all 5 NEM regions (NSW1, QLD1, SA1, TAS1, VIC1) automatically from the AEMO data. To add real weather observations for additional regions:
 
 1. Find the relevant BOM station and JSON endpoint at [bom.gov.au](https://www.bom.gov.au)
 2. Add an entry to `BOM_STATIONS` in `src/config.py`:
@@ -263,16 +266,30 @@ ON DUPLICATE KEY UPDATE region_id = VALUES(region_id);
 
 4. Re-run `python run_pipeline.py --historical`.
 
-Regions without a mapped BOM station fall back to Melbourne monthly climate averages for temperature, so they still train and forecast correctly.
+Regions without a mapped BOM station fall back to Melbourne monthly climate averages, so they still train and forecast correctly — just with less precise temperature data.
+
+---
+
+## Next Steps
+
+These improvements would meaningfully increase forecast accuracy:
+
+- **Add BOM stations for all regions** — real temperature data for NSW1, QLD1, SA1, and TAS1 instead of the Melbourne climate average fallback
+- **Add renewable generation features** — solar and wind availability are strong NEM price predictors and are available from the same AEMO DispatchIS files
+- **Add interconnector flow features** — inter-regional flows influence regional prices significantly, especially for SA1 and TAS1
+- **Schedule daily retraining** — use Windows Task Scheduler or a cron job to run `python run_pipeline.py` daily so the model stays current
+- **Expand archive history** — add more months via `AEMO_ARCHIVE_MONTHS` in `.env` for a larger training set, e.g. `202601,202602,202603,202604`
+- **Hyperparameter tuning** — run an Optuna or scikit-learn grid search over `XGB_PARAMS` to squeeze out further accuracy gains
 
 ---
 
 ## Known Limitations
 
 - **Weather coverage:** Only VIC1 has a real BOM station configured. All other regions use Melbourne monthly climate means as a temperature proxy, which reduces feature accuracy for those regions.
-- **Price spikes:** Extreme price events (e.g. $15,000+/MWh during heatwaves) are rare and hard to forecast with a single-model approach. Consider adding renewable generation and interconnector flow features for better spike capture.
+- **Price spikes:** Extreme price events (e.g. $15,000+/MWh during summer heatwaves) are rare and hard to forecast with the current feature set. Renewable generation and interconnector features would help capture these.
 - **Model artefacts:** The `.joblib` file is gitignored due to size. Re-train by running the pipeline, or use Git LFS / DVC if you want to version model files.
-- **AEMO format changes:** The DispatchIS CSV parser targets `DISPATCH/PRICE` and `DISPATCH/REGIONSUM` tables. If AEMO changes the MMS export format, `_extract_dispatch_region_rows` in `data_ingestion.py` will need updating. Run `debug_aemo.py` to inspect the current format.
+- **AEMO format dependency:** The DispatchIS CSV parser targets `DISPATCH/PRICE` and `DISPATCH/REGIONSUM` tables in the MMS format. If AEMO changes the export format, `_extract_dispatch_region_rows` in `data_ingestion.py` will need updating. Run `debug_aemo.py` to inspect the current format.
+- **BOM live feed window:** BOM JSON observations only cover ~72 hours. Historical NEM rows outside this window use Melbourne climate averages for temperature, which is a reasonable seasonal proxy but less precise than real observations.
 
 ---
 

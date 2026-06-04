@@ -1,0 +1,36 @@
+# ASX Trading Agent — Python dependencies
+# Install with: pip install -r requirements.txt
+
+# Market data
+yfinance>=0.2.40
+
+# Database
+duckdb>=0.10.0
+
+# Data processing
+pandas>=2.2.0
+numpy>=1.26.0
+
+# Data validation
+pydantic>=2.6.0
+
+# Forecasting (used in Agent 2)
+scikit-learn>=1.4.0
+statsmodels>=0.14.0
+
+# LLM orchestration (used in Agent 5)
+anthropic>=0.25.0
+
+# Agent framework
+langgraph>=0.1.0
+langchain>=0.2.0
+
+# Visualisation & reporting
+matplotlib>=3.8.0
+plotly>=5.20.0
+
+# Scheduling (for daily runs)
+schedule>=1.2.0
+
+# Environment variables
+python-dotenv>=1.0.0

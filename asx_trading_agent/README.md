@@ -12,8 +12,8 @@ This project demonstrates agentic AI design, time series forecasting, and financ
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Orchestrator                      │
-│                    (LangGraph)                       │
+│                    Orchestrator                     │
+│                    (LangGraph)                      │
 └──────┬──────────┬──────────┬──────────┬─────────────┘
        │          │          │          │
        ▼          ▼          ▼          ▼

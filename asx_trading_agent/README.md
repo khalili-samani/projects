@@ -4,7 +4,7 @@ A multi-agent AI system built in Python that fetches ASX market data, forecasts 
 
 This project demonstrates agentic AI design, time series forecasting, and financial decision-making applied to Australian equities.
 
-> **Status:** In active development. Agents 1 and 2 complete.
+> **Status:** In active development. Agents 1, 2 and 3 complete.
 
 ---
 
@@ -36,8 +36,8 @@ Each agent has a single responsibility and exposes a `run()` method. The orchest
 |---|-------|--------|----------------|
 | 1 | Market Data Agent | Complete | Fetch and store ASX price, fundamental, and macro data |
 | 2 | Forecasting Agent | Complete | Predict next-day returns for each watchlist stock |
-| 3 | Risk Agent | Next | Calculate VaR, drawdown, beta, and position sizing |
-| 4 | Trading Strategy Agent | Planned | Generate buy/hold/reduce signals from forecast + risk |
+| 3 | Risk Agent | Complete | Calculate VaR, drawdown, beta, and sector concentration |
+| 4 | Trading Strategy Agent | Next | Generate final signals from forecast + risk combined |
 | 5 | Report Writer Agent | Planned | LLM-generated daily briefing |
 | — | Orchestrator | Planned | Wire all agents together with LangGraph |
 
@@ -87,6 +87,35 @@ WBC.AX    2026-06-05           -0.35%        46% 1.25%   HOLD   dist_52w_low
 CSL.AX    2026-06-05           +1.05%        12% 1.56%    BUY  asx200_return
 TLS.AX    2026-06-05           -0.09%        63% 0.82%   HOLD volatility_20d
 CBA.AX    2026-06-05           -0.70%        55% 1.36% REDUCE   volume_ratio
+```
+
+---
+
+## Agent 3: Risk Agent
+
+Takes forecasts from Agent 2 and assesses the risk profile of each stock and the overall watchlist portfolio.
+
+**What it does:**
+- Calculates historical Value at Risk (VaR) at 95% and 99% confidence — using actual return distributions rather than assuming normality
+- Measures maximum drawdown over the full price history
+- Calculates beta against the ASX 200 index
+- Derives annualised volatility and a risk-adjusted Sharpe score
+- Assesses sector concentration across the watchlist
+- Outputs a recommendation modifier (CONFIRM / DOWNGRADE / BLOCK) that the Strategy Agent uses to filter signals
+
+**Key design decisions:**
+- Historical (non-parametric) VaR — stock returns have fat tails, so assuming a normal distribution underestimates real-world risk
+- Recommendation modifier bridges risk assessment to strategy — a BUY signal with HIGH risk and low confidence gets downgraded before it reaches the Strategy Agent
+- Portfolio-level risk assessed separately from individual stocks — sector concentration is a portfolio problem, not a stock problem
+
+**Sample output:**
+```
+ticker signal predicted_ret confidence volatility  var_95 max_drawdown  beta risk_level modifier sharpe_score
+CSL.AX    BUY        +1.05%        12%     18.2%  -1.14%      -22.31%  0.15        LOW  DOWNGRADE        0.021
+TLS.AX   HOLD        -0.09%        63%     14.8%  -0.93%      -18.44%  0.13        LOW    CONFIRM       -0.027
+CBA.AX REDUCE        -0.70%        55%     22.1%  -1.38%      -28.54%  0.83     MEDIUM    CONFIRM       -0.142
+
+Portfolio: avg beta 0.59 | avg volatility 24.3% | sector concentration HIGH (Financials 40%)
 ```
 
 ---
@@ -145,16 +174,19 @@ cp .env.example .env
 
 ## Running the Agents
 
-**Agent 1 — fetch and store market data:**
+Agents must be run in order — each depends on the output of the previous.
+
 ```bash
+# Agent 1 — fetch and store market data
 python agents/market_data_agent.py
-```
 
-**Agent 2 — forecast next-day returns:**
-```bash
+# Agent 2 — forecast next-day returns
 python agents/forecasting_agent.py
+
+# Agent 3 — assess risk (also re-runs Agent 2 internally)
+python agents/risk_agent.py
 ```
 
-Agent 1 must be run before Agent 2. The database file `asx_market_data.db` is created automatically on first run.
+The database file `asx_market_data.db` is created automatically on first run.
 
 ---

@@ -4,7 +4,7 @@ A multi-agent AI system built in Python that fetches ASX market data, forecasts 
 
 This project demonstrates agentic AI design, time series forecasting, and financial decision-making applied to Australian equities.
 
-> **Status:** In active development. Agents 1, 2 and 3 complete.
+> **Status:** In active development. Agents 1, 2, 3 and 4 complete.
 
 ---
 
@@ -37,8 +37,8 @@ Each agent has a single responsibility and exposes a `run()` method. The orchest
 | 1 | Market Data Agent | Complete | Fetch and store ASX price, fundamental, and macro data |
 | 2 | Forecasting Agent | Complete | Predict next-day returns for each watchlist stock |
 | 3 | Risk Agent | Complete | Calculate VaR, drawdown, beta, and sector concentration |
-| 4 | Trading Strategy Agent | Next | Generate final signals from forecast + risk combined |
-| 5 | Report Writer Agent | Planned | LLM-generated daily briefing |
+| 4 | Trading Strategy Agent | Complete | Generate final signals from forecast + risk combined |
+| 5 | Report Writer Agent | Next | LLM-generated daily briefing |
 | — | Orchestrator | Planned | Wire all agents together with LangGraph |
 
 ---
@@ -120,6 +120,46 @@ Portfolio: avg beta 0.59 | avg volatility 24.3% | sector concentration HIGH (Fin
 
 ---
 
+## Agent 4: Trading Strategy Agent
+
+Takes forecasts from Agent 2 and risk assessments from Agent 3 and produces a final actionable recommendation for each stock.
+
+**What it does:**
+- Resolves forecast signals against risk modifiers using a signal resolution table to produce a final BUY / HOLD / REDUCE decision
+- Sizes positions based on confidence and risk level — high-confidence, low-risk signals get larger allocations
+- Ranks all recommendations by Sharpe score so the highest-opportunity signals are prioritised
+- Derives an overall market bias (BULLISH / NEUTRAL / BEARISH) from the balance of signals across the watchlist
+- Generates a plain-English rationale for each recommendation, passed directly to the Report Writer
+
+**Signal resolution logic:**
+
+| Forecast | Risk Modifier | Final Signal |
+|----------|--------------|--------------|
+| BUY | CONFIRM | BUY |
+| BUY | DOWNGRADE | HOLD |
+| BUY | BLOCK | HOLD |
+| REDUCE | CONFIRM | REDUCE |
+| REDUCE | DOWNGRADE | HOLD |
+| HOLD | anything | HOLD |
+
+**Key design decisions:**
+- Resolution table over if/else logic — clean, readable, easy to modify and explain
+- Conservative by default — ambiguous signals resolve to HOLD rather than a marginal BUY or REDUCE
+- Position sizing is volatility-scaled — higher-risk stocks receive smaller allocations to equalise risk contribution across the portfolio
+
+**Sample output:**
+```
+ticker forecast_signal modifier final_signal predicted_ret confidence risk_level position sharpe_score
+CSL.AX            BUY DOWNGRADE         HOLD        +1.05%        12%        LOW     NONE        0.021
+TLS.AX           HOLD   CONFIRM         HOLD        -0.09%        63%        LOW     NONE       -0.027
+CBA.AX         REDUCE   CONFIRM       REDUCE        -0.70%        55%     MEDIUM  REDUCED       -0.142
+
+Market bias: BEARISH
+Actionable: CBA.AX REDUCE | Predicted -0.70% (55% confidence). Primary driver: unusual trading volume.
+```
+
+---
+
 ## Watchlist
 
 | Ticker | Company | Sector |
@@ -185,6 +225,9 @@ python agents/forecasting_agent.py
 
 # Agent 3 — assess risk (also re-runs Agent 2 internally)
 python agents/risk_agent.py
+
+# Agent 4 — generate final recommendations (also re-runs Agents 2 and 3 internally)
+python agents/strategy_agent.py
 ```
 
 The database file `asx_market_data.db` is created automatically on first run.

@@ -4,16 +4,16 @@ A multi-agent AI system built in Python that fetches ASX market data, forecasts 
 
 This project demonstrates agentic AI design, time series forecasting, and financial decision-making applied to Australian equities.
 
-> **Status:** In active development. Agents 1, 2, 3 and 4 complete.
+> **Status:** In active development. Agents 1–5 complete. Orchestrator next.
 
 ---
 
-## Planned Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Orchestrator                     │
-│                    (LangGraph)                      │
+│                    Orchestrator                      │
+│                    (LangGraph)                       │
 └──────┬──────────┬──────────┬──────────┬─────────────┘
        │          │          │          │
        ▼          ▼          ▼          ▼
@@ -38,8 +38,8 @@ Each agent has a single responsibility and exposes a `run()` method. The orchest
 | 2 | Forecasting Agent | Complete | Predict next-day returns for each watchlist stock |
 | 3 | Risk Agent | Complete | Calculate VaR, drawdown, beta, and sector concentration |
 | 4 | Trading Strategy Agent | Complete | Generate final signals from forecast + risk combined |
-| 5 | Report Writer Agent | Next | LLM-generated daily briefing |
-| — | Orchestrator | Planned | Wire all agents together with LangGraph |
+| 5 | Report Writer Agent | Complete | LLM-generated daily briefing via Google Gemini |
+| — | Orchestrator | Next | Wire all agents together with LangGraph |
 
 ---
 
@@ -83,10 +83,10 @@ Reads OHLCV and macro data from the database, engineers features, trains a model
 **Sample output:**
 ```
 ticker forecast_date predicted_return confidence   mae signal    top_feature
-WBC.AX    2026-06-05           -0.35%        46% 1.25%   HOLD   dist_52w_low
-CSL.AX    2026-06-05           +1.05%        12% 1.56%    BUY  asx200_return
-TLS.AX    2026-06-05           -0.09%        63% 0.82%   HOLD volatility_20d
-CBA.AX    2026-06-05           -0.70%        55% 1.36% REDUCE   volume_ratio
+WBC.AX    2026-06-11           +1.15%        58% 1.29%    BUY   dist_52w_low
+TLS.AX    2026-06-11           +1.07%        69% 0.89%    BUY volatility_20d
+ANZ.AX    2026-06-11           +0.61%        65% 1.10%    BUY   dist_52w_low
+CBA.AX    2026-06-11           +0.17%        53% 1.31%   HOLD   dist_52w_low
 ```
 
 ---
@@ -110,12 +110,12 @@ Takes forecasts from Agent 2 and assesses the risk profile of each stock and the
 
 **Sample output:**
 ```
-ticker signal predicted_ret confidence volatility  var_95 max_drawdown  beta risk_level modifier sharpe_score
-CSL.AX    BUY        +1.05%        12%     18.2%  -1.14%      -22.31%  0.15        LOW  DOWNGRADE        0.021
-TLS.AX   HOLD        -0.09%        63%     14.8%  -0.93%      -18.44%  0.13        LOW    CONFIRM       -0.027
-CBA.AX REDUCE        -0.70%        55%     22.1%  -1.38%      -28.54%  0.83     MEDIUM    CONFIRM       -0.142
+ticker vol    var_95 max_drawdown  beta risk_level modifier
+WBC.AX 21.5% -2.15%      -28.3%  -0.07     MEDIUM  CONFIRM
+TLS.AX 13.2% -1.11%      -18.4%  -0.05        LOW  CONFIRM
+CSL.AX 38.1% -2.50%      -31.2%  -0.40       HIGH DOWNGRADE
 
-Portfolio: avg beta 0.59 | avg volatility 24.3% | sector concentration HIGH (Financials 40%)
+Portfolio: avg beta -0.06 | avg volatility 24.9% | sector concentration MEDIUM (Financials 40%)
 ```
 
 ---
@@ -149,13 +149,47 @@ Takes forecasts from Agent 2 and risk assessments from Agent 3 and produces a fi
 
 **Sample output:**
 ```
-ticker forecast_signal modifier final_signal predicted_ret confidence risk_level position sharpe_score
-CSL.AX            BUY DOWNGRADE         HOLD        +1.05%        12%        LOW     NONE        0.021
-TLS.AX           HOLD   CONFIRM         HOLD        -0.09%        63%        LOW     NONE       -0.027
-CBA.AX         REDUCE   CONFIRM       REDUCE        -0.70%        55%     MEDIUM  REDUCED       -0.142
+ticker forecast_signal modifier final_signal predicted_ret confidence risk_level position
+TLS.AX            BUY  CONFIRM          BUY        +1.07%        69%        LOW     FULL
+WBC.AX            BUY  CONFIRM          BUY        +1.15%        58%     MEDIUM  REDUCED
+ANZ.AX            BUY  CONFIRM          BUY        +0.61%        65%     MEDIUM  REDUCED
+CSL.AX            BUY DOWNGRADE        HOLD        +0.88%        26%       HIGH     NONE
 
-Market bias: BEARISH
-Actionable: CBA.AX REDUCE | Predicted -0.70% (55% confidence). Primary driver: unusual trading volume.
+Market bias: NEUTRAL | BUY: 4 | HOLD: 6 | REDUCE: 0
+```
+
+---
+
+## Agent 5: Report Writer Agent
+
+Takes the full output of all four upstream agents and generates a professional daily trading briefing using an LLM.
+
+**What it does:**
+- Assembles macro context, risk summary, watchlist recommendations, and actionable signals into a structured prompt
+- Calls Google Gemini to generate a narrative daily briefing
+- Saves the report as a markdown file in the `reports/` folder, named by date
+- LLM provider is swappable — comments in the code show how to switch to Claude or Groq
+
+**Key design decisions:**
+- Structured prompt with explicit section headings — produces consistent output across runs
+- All data passed to the LLM comes from upstream agents — the LLM writes, it doesn't decide
+- Mandatory disclaimer appended to every report
+
+**Sample output:**
+```
+ASX MORNING BRIEF — 2026-06-11
+
+MACRO OVERVIEW
+The ASX 200 opened lower, down 0.24% to 8604.2, alongside a 0.25% depreciation
+in AUD/USD. Gold fell sharply by 3.56% while crude oil surged 2.07%...
+
+ACTIONABLE RECOMMENDATIONS
+TLS.AX (BUY): Predicted +1.07% (69% confidence). Low volatility of 13.2% makes
+this a low-beta anchor for the portfolio. FULL position recommended...
+
+DISCLAIMER
+This report is generated by an automated system for educational purposes only
+and does not constitute financial advice.
 ```
 
 ---
@@ -186,8 +220,8 @@ Actionable: CBA.AX REDUCE | Predicted -0.70% (55% confidence). Primary driver: u
 | Data processing | `pandas`, `numpy` |
 | Data validation | `pydantic` |
 | Forecasting | `scikit-learn` |
-| LLM orchestration (Agent 5) | TBD |
-| Agent framework | `langgraph` |
+| LLM | `google-genai` (Gemini 2.5 Flash Lite) |
+| Agent framework | `langgraph` (orchestrator) |
 
 ---
 
@@ -207,7 +241,7 @@ pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# LLM API key required for Agent 5 only — not needed yet
+# Add your Gemini API key — free at aistudio.google.com
 ```
 
 ---
@@ -228,8 +262,12 @@ python agents/risk_agent.py
 
 # Agent 4 — generate final recommendations (also re-runs Agents 2 and 3 internally)
 python agents/strategy_agent.py
+
+# Agent 5 — generate daily briefing (also re-runs Agents 2, 3 and 4 internally)
+python agents/report_writer_agent.py
 ```
 
 The database file `asx_market_data.db` is created automatically on first run.
+Reports are saved to the `reports/` folder as `asx_brief_YYYYMMDD.md`.
 
 ---

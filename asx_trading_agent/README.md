@@ -4,7 +4,7 @@ A multi-agent AI system built in Python that fetches ASX market data, forecasts 
 
 This project demonstrates agentic AI design, time series forecasting, and financial decision-making applied to Australian equities.
 
-> **Status:** In active development. Agents 1–5 complete. Orchestrator next.
+> **Status:** Complete. All five agents and the orchestrator are built and working.
 
 ---
 
@@ -39,7 +39,7 @@ Each agent has a single responsibility and exposes a `run()` method. The orchest
 | 3 | Risk Agent | Complete | Calculate VaR, drawdown, beta, and sector concentration |
 | 4 | Trading Strategy Agent | Complete | Generate final signals from forecast + risk combined |
 | 5 | Report Writer Agent | Complete | LLM-generated daily briefing via Google Gemini |
-| — | Orchestrator | Next | Wire all agents together with LangGraph |
+| — | Orchestrator | Complete | LangGraph pipeline wiring all agents with error handling and scheduling |
 
 ---
 
@@ -267,7 +267,48 @@ python agents/strategy_agent.py
 python agents/report_writer_agent.py
 ```
 
+Or run the full pipeline via the orchestrator (recommended):
+
+```bash
+# Run once now
+python orchestrator.py --mode run
+
+# Run automatically every day at 7am
+python orchestrator.py --mode schedule
+```
+
 The database file `asx_market_data.db` is created automatically on first run.
 Reports are saved to the `reports/` folder as `asx_brief_YYYYMMDD.md`.
+
+---
+
+## Orchestrator
+
+Wires all five agents into a single LangGraph pipeline with conditional routing, shared state, and daily scheduling.
+
+**What it does:**
+- Defines the pipeline as a directed graph — each agent is a node, each handoff is an edge
+- Passes a shared `AgentState` between agents so each one reads from and writes to a single object
+- Routes to an error handler if any agent fails rather than crashing the whole run
+- Logs a full summary at the end of every run — what succeeded, what failed, where the report was saved
+- Schedules the pipeline at 7am AEST every day so the report is ready before the ASX opens at 10am
+
+**Why LangGraph over a plain script:**
+
+| Plain script | LangGraph graph |
+|---|---|
+| Crashes if any step fails | Routes to error handler, logs what went wrong |
+| Re-runs upstream agents redundantly | Passes outputs through shared state |
+| No visibility into pipeline state | Each node's output is inspectable |
+| Hard to extend with new agents | Add a node and an edge |
+
+**Two run modes:**
+```bash
+# Run once immediately
+python orchestrator.py --mode run
+
+# Run daily at 7am (leave terminal open or use Task Scheduler)
+python orchestrator.py --mode schedule
+```
 
 ---

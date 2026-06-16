@@ -24,7 +24,7 @@ Anyone working with real Australian property data — scrapes from Domain.com.au
 
 ```bash
 pip install numpy pandas
-python generate_messy_housing_data.py
+python messy_data_generator.py
 ```
 
 You'll be asked three questions:

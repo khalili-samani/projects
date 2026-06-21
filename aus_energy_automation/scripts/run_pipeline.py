@@ -3,16 +3,6 @@ run_pipeline.py
 ---------------
 Orchestrates the end-to-end NEM price and demand pipeline.
 
-Prompts the user for a target year and month, then runs each pipeline step
-in sequence. Any step failure stops the pipeline immediately with a clear
-error message — no partial or inconsistent state is left in the database.
-
-Steps:
-    1. fetch_energy.py  — download raw CSVs from AEMO
-    2. clean_energy.py  — standardise and validate raw data
-    3. load_energy.py   — load processed data into MySQL
-    4. analyse_energy.py — generate analytical charts
-
 Usage:
     python scripts/run_pipeline.py
 """
@@ -27,6 +17,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
 logger = logging.getLogger(__name__)
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -40,14 +31,6 @@ PIPELINE_STEPS: list[str] = [
 
 
 def get_year_month() -> str:
-    """Prompt the user for a year and month and return a YYYYMM string.
-
-    Returns:
-        Validated period string in YYYYMM format, e.g. "202603".
-
-    Raises:
-        ValueError: If the year or month input is invalid.
-    """
     year = input("Enter year (e.g. 2026): ").strip()
     month = input("Enter month (e.g. 03): ").strip()
 
@@ -58,26 +41,17 @@ def get_year_month() -> str:
         raise ValueError(f"Invalid month '{month}' — must be numeric, e.g. 03.")
 
     month_int = int(month)
+
     if not 1 <= month_int <= 12:
-        raise ValueError(
-            f"Invalid month '{month}' — must be between 1 and 12."
-        )
+        raise ValueError(f"Invalid month '{month}' — must be between 1 and 12.")
 
     return f"{year}{month_int:02d}"
 
 
 def run_step(script_name: str, year_month: str) -> None:
-    """Execute a single pipeline script as a subprocess.
-
-    Args:
-        script_name: Filename of the script within the scripts directory.
-        year_month: Period argument passed to the script.
-
-    Raises:
-        RuntimeError: If the script exits with a non-zero return code.
-    """
     script_path = SCRIPTS_DIR / script_name
-    logger.info("Running: %s %s", script_name, year_month)
+
+    logger.info("Running: %s %s", script_path, year_month)
 
     result = subprocess.run(
         [sys.executable, str(script_path), year_month],
@@ -86,13 +60,12 @@ def run_step(script_name: str, year_month: str) -> None:
 
     if result.returncode != 0:
         raise RuntimeError(
-            f"Pipeline failed at step: {script_name} "
+            f"Pipeline failed at: {script_path} "
             f"(exit code {result.returncode})"
         )
 
 
 def main() -> None:
-    """Run the full pipeline for a user-specified period."""
     print("\n── Australian Energy Market Pipeline ──\n")
 
     try:

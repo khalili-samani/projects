@@ -1,99 +1,71 @@
 """
-Report Writer Agent
-===================
-Responsibility: Take the outputs of all four previous agents and generate
-a professional daily trading briefing using an LLM.
+report_writer_agent.py
+----------------------
+Generates a daily ASX market briefing using structured outputs from the
+forecasting, risk and strategy agents.
 
-Design decisions:
-- Google Gemini Flash used as the LLM (free tier, no cost to run daily)
-- Swappable LLM provider — see _call_llm() to switch to Claude or others
-- Prompt structured with clear sections so the LLM produces consistent output
-- Macro context fetched directly from the database for freshness
-- Report saved as both .txt and .md for flexibility
-- Disclaimer always appended — this is not financial advice
+The LLM writes the report, but it does not make the trading decision.
+All forecasts, risk metrics and recommendations are produced upstream.
 """
 
 import logging
 import os
-import duckdb
-import pandas as pd
-from datetime import datetime
-from dotenv import load_dotenv
 import sys
+from datetime import datetime
+
+import duckdb
+from dotenv import load_dotenv
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from forecasting_agent import ForecastingAgent, StockForecast
-from risk_agent import RiskAgent, StockRisk, PortfolioRisk
+from forecasting_agent import ForecastingAgent
+from risk_agent import RiskAgent
 from strategy_agent import StrategyAgent, StrategyOutput, TradeRecommendation
 
 load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+    format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
 )
+
 logger = logging.getLogger("ReportWriterAgent")
 
 
-# ---------------------------------------------------------------------------
-# LLM provider — swap this function to change providers
-# ---------------------------------------------------------------------------
 def _call_llm(prompt: str) -> str:
     """
-    Call the LLM with a prompt and return the response text.
-
-    Currently configured for Google Gemini Flash (free tier).
-    Uses the new google-genai package (replaces deprecated google-generativeai).
-    Install with: pip install google-genai
-
-    To switch to Claude, replace the body of this function with:
-
-        import anthropic
-        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1500,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.content[0].text
-
-    To switch to Groq (also free):
-
-        from groq import Groq
-        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content
+    Call Gemini 2.5 Flash Lite and return the generated report text.
     """
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    if not api_key:
+        raise EnvironmentError(
+            "GEMINI_API_KEY is missing. Add it to your .env file."
+        )
+
     try:
         from google import genai
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=prompt,
-        )
-        return response.text
-    except ImportError:
+    except ImportError as exc:
         raise ImportError(
-            "google-genai not installed. "
-            "Run: pip install google-genai"
-        )
-    except Exception as e:
-        logger.error(f"LLM call failed: {e}")
-        raise
+            "google-genai is not installed. Run: pip install google-genai"
+        ) from exc
+
+    client = genai.Client(api_key=api_key)
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash-lite",
+        contents=prompt,
+    )
+
+    return response.text
 
 
-
-# ---------------------------------------------------------------------------
-# Report Writer Agent
-# ---------------------------------------------------------------------------
 class ReportWriterAgent:
     """
-    Generates a daily ASX trading briefing by prompting an LLM with
-    structured context assembled from all four upstream agents.
+    Generates a daily ASX briefing from structured strategy output.
+
+    The model is used only for communication and summarisation. It is not
+    responsible for producing forecasts, risk calculations or trading signals.
     """
 
     def __init__(
@@ -108,69 +80,96 @@ class ReportWriterAgent:
 
     def _load_macro_context(self) -> dict:
         """
-        Fetch the latest macro data points for the report header.
-        Gives the LLM real numbers to reference.
+        Fetch latest macro data points for the report.
+
+        Returns a dictionary containing exact numerical values supplied to the
+        LLM. This reduces the risk of the model inventing market movements.
         """
         macro_tickers = {
-            "^AXJO":    "ASX 200",
+            "^AXJO": "ASX 200",
             "AUDUSD=X": "AUD/USD",
-            "GC=F":     "Gold",
-            "CL=F":     "Crude Oil",
+            "GC=F": "Gold",
+            "CL=F": "Crude Oil",
         }
+
         context = {}
+
         for ticker, name in macro_tickers.items():
             try:
-                row = self.conn.execute("""
+                row = self.conn.execute(
+                    """
                     SELECT close, daily_return
                     FROM macro
                     WHERE ticker = ?
                     ORDER BY date DESC
                     LIMIT 1
-                """, (ticker,)).df()
+                    """,
+                    (ticker,),
+                ).df()
+
                 if not row.empty:
                     context[name] = {
-                        "close":  round(float(row["close"].iloc[0]), 2),
-                        "return": round(float(row["daily_return"].iloc[0]) * 100, 2),
+                        "close": round(float(row["close"].iloc[0]), 2),
+                        "return_pct": round(
+                            float(row["daily_return"].iloc[0]) * 100,
+                            2,
+                        ),
                     }
-            except Exception:
-                pass
+
+            except Exception as exc:
+                logger.warning("Could not load macro context for %s: %s", ticker, exc)
+
         return context
 
     def _format_macro_context(self, macro: dict) -> str:
-        """Format macro context into a string for the prompt."""
+        """Format macro context using exact values from the database."""
+        if not macro:
+            return "- Macro context unavailable for this run."
+
         lines = []
+
         for name, data in macro.items():
-            direction = "up" if data["return"] >= 0 else "down"
+            return_pct = data["return_pct"]
+            direction = "up" if return_pct >= 0 else "down"
+
             lines.append(
-                f"- {name}: {data['close']} ({direction} {abs(data['return'])}%)"
+                f"- {name}: close={data['close']}, "
+                f"daily_return={return_pct:+.2f}% ({direction})"
             )
+
         return "\n".join(lines)
 
     def _format_recommendations(
-        self, recommendations: list[TradeRecommendation]
+        self,
+        recommendations: list[TradeRecommendation],
     ) -> str:
-        """Format all recommendations into a structured string for the prompt."""
+        """Format all watchlist recommendations for the prompt."""
         lines = []
-        for r in recommendations:
-            emoji = {"BUY": "↑", "HOLD": "→", "REDUCE": "↓"}.get(r.final_signal, "→")
+
+        for rec in recommendations:
             lines.append(
-                f"- {r.ticker}: {emoji} {r.final_signal} | "
-                f"Predicted {r.predicted_return*100:+.2f}% | "
-                f"Confidence {r.confidence:.0%} | "
-                f"Risk {r.risk_level} | "
-                f"Position: {r.position_label}"
+                f"- {rec.ticker}: final_signal={rec.final_signal}, "
+                f"predicted_return={rec.predicted_return * 100:+.2f}%, "
+                f"confidence={rec.confidence:.0%}, "
+                f"risk_level={rec.risk_level}, "
+                f"position={rec.position_label}"
             )
+
         return "\n".join(lines)
 
     def _format_actionable(
-        self, actionable: list[TradeRecommendation]
+        self,
+        actionable: list[TradeRecommendation],
     ) -> str:
-        """Format actionable signals with full rationale for the prompt."""
+        """Format actionable BUY and REDUCE signals with rationale."""
         if not actionable:
-            return "No actionable signals today. All stocks on HOLD."
+            return "- No actionable BUY or REDUCE signals today."
+
         lines = []
-        for r in actionable:
-            lines.append(f"- {r.ticker}: {r.rationale}")
+
+        for rec in actionable:
+            lines.append(f"- {rec.ticker}: {rec.rationale}")
+
         return "\n".join(lines)
 
     def _build_prompt(
@@ -180,122 +179,118 @@ class ReportWriterAgent:
         report_date: str,
     ) -> str:
         """
-        Assemble the full prompt for the LLM.
+        Assemble the LLM prompt.
 
-        The prompt is structured to give the LLM:
-        1. A clear role and output format
-        2. All the data it needs to write the report
-        3. Explicit instructions on tone and length
-        4. A reminder that this is not financial advice
+        The prompt explicitly prevents the LLM from inventing market movements
+        or changing recommendations.
         """
-        macro_str      = self._format_macro_context(macro)
-        recs_str       = self._format_recommendations(
+        macro_str = self._format_macro_context(macro)
+        recs_str = self._format_recommendations(
             strategy_output.recommendations
         )
         actionable_str = self._format_actionable(
             strategy_output.actionable_signals
         )
 
-        prompt = f"""You are a professional financial analyst writing a daily ASX equity briefing for a portfolio management team.
+        return f"""You are a professional financial analyst writing a daily ASX equity briefing.
 
-Today's date: {report_date}
-Market bias: {strategy_output.market_bias}
+IMPORTANT RULES:
+1. Use ONLY the information supplied below.
+2. Do NOT invent market movements, prices, returns, explanations or statistics.
+3. If information is not supplied, do not mention it.
+4. Do not infer macro trends beyond the provided values.
+5. Quote numerical values exactly as provided.
+6. Do not round or modify percentages.
+7. All BUY, HOLD and REDUCE recommendations must come only from the supplied strategy output.
+8. Do not change any recommendation, confidence value, risk level or position label.
+9. The LLM is responsible for communication only, not decision-making.
 
----
-MACRO DATA (latest available):
+DATE:
+{report_date}
+
+MARKET BIAS:
+{strategy_output.market_bias}
+
+MACRO DATA:
 {macro_str}
 
----
 PORTFOLIO RISK CONTEXT:
 {strategy_output.portfolio_risk.risk_summary}
 
----
-WATCHLIST RECOMMENDATIONS ({len(strategy_output.recommendations)} stocks):
+WATCHLIST RECOMMENDATIONS:
 {recs_str}
 
----
 ACTIONABLE SIGNALS:
 {actionable_str}
 
----
-INSTRUCTIONS:
-Write a professional daily briefing using the data above. Structure it with these exact sections:
+Write a professional Markdown report using exactly these sections:
 
 1. ASX MORNING BRIEF — {report_date}
-2. MACRO OVERVIEW (2-3 sentences summarising market conditions from the macro data)
-3. PORTFOLIO RISK SNAPSHOT (2-3 sentences on the risk context)
-4. WATCHLIST SUMMARY (brief commentary on the overall signal mix and market bias)
-5. ACTIONABLE RECOMMENDATIONS (one paragraph per actionable signal, explaining the rationale clearly)
+2. MACRO OVERVIEW
+3. PORTFOLIO RISK SNAPSHOT
+4. WATCHLIST SUMMARY
+5. ACTIONABLE RECOMMENDATIONS
 6. DISCLAIMER
 
-Keep the tone professional but direct. Write for someone who understands financial markets.
-The disclaimer must state: "This report is generated by an automated system for educational purposes only and does not constitute financial advice."
+The disclaimer must state exactly:
+"This report is generated by an automated system for educational purposes only and does not constitute financial advice."
 
-If there are no actionable signals, say so clearly and explain what that means for the portfolio today."""
-
-        return prompt
+Keep the tone professional, concise and factual."""
 
     def _save_report(self, content: str, report_date: str) -> str:
         """Save the report to the output directory and return the file path."""
         filename = f"asx_brief_{report_date.replace('-', '')}.md"
         filepath = os.path.join(self.output_dir, filename)
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(content)
-        logger.info(f"  ✓ Report saved to {filepath}")
+
+        with open(filepath, "w", encoding="utf-8") as file:
+            file.write(content)
+
+        logger.info("  ✓ Report saved to %s", filepath)
         return filepath
 
     def run(self, strategy_output: StrategyOutput) -> str:
         """
-        Main entry point. Takes the Strategy Agent's output and returns
-        a path to the generated report file.
+        Generate the daily briefing and return the saved report path.
         """
+        if strategy_output is None:
+            raise ValueError("strategy_output cannot be None.")
+
         logger.info("=" * 60)
         logger.info("Report Writer Agent — starting run")
         logger.info("=" * 60)
 
         report_date = datetime.today().strftime("%Y-%m-%d")
 
-        # Load macro context
-        logger.info("Loading macro context...")
+        logger.info("Loading macro context.")
         macro = self._load_macro_context()
 
-        # Build prompt
-        logger.info("Building prompt...")
+        logger.info("Building prompt.")
         prompt = self._build_prompt(strategy_output, macro, report_date)
-        logger.info(f"  Prompt length: {len(prompt)} characters")
+        logger.info("  Prompt length: %d characters", len(prompt))
 
-        # Call LLM
-        logger.info("Calling LLM...")
+        logger.info("Calling LLM.")
         report_content = _call_llm(prompt)
         logger.info("  ✓ LLM response received")
 
-        # Save report
         filepath = self._save_report(report_content, report_date)
 
         logger.info("=" * 60)
-        logger.info(f"Report Writer complete. Report saved to: {filepath}")
+        logger.info("Report Writer complete. Report saved to: %s", filepath)
         logger.info("=" * 60)
 
         return filepath
 
-    def close(self):
+    def close(self) -> None:
         self.conn.close()
 
 
-# ---------------------------------------------------------------------------
-# Run directly for testing
-# ---------------------------------------------------------------------------
 if __name__ == "__main__":
-
-    # Check for API key before running
     if not os.getenv("GEMINI_API_KEY"):
-        print("\n⚠️  GEMINI_API_KEY not found in .env file.")
-        print("Get a free key at: aistudio.google.com")
-        print("Then add to your .env file: GEMINI_API_KEY=your_key_here\n")
+        print("\nGEMINI_API_KEY not found in .env file.")
+        print("Add it to your .env file: GEMINI_API_KEY=your_key_here\n")
         sys.exit(1)
 
-    # Run Agents 1–4
-    print("Running upstream agents...")
+    print("Running upstream agents.")
 
     forecasting_agent = ForecastingAgent()
     forecasts = forecasting_agent.run()
@@ -308,14 +303,13 @@ if __name__ == "__main__":
     strategy_agent = StrategyAgent()
     strategy_output = strategy_agent.run(forecasts, stock_risks, portfolio_risk)
 
-    # Run Agent 5
     report_agent = ReportWriterAgent()
     filepath = report_agent.run(strategy_output)
     report_agent.close()
 
-    # Print the report to terminal
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("GENERATED REPORT:")
-    print(f"{'='*60}\n")
-    with open(filepath, encoding="utf-8") as f:
-        print(f.read())
+    print(f"{'=' * 60}\n")
+
+    with open(filepath, encoding="utf-8") as file:
+        print(file.read())

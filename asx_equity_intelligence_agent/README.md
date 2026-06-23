@@ -1,314 +1,475 @@
-# ASX Equity Trading Agent
+# ASX Equity Intelligence Agent
 
-A multi-agent AI system built in Python that fetches ASX market data, forecasts equity prices, assesses portfolio risk, and generates daily trading recommendations using LLM-written briefings.
+A multi-agent AI system that automates daily ASX equity analysis by collecting market data, forecasting next-day returns, assessing portfolio risk, generating trading recommendations and producing professional market briefings.
 
-This project demonstrates agentic AI design, time series forecasting, and financial decision-making applied to Australian equities.
+The project combines data engineering, machine learning, risk analytics, agent orchestration and LLM-based reporting into a single automated workflow.
 
-> **Status:** Complete. All five agents and the orchestrator are built and working.
+---
+
+## Business Problem
+
+Market analysis often requires analysts to manually collect market data, build forecasts, evaluate risk, formulate recommendations and prepare reports for stakeholders.
+
+This process is repetitive, time-consuming and difficult to scale.
+
+This project explores how a multi-agent architecture can automate the end-to-end workflow while maintaining transparency, explainability and separation of responsibilities across analytical tasks.
+
+---
+
+## Why I Built This Project
+
+I built this project to demonstrate how traditional analytics, machine learning and generative AI can be combined into a practical decision-support system.
+
+Rather than building a simple stock prediction model, the goal was to create a complete analytical pipeline capable of:
+
+* Collecting and storing market data
+* Forecasting next-day returns
+* Assessing stock and portfolio risk
+* Generating trading recommendations
+* Producing professional market commentary
+
+The result is an automated market intelligence system that simulates the workflow used by quantitative analysts, research teams and investment professionals.
+
+---
+
+## Key Results
+
+| Area                  | Result                               |
+| --------------------- | ------------------------------------ |
+| Market Coverage       | Australian Securities Exchange (ASX) |
+| Watchlist Size        | 10 ASX-listed companies              |
+| Market Data Source    | Yahoo Finance (yfinance)             |
+| Database              | DuckDB                               |
+| Forecasting Method    | Random Forest Models                 |
+| Validation Method     | Walk-Forward Validation              |
+| Risk Metrics          | VaR, Volatility, Beta, Drawdown      |
+| Recommendation Engine | Rule-Based Strategy Layer            |
+| LLM Model             | Gemini 2.5 Flash Lite                |
+| Workflow Engine       | LangGraph                            |
+| Output                | Daily ASX Morning Brief              |
+
+---
+
+## Real Pipeline Run
+
+The system successfully completed a full end-to-end run on 23 June 2026.
+
+### Pipeline Summary
+
+| Stage                | Output                                  |
+| -------------------- | --------------------------------------- |
+| Market Data Agent    | 10 successful tickers, 0 failed tickers |
+| OHLCV Records Loaded | 2,540                                   |
+| Forecasting Agent    | 10 forecasts generated                  |
+| Risk Agent           | 10 stocks assessed                      |
+| Strategy Agent       | 1 BUY, 8 HOLD, 1 REDUCE                 |
+| Market Bias          | NEUTRAL                                 |
+| Report Writer Agent  | Report generated successfully           |
+
+### Pipeline Execution
+
+![Pipeline Execution](screenshots/pipeline_execution.png)
+
+The pipeline successfully collected market data, generated forecasts, assessed portfolio risk, produced trading recommendations and generated a professional market briefing.
+
+---
+
+## Real Generated Report Example
+
+The following output was generated automatically by the system on 23 June 2026.
+
+### Macro Overview
+
+| Market Indicator |   Close | Daily Return |
+| ---------------- | ------: | -----------: |
+| ASX 200          | 8,816.1 |       -0.14% |
+| AUD/USD          |    0.70 |       -0.15% |
+| Gold             | 4,173.3 |       -1.20% |
+| Crude Oil        |   74.11 |       -3.25% |
+
+### Portfolio Risk Snapshot
+
+| Metric                        |                    Value |
+| ----------------------------- | -----------------------: |
+| Average Beta                  |                     0.84 |
+| Average Annualised Volatility |                    25.0% |
+| Average 1-Day VaR (95%)       |                   -2.28% |
+| Largest Sector Exposure       | Financial Services (40%) |
+| Concentration Risk            |                   MEDIUM |
+
+### Actionable Recommendations
+
+| Ticker | Signal | Predicted Return | Confidence | Risk Level | Position Size |
+| ------ | ------ | ---------------: | ---------: | ---------- | ------------- |
+| CBA.AX | BUY    |           +0.54% |        60% | MEDIUM     | REDUCED       |
+| MQG.AX | REDUCE |           -0.68% |        64% | MEDIUM     | REDUCED       |
+
+### Generated Market Brief
+
+![Generated Report](screenshots/final_report.png)
+
+The Report Writer Agent uses Gemini 2.5 Flash Lite to convert structured analytical outputs into a professional market briefing.
+
+---
+
+## Skills Demonstrated
+
+### Agentic AI Systems
+
+* Multi-agent workflow design
+* LangGraph orchestration
+* Shared state management
+* Conditional routing
+* AI-assisted reporting
+
+### Data Engineering
+
+* Financial data ingestion
+* Database design
+* DuckDB analytics
+* Data validation
+* Automated data pipelines
+
+### Machine Learning
+
+* Time-series forecasting
+* Feature engineering
+* Random Forest modelling
+* Walk-forward validation
+* Confidence estimation
+
+### Risk Analytics
+
+* Historical Value at Risk (VaR)
+* Annualised volatility analysis
+* Beta estimation
+* Maximum drawdown analysis
+* Sector concentration assessment
+
+### Reporting & Communication
+
+* Automated report generation
+* Financial commentary
+* Executive-style reporting
+* Prompt engineering
+* Data storytelling
+
+---
+
+## Technology Stack
+
+| Category               | Tools                 |
+| ---------------------- | --------------------- |
+| Programming            | Python                |
+| Database               | DuckDB                |
+| Data Processing        | Pandas, NumPy         |
+| Machine Learning       | Scikit-Learn          |
+| Workflow Orchestration | LangGraph             |
+| Market Data            | yfinance              |
+| LLM Reporting          | Gemini 2.5 Flash Lite |
+| Scheduling             | schedule              |
+| Configuration          | python-dotenv         |
+
+---
+
+## LLM Design Decisions
+
+The project uses Google's Gemini 2.5 Flash Lite model as the report-generation layer.
+
+The LLM is not responsible for forecasting, risk modelling or recommendation generation.
+
+Instead, it receives structured outputs from the analytical pipeline and converts them into professional market commentary.
+
+To reduce hallucination risk, the prompt explicitly instructs the model to:
+
+* Use only supplied information
+* Preserve numerical values exactly
+* Avoid inventing market movements
+* Avoid altering BUY, HOLD or REDUCE recommendations
+* Avoid modifying confidence scores or risk metrics
+
+This design improves explainability while maintaining analytical integrity.
+
+---
+
+## Solution Overview
+
+The workflow consists of five specialised agents.
+
+| Stage | Agent               | Responsibility                        |
+| ----- | ------------------- | ------------------------------------- |
+| 1     | Market Data Agent   | Collect market and macroeconomic data |
+| 2     | Forecasting Agent   | Predict next-day stock returns        |
+| 3     | Risk Agent          | Assess stock and portfolio risk       |
+| 4     | Strategy Agent      | Generate final recommendations        |
+| 5     | Report Writer Agent | Produce the market briefing           |
+
+Each agent has a clearly defined responsibility and passes structured outputs to the next stage.
 
 ---
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    Orchestrator                     │
-│                    (LangGraph)                      │
-└──────┬──────────┬──────────┬──────────┬─────────────┘
-       │          │          │          │
-       ▼          ▼          ▼          ▼
-  Market Data  Forecast    Risk     Strategy    Report
-    Agent       Agent      Agent     Agent      Writer
-       │          │          │          │         │
-       └──────────┴──────────┴──────────┴─────────┘
-                            │
-                     DuckDB (local)
-                   asx_market_data.db
+```text
+Market Data Agent
+        │
+        ▼
+Forecasting Agent
+        │
+        ▼
+Risk Agent
+        │
+        ▼
+Strategy Agent
+        │
+        ▼
+Report Writer Agent
+        │
+        ▼
+ASX Morning Brief
 ```
 
-Each agent has a single responsibility and exposes a `run()` method. The orchestrator calls them in sequence and passes outputs downstream.
+The workflow is orchestrated through LangGraph, enabling clear separation of concerns and extensibility.
 
 ---
 
-## Agents
+## Repository Structure
 
-| # | Agent | Status | Responsibility |
-|---|-------|--------|----------------|
-| 1 | Market Data Agent | Complete | Fetch and store ASX price, fundamental, and macro data |
-| 2 | Forecasting Agent | Complete | Predict next-day returns for each watchlist stock |
-| 3 | Risk Agent | Complete | Calculate VaR, drawdown, beta, and sector concentration |
-| 4 | Trading Strategy Agent | Complete | Generate final signals from forecast + risk combined |
-| 5 | Report Writer Agent | Complete | LLM-generated daily briefing via Google Gemini |
-| — | Orchestrator | Complete | LangGraph pipeline wiring all agents with error handling and scheduling |
-
----
-
-## Agent 1: Market Data Agent
-
-The foundation of the system. Fetches, validates, and stores all market data that downstream agents depend on.
-
-**What it does:**
-- Downloads 12 months of OHLCV price history for 10 ASX stocks via `yfinance`
-- Fetches fundamental snapshots per stock (market cap, P/E ratio, beta, sector)
-- Fetches macro context: ASX 200 index, AUD/USD, Gold, and Crude Oil
-- Validates all incoming data with Pydantic — suspicious rows are skipped, not stored
-- Persists everything to a local DuckDB database across three tables
-
-**Database schema:**
-
-| Table | Contents |
-|-------|----------|
-| `ohlcv` | Daily open, high, low, close, volume, and return per ticker |
-| `fundamentals` | Timestamped snapshot of each stock's fundamental data |
-| `macro` | Daily close and return for ASX 200, AUD/USD, Gold, and Oil |
-
----
-
-## Agent 2: Forecasting Agent
-
-Reads OHLCV and macro data from the database, engineers features, trains a model per stock, and predicts next-day returns.
-
-**What it does:**
-- Engineers 11 features from price and volume history — momentum, volatility, RSI, volume ratio, mean reversion signals, and macro context
-- Trains a Random Forest Regressor per stock using walk-forward validation to avoid lookahead bias
-- Predicts the next trading day's return for each watchlist stock
-- Derives a confidence score from the spread of individual tree predictions
-- Outputs a BUY / HOLD / REDUCE signal and identifies the top driving feature
-
-**Key design decisions:**
-- Walk-forward train/validate split (80/20, chronological) — never shuffled, never peeked at future data
-- One model per stock — each stock has different dynamics and shouldn't share a model
-- Confidence derived from tree disagreement — low confidence flags unreliable predictions rather than hiding them
-
-**Sample output:**
-```
-ticker forecast_date predicted_return confidence   mae signal    top_feature
-WBC.AX    2026-06-11           +1.15%        58% 1.29%    BUY   dist_52w_low
-TLS.AX    2026-06-11           +1.07%        69% 0.89%    BUY volatility_20d
-ANZ.AX    2026-06-11           +0.61%        65% 1.10%    BUY   dist_52w_low
-CBA.AX    2026-06-11           +0.17%        53% 1.31%   HOLD   dist_52w_low
+```text
+asx-equity-intelligence-agent/
+│
+├── README.md
+├── requirements.txt
+├── .env.example
+├── orchestrator.py
+├── asx_market_data.db
+│
+├── screenshots/
+│   ├── pipeline_execution.png
+│   ├── forecasting_agent.png
+│   ├── risk_agent.png
+│   ├── strategy_agent.png
+│   └── final_report.png
+│
+├── agents/
+│   ├── market_data_agent.py
+│   ├── forecasting_agent.py
+│   ├── risk_agent.py
+│   ├── strategy_agent.py
+│   └── report_writer_agent.py
+│
+└── reports/
+    ├── asx_brief_20260623.md
+    └── ...
 ```
 
 ---
 
-## Agent 3: Risk Agent
+## Agent Responsibilities
 
-Takes forecasts from Agent 2 and assesses the risk profile of each stock and the overall watchlist portfolio.
+### Market Data Agent
 
-**What it does:**
-- Calculates historical Value at Risk (VaR) at 95% and 99% confidence — using actual return distributions rather than assuming normality
-- Measures maximum drawdown over the full price history
-- Calculates beta against the ASX 200 index
-- Derives annualised volatility and a risk-adjusted Sharpe score
-- Assesses sector concentration across the watchlist
-- Outputs a recommendation modifier (CONFIRM / DOWNGRADE / BLOCK) that the Strategy Agent uses to filter signals
+Responsible for:
 
-**Key design decisions:**
-- Historical (non-parametric) VaR — stock returns have fat tails, so assuming a normal distribution underestimates real-world risk
-- Recommendation modifier bridges risk assessment to strategy — a BUY signal with HIGH risk and low confidence gets downgraded before it reaches the Strategy Agent
-- Portfolio-level risk assessed separately from individual stocks — sector concentration is a portfolio problem, not a stock problem
+* Downloading ASX OHLCV data
+* Collecting company fundamentals
+* Collecting macroeconomic indicators
+* Storing data in DuckDB
 
-**Sample output:**
-```
-ticker vol    var_95 max_drawdown  beta risk_level modifier
-WBC.AX 21.5% -2.15%      -28.3%  -0.07     MEDIUM  CONFIRM
-TLS.AX 13.2% -1.11%      -18.4%  -0.05        LOW  CONFIRM
-CSL.AX 38.1% -2.50%      -31.2%  -0.40       HIGH DOWNGRADE
+Market indicators include:
 
-Portfolio: avg beta -0.06 | avg volatility 24.9% | sector concentration MEDIUM (Financials 40%)
-```
+* ASX 200 Index
+* AUD/USD Exchange Rate
+* Gold Futures
+* Crude Oil Futures
 
 ---
 
-## Agent 4: Trading Strategy Agent
+### Forecasting Agent
 
-Takes forecasts from Agent 2 and risk assessments from Agent 3 and produces a final actionable recommendation for each stock.
+Responsible for:
 
-**What it does:**
-- Resolves forecast signals against risk modifiers using a signal resolution table to produce a final BUY / HOLD / REDUCE decision
-- Sizes positions based on confidence and risk level — high-confidence, low-risk signals get larger allocations
-- Ranks all recommendations by Sharpe score so the highest-opportunity signals are prioritised
-- Derives an overall market bias (BULLISH / NEUTRAL / BEARISH) from the balance of signals across the watchlist
-- Generates a plain-English rationale for each recommendation, passed directly to the Report Writer
+* Feature engineering
+* Training stock-specific models
+* Generating next-day return forecasts
+* Estimating prediction confidence
 
-**Signal resolution logic:**
+Key design decisions:
 
-| Forecast | Risk Modifier | Final Signal |
-|----------|--------------|--------------|
-| BUY | CONFIRM | BUY |
-| BUY | DOWNGRADE | HOLD |
-| BUY | BLOCK | HOLD |
-| REDUCE | CONFIRM | REDUCE |
-| REDUCE | DOWNGRADE | HOLD |
-| HOLD | anything | HOLD |
+* One model per stock
+* Walk-forward validation
+* No look-ahead bias
+* Confidence derived from model agreement
 
-**Key design decisions:**
-- Resolution table over if/else logic — clean, readable, easy to modify and explain
-- Conservative by default — ambiguous signals resolve to HOLD rather than a marginal BUY or REDUCE
-- Position sizing is volatility-scaled — higher-risk stocks receive smaller allocations to equalise risk contribution across the portfolio
+### Forecast Generation
 
-**Sample output:**
-```
-ticker forecast_signal modifier final_signal predicted_ret confidence risk_level position
-TLS.AX            BUY  CONFIRM          BUY        +1.07%        69%        LOW     FULL
-WBC.AX            BUY  CONFIRM          BUY        +1.15%        58%     MEDIUM  REDUCED
-ANZ.AX            BUY  CONFIRM          BUY        +0.61%        65%     MEDIUM  REDUCED
-CSL.AX            BUY DOWNGRADE        HOLD        +0.88%        26%       HIGH     NONE
+![Forecasting Agent Output](screenshots/forecasting_agent.png)
 
-Market bias: NEUTRAL | BUY: 4 | HOLD: 6 | REDUCE: 0
-```
+The Forecasting Agent trains a separate Random Forest model for each stock and generates predicted returns, confidence scores and recommendation signals.
 
 ---
 
-## Agent 5: Report Writer Agent
+### Risk Agent
 
-Takes the full output of all four upstream agents and generates a professional daily trading briefing using an LLM.
+Responsible for:
 
-**What it does:**
-- Assembles macro context, risk summary, watchlist recommendations, and actionable signals into a structured prompt
-- Calls Google Gemini to generate a narrative daily briefing
-- Saves the report as a markdown file in the `reports/` folder, named by date
-- LLM provider is swappable — comments in the code show how to switch to Claude or Groq
+* Historical VaR calculations
+* Volatility analysis
+* Beta estimation
+* Maximum drawdown analysis
+* Portfolio concentration assessment
 
-**Key design decisions:**
-- Structured prompt with explicit section headings — produces consistent output across runs
-- All data passed to the LLM comes from upstream agents — the LLM writes, it doesn't decide
-- Mandatory disclaimer appended to every report
+The risk layer ensures recommendations are evaluated within a portfolio context.
 
-**Sample output:**
-```
-ASX MORNING BRIEF — 2026-06-11
+### Risk Assessment
 
-MACRO OVERVIEW
-The ASX 200 opened lower, down 0.24% to 8604.2, alongside a 0.25% depreciation
-in AUD/USD. Gold fell sharply by 3.56% while crude oil surged 2.07%...
+![Risk Agent Output](screenshots/risk_agent.png)
 
-ACTIONABLE RECOMMENDATIONS
-TLS.AX (BUY): Predicted +1.07% (69% confidence). Low volatility of 13.2% makes
-this a low-beta anchor for the portfolio. FULL position recommended...
+The Risk Agent evaluates volatility, Value at Risk (VaR), beta and portfolio concentration metrics to assess risk exposure.
 
-DISCLAIMER
-This report is generated by an automated system for educational purposes only
-and does not constitute financial advice.
-```
+---
+
+### Strategy Agent
+
+Combines:
+
+* Forecast signals
+* Confidence levels
+* Risk assessments
+
+to generate final recommendations.
+
+Possible outputs:
+
+* BUY
+* HOLD
+* REDUCE
+
+The strategy layer is intentionally conservative and defaults to HOLD under elevated uncertainty.
+
+### Recommendation Engine
+
+![Strategy Agent Output](screenshots/strategy_agent.png)
+
+Forecasts and risk metrics are combined to produce final BUY, HOLD and REDUCE recommendations.
+
+---
+
+### Report Writer Agent
+
+The final stage of the pipeline.
+
+Responsibilities include:
+
+* Receiving structured analytical outputs
+* Constructing the reporting prompt
+* Generating market commentary with Gemini 2.5 Flash Lite
+* Saving reports as Markdown files
+
+The LLM performs communication tasks only and does not generate recommendations independently.
 
 ---
 
 ## Watchlist
 
-| Ticker | Company | Sector |
-|--------|---------|--------|
-| BHP.AX | BHP Group | Materials |
-| CBA.AX | Commonwealth Bank | Financials |
-| CSL.AX | CSL Limited | Healthcare |
-| WDS.AX | Woodside Energy | Energy |
-| WES.AX | Wesfarmers | Consumer Discretionary |
-| ANZ.AX | ANZ Banking Group | Financials |
-| RIO.AX | Rio Tinto | Materials |
-| WBC.AX | Westpac Banking | Financials |
-| MQG.AX | Macquarie Group | Financials |
-| TLS.AX | Telstra | Telecommunications |
-
----
-
-## Tech Stack
-
-| Purpose | Library |
-|---------|---------|
-| Market data | `yfinance` |
-| Database | `duckdb` |
-| Data processing | `pandas`, `numpy` |
-| Data validation | `pydantic` |
-| Forecasting | `scikit-learn` |
-| LLM | `google-genai` (Gemini 2.5 Flash Lite) |
-| Agent framework | `langgraph` (orchestrator) |
+| Ticker | Company                     | Sector                 |
+| ------ | --------------------------- | ---------------------- |
+| BHP.AX | BHP Group                   | Materials              |
+| CBA.AX | Commonwealth Bank           | Financial Services     |
+| CSL.AX | CSL Limited                 | Healthcare             |
+| WDS.AX | Woodside Energy             | Energy                 |
+| WES.AX | Wesfarmers                  | Consumer Discretionary |
+| ANZ.AX | ANZ Banking Group           | Financial Services     |
+| RIO.AX | Rio Tinto                   | Materials              |
+| WBC.AX | Westpac Banking Corporation | Financial Services     |
+| MQG.AX | Macquarie Group             | Financial Services     |
+| TLS.AX | Telstra Corporation         | Telecommunications     |
 
 ---
 
 ## Setup
 
+### 1. Install Dependencies
+
 ```bash
-# Clone the repo
-git clone https://github.com/YOUR_USERNAME/asx-trading-agent.git
-cd asx-trading-agent
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Add your Gemini API key — free at aistudio.google.com
 ```
 
----
+### 2. Configure Environment Variables
 
-## Running the Agents
+Create a `.env` file:
 
-Agents must be run in order — each depends on the output of the previous.
-
-```bash
-# Agent 1 — fetch and store market data
-python agents/market_data_agent.py
-
-# Agent 2 — forecast next-day returns
-python agents/forecasting_agent.py
-
-# Agent 3 — assess risk (also re-runs Agent 2 internally)
-python agents/risk_agent.py
-
-# Agent 4 — generate final recommendations (also re-runs Agents 2 and 3 internally)
-python agents/strategy_agent.py
-
-# Agent 5 — generate daily briefing (also re-runs Agents 2, 3 and 4 internally)
-python agents/report_writer_agent.py
+```env
+GEMINI_API_KEY=your_api_key_here
 ```
 
-Or run the full pipeline via the orchestrator (recommended):
+### 3. Run the Full Pipeline
 
 ```bash
-# Run once now
 python orchestrator.py --mode run
+```
 
-# Run automatically every day at 7am
+### 4. Schedule Daily Execution
+
+```bash
 python orchestrator.py --mode schedule
 ```
 
-The database file `asx_market_data.db` is created automatically on first run.
-Reports are saved to the `reports/` folder as `asx_brief_YYYYMMDD.md`.
+The scheduler is configured to generate reports before the ASX market opens.
 
 ---
 
-## Orchestrator
+## Output Files
 
-Wires all five agents into a single LangGraph pipeline with conditional routing, shared state, and daily scheduling.
+After a successful run, the project generates:
 
-**What it does:**
-- Defines the pipeline as a directed graph — each agent is a node, each handoff is an edge
-- Passes a shared `AgentState` between agents so each one reads from and writes to a single object
-- Routes to an error handler if any agent fails rather than crashing the whole run
-- Logs a full summary at the end of every run — what succeeded, what failed, where the report was saved
-- Schedules the pipeline at 7am AEST every day so the report is ready before the ASX opens at 10am
+| Output          | Location                        |
+| --------------- | ------------------------------- |
+| DuckDB Database | `asx_market_data.db`            |
+| Daily Report    | `reports/asx_brief_YYYYMMDD.md` |
 
-**Why LangGraph over a plain script:**
+---
 
-| Plain script | LangGraph graph |
-|---|---|
-| Crashes if any step fails | Routes to error handler, logs what went wrong |
-| Re-runs upstream agents redundantly | Passes outputs through shared state |
-| No visibility into pipeline state | Each node's output is inspectable |
-| Hard to extend with new agents | Add a node and an edge |
+## Why LangGraph?
 
-**Two run modes:**
-```bash
-# Run once immediately
-python orchestrator.py --mode run
+LangGraph was selected because the project naturally consists of multiple dependent analytical agents.
 
-# Run daily at 7am (leave terminal open or use Task Scheduler)
-python orchestrator.py --mode schedule
-```
+| Traditional Script    | LangGraph Workflow      |
+| --------------------- | ----------------------- |
+| Sequential execution  | Explicit agent graph    |
+| Basic error handling  | Conditional routing     |
+| Limited state sharing | Shared state management |
+| Harder to extend      | Modular architecture    |
+
+---
+
+## Limitations
+
+Current limitations include:
+
+* Uses yfinance rather than institutional market feeds
+* Forecasting models are intentionally simple
+* No transaction cost modelling
+* No slippage modelling
+* No live order execution
+* No portfolio optimisation
+* No historical backtesting framework
+
+This project is intended as an educational analytics and AI portfolio project.
+
+---
+
+## Future Improvements
+
+Potential future enhancements include:
+
+* Portfolio optimisation
+* Backtesting engine
+* Streamlit dashboard
+* Power BI reporting
+* Benchmark comparison reporting
+* Automated email delivery
+* Model performance monitoring
+* Feature importance visualisations
 
 ---

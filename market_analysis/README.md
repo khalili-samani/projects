@@ -1,18 +1,72 @@
 # Sector-Based Stock Market Analysis
 
-A data analysis project examining historical stock performance across four US market sectors — Technology, Finance, Energy, and Healthcare — using MySQL for storage and aggregation, and Python for cleaning and visualisation.
+A data analytics project that investigates the relationship between risk and return across major US companies in the Technology, Finance, Energy and Healthcare sectors.
 
-Data covers **752 trading days from March 2023 to February 2026** across 12 companies sourced from [Stooq](https://stooq.com).
+The project combines data engineering, SQL analytics and visualisation to build a reusable market analysis pipeline. Historical stock price data is cleaned, loaded into a MySQL data warehouse, transformed into analytical views and visualised through automated reporting charts.
 
 ---
 
-## Sample Outputs
+## Business Problem
 
-### Risk vs Return by Company
+Investors and analysts often compare sectors based on return potential and risk exposure.
+
+However, raw market data alone does not provide meaningful insights. Analysts need a structured process for:
+
+* Cleaning historical market data
+* Calculating daily returns
+* Measuring volatility
+* Comparing companies across sectors
+* Identifying risk-return trade-offs
+
+This project demonstrates how a data warehouse and analytical workflow can transform raw stock market data into actionable insights.
+
+---
+
+## Why I Built This Project
+
+I built this project to demonstrate practical data engineering and analytics skills using financial market data.
+
+The objective was to create an end-to-end workflow that:
+
+* Ingests historical stock price data
+* Cleans and standardises datasets
+* Stores data in a relational database
+* Creates analytical SQL views
+* Produces business-focused visualisations
+* Supports sector-level investment analysis
+
+---
+
+## Key Results
+
+| Area               | Result                     |
+| ------------------ | -------------------------- |
+| Companies Analysed | 12                         |
+| Sectors Analysed   | 4                          |
+| Database           | MySQL                      |
+| Data Source        | Stooq                      |
+| Analytical Views   | 3                          |
+| Charts Produced    | 2                          |
+| Time Period        | March 2023 – February 2026 |
+
+---
+
+## Example Outputs
+
+### Risk vs Return Analysis
 
 ![Risk vs Return](outputs/charts/risk_vs_return.png)
 
-NVDA stands out with the highest average daily return and the highest volatility — consistent with its position as a high-growth AI-driven stock over this period. Healthcare stocks cluster at the lower-risk, lower-return end of the spectrum. Finance stocks show moderate volatility with positive returns, while energy companies sit in the mid-range on both axes.
+The scatter plot compares average daily return against volatility for all companies.
+
+Key observations:
+
+* Nvidia delivered the highest average return but also exhibited the highest volatility.
+* Healthcare companies clustered in the lower-risk, lower-return region.
+* Financial institutions generated moderate returns with moderate volatility.
+* Energy companies occupied the middle of the risk-return spectrum.
+
+This visualisation highlights the classic relationship between risk and reward in equity markets.
 
 ---
 
@@ -20,113 +74,242 @@ NVDA stands out with the highest average daily return and the highest volatility
 
 ![Average Daily Return](outputs/charts/avg_daily_return_by_company.png)
 
-NVDA leads significantly, followed by JPM and GS. PFE is the only company with a negative average daily return over the analysis period, reflecting its post-COVID earnings headwinds. The spread across companies highlights meaningful differentiation in performance even within the same sector.
+Nvidia achieved the strongest average daily performance during the analysis period.
+
+Pfizer was the only company to generate a negative average daily return.
+
+The chart illustrates substantial performance differences both across and within sectors.
 
 ---
 
-## Project Structure
+## Skills Demonstrated
 
+### Data Engineering
+
+* ETL pipeline development
+* Data cleaning and validation
+* Relational database design
+* Star schema modelling
+* Automated data loading
+
+### SQL Analytics
+
+* Window functions (`LAG`)
+* Aggregations
+* Analytical views
+* Dimensional modelling
+* Data warehousing concepts
+
+### Data Analysis
+
+* Return calculations
+* Volatility analysis
+* Sector benchmarking
+* Risk-return assessment
+* Comparative company analysis
+
+### Data Visualisation
+
+* Business-focused chart design
+* Financial reporting visuals
+* Automated chart generation
+* Insight communication
+
+---
+
+## Solution Architecture
+
+```text
+Raw Stock CSV Files
+        │
+        ▼
+Data Cleaning Pipeline
+        │
+        ▼
+MySQL Data Warehouse
+        │
+        ▼
+Analytical SQL Views
+        │
+        ▼
+Business Analysis Charts
 ```
+
+The workflow automates the process of transforming raw market data into analytical outputs suitable for decision-making and reporting.
+
+---
+
+## Data Warehouse Design
+
+The project uses a dimensional model consisting of two dimension tables and one fact table.
+
+```text
+dim_sector
+      │
+      ▼
+dim_company
+      │
+      ▼
+fact_stock_prices
+```
+
+This design separates descriptive business attributes from transactional stock price data and supports efficient analytical querying.
+
+### Dimension Tables
+
+#### dim_sector
+
+Stores sector classifications:
+
+* Technology
+* Finance
+* Energy
+* Healthcare
+
+#### dim_company
+
+Stores:
+
+* Company name
+* Ticker symbol
+* Sector assignment
+
+#### fact_stock_prices
+
+Stores daily market data including:
+
+* Open price
+* High price
+* Low price
+* Close price
+* Trading volume
+* Trading date
+
+---
+
+## Analytical Views
+
+The database contains three analytical SQL views that support reporting and visualisation.
+
+### vw_daily_returns
+
+Calculates daily percentage returns for every company using the SQL `LAG()` window function.
+
+```sql
+(close_price - previous_close) / previous_close * 100
+```
+
+### vw_company_summary
+
+Aggregates company-level metrics:
+
+* Average daily return
+* Volatility
+* Total return
+* Number of trading days
+
+### vw_sector_summary
+
+Aggregates performance metrics at sector level.
+
+Used to compare:
+
+* Average returns
+* Volatility
+* Relative sector performance
+
+across Technology, Finance, Energy and Healthcare.
+
+---
+
+## Methodology
+
+### Data Cleaning
+
+The cleaning pipeline:
+
+* Standardises column names
+* Converts data types
+* Validates records
+* Removes invalid rows
+* Assigns company identifiers
+
+### Return Calculation
+
+Daily return is calculated using the percentage change in closing price between consecutive trading days.
+
+### Volatility Calculation
+
+Volatility is measured as the standard deviation of daily returns.
+
+### Risk vs Return Analysis
+
+The final visualisation compares:
+
+* Expected return (average daily return)
+* Risk (volatility)
+
+to identify companies with stronger risk-adjusted characteristics.
+
+---
+
+## Repository Structure
+
+```text
 market_analysis/
-├── data_raw/                       # Raw CSVs downloaded from Stooq
-├── data_cleaned/                   # Cleaned CSVs ready for MySQL load
+├── data_raw/
+├── data_cleaned/
 ├── outputs/
-│   └── charts/                     # Generated PNG charts
+│   └── charts/
+│       ├── avg_daily_return_by_company.png
+│       └── risk_vs_return.png
 ├── scripts/
-│   ├── config.py                   # Centralised settings and paths
-│   ├── clean_data.py               # Cleans all 12 companies in one run
-│   ├── load_data.py                # Creates database schema and loads data
-│   ├── avg_daily_return.py         # Bar chart — average daily return
-│   └── risk_vs_return.py           # Scatter chart — risk vs return
+│   ├── config.py
+│   ├── clean_data.py
+│   ├── load_data.py
+│   ├── avg_daily_return.py
+│   └── risk_vs_return.py
 ├── sql/
-│   └── market.sql                  # Database schema reference document
+│   └── market.sql
 ├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## Database Design
+## Technologies Used
 
-A simple star schema with two dimension tables and one fact table.
-
-### Schema
-
-```
-dim_sector ──< dim_company ──< fact_stock_prices
-```
-
-### Tables
-
-**`dim_sector`** — four sectors: Technology, Finance, Energy, Healthcare
-
-**`dim_company`** — 12 companies with ticker and sector FK
-
-| Company           | Ticker | Sector       |
-|-------------------|--------|--------------|
-| Apple             | AAPL   | Technology   |
-| Microsoft         | MSFT   | Technology   |
-| Nvidia            | NVDA   | Technology   |
-| JPMorgan Chase    | JPM    | Finance      |
-| Goldman Sachs     | GS     | Finance      |
-| Bank of America   | BAC    | Finance      |
-| ExxonMobil        | XOM    | Energy       |
-| Chevron           | CVX    | Energy       |
-| ConocoPhillips    | COP    | Energy       |
-| Johnson & Johnson | JNJ    | Healthcare   |
-| Pfizer            | PFE    | Healthcare   |
-| Merck             | MRK    | Healthcare   |
-
-**`fact_stock_prices`** — daily OHLCV data, one row per company per trading day
-
-| Column        | Type          | Description              |
-|---------------|---------------|--------------------------|
-| `company_id`  | INT FK        | Links to dim_company     |
-| `date`        | DATE          | Trading date             |
-| `open_price`  | DECIMAL(10,4) | Opening price (USD)      |
-| `high_price`  | DECIMAL(10,4) | Daily high (USD)         |
-| `low_price`   | DECIMAL(10,4) | Daily low (USD)          |
-| `close_price` | DECIMAL(10,4) | Closing price (USD)      |
-| `volume`      | BIGINT        | Shares traded            |
-
-### Analytical Views
-
-**`vw_daily_returns`** — calculates daily return % per company using `LAG()` window function
-
-**`vw_company_summary`** — aggregates to company level: avg return, volatility, total return, trading days
-
-**`vw_sector_summary`** — rolls up to sector level for cross-sector comparison
-
----
-
-## Methodology
-
-**Data cleaning** (`clean_data.py`) loops all 12 companies in a single run — renaming columns, coercing types, attaching company IDs, and dropping unparseable rows.
-
-**Daily return** is calculated in SQL as the percentage change in closing price between consecutive trading days using the `LAG()` window function partitioned by company.
-
-**Volatility** is the standard deviation of daily returns — a standard measure of price risk.
-
-**Total return** is calculated as `(max_close - min_close) / min_close × 100` over the full period, giving a simple price appreciation measure.
+| Category        | Technology |
+| --------------- | ---------- |
+| Programming     | Python     |
+| Database        | MySQL      |
+| Data Processing | Pandas     |
+| Database Access | SQLAlchemy |
+| Visualisation   | Matplotlib |
+| Data Source     | Stooq      |
 
 ---
 
 ## Setup
 
-**1. Clone the repository**
-
-```bash
-git clone https://github.com/your-username/market_analysis.git
-cd market_analysis
-```
-
-**2. Install dependencies**
+### 1. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**3. Set environment variables**
+### 2. Configure Database Credentials
+
+Windows:
+
+```cmd
+set MYSQL_USER=root
+set MYSQL_PASSWORD=your_password
+set MYSQL_HOST=localhost
+set MYSQL_DATABASE=market_analysis
+```
+
+macOS / Linux:
 
 ```bash
 export MYSQL_USER=root
@@ -135,61 +318,96 @@ export MYSQL_HOST=localhost
 export MYSQL_DATABASE=market_analysis
 ```
 
-**4. Download raw data from Stooq**
+### 3. Prepare Raw Data
 
-Go to [https://stooq.com](https://stooq.com), search each ticker, and download the daily CSV to `data_raw/`. Files must be named in the format `{ticker}_us.csv` (e.g. `aapl_us.csv`).
+Download daily historical CSV files from:
 
-**5. Clean the data**
+https://stooq.com
+
+Place the files inside:
+
+```text
+data_raw/
+```
+
+### 4. Clean Data
 
 ```bash
 python scripts/clean_data.py
 ```
 
-**6. Create the database and load data**
+### 5. Load Data into MySQL
 
 ```bash
 python scripts/load_data.py
 ```
 
-This creates the database, tables, and views automatically, then loads all 12 companies in one run. The full database schema is also available as a reference in `sql/market.sql`.
-
-**7. Generate charts**
+### 6. Generate Visualisations
 
 ```bash
 python scripts/avg_daily_return.py
+
 python scripts/risk_vs_return.py
+```
+
+Generated charts are saved in:
+
+```text
+outputs/charts/
 ```
 
 ---
 
 ## Key Findings
 
-| Metric                   | Result                                      |
-|--------------------------|---------------------------------------------|
-| Highest avg daily return | NVDA (+0.21%/day)                           |
-| Lowest avg daily return  | PFE (negative)                              |
-| Highest volatility       | NVDA                                        |
-| Lowest volatility        | JNJ, MRK (Healthcare)                       |
-| Best sector (return)     | Technology                                  |
-| Most stable sector       | Healthcare                                  |
+| Finding                | Observation               |
+| ---------------------- | ------------------------- |
+| Highest Average Return | Nvidia                    |
+| Lowest Average Return  | Pfizer                    |
+| Highest Volatility     | Nvidia                    |
+| Lowest Volatility      | Johnson & Johnson / Merck |
+| Strongest Sector       | Technology                |
+| Most Stable Sector     | Healthcare                |
+
+---
+
+## Business Value
+
+This project demonstrates how raw financial data can be transformed into a structured analytical asset through data engineering, SQL modelling and visual analytics.
+
+The workflow reflects common practices used in:
+
+* Business Intelligence
+* Financial Analytics
+* Investment Research
+* Data Warehousing
+* Reporting and Dashboarding
 
 ---
 
 ## Limitations
 
-- Analysis uses closing prices only — dividend-adjusted returns are not included
-- Total return metric captures price range, not a buy-and-hold return from a fixed start date
-- Transaction costs and taxes are not considered
-- 12 companies is a limited sample within each sector
+Current limitations include:
+
+* Dividend-adjusted returns are not included
+* Transaction costs are ignored
+* Tax considerations are excluded
+* Analysis is limited to 12 companies
+* Sector representation is intentionally simplified
 
 ---
 
-## Roadmap
+## Future Improvements
 
-- [ ] Rolling 30-day return and volatility charts
-- [ ] Correlation heatmap across all 12 companies
-- [ ] Sector-level summary chart
-- [ ] Dividend-adjusted return calculation
-- [ ] Interactive dashboard (Plotly or Streamlit)
+Potential future enhancements include:
+
+* Correlation heatmaps
+* Rolling volatility analysis
+* Sector performance dashboards
+* Portfolio optimisation scenarios
+* Power BI dashboards
+* Streamlit applications
+* Interactive Plotly visualisations
+* Dividend-adjusted return calculations
 
 ---

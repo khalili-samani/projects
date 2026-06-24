@@ -1,251 +1,495 @@
-# Messy Data Generator for Australian Housing Market
+# Australian Housing Data Quality Simulator
 
-> **Synthetic, uncleaned Australian residential property data — grounded in real market conditions.**
+A Python-based synthetic data generation tool that creates realistic, intentionally messy Australian residential property datasets for data cleaning, ETL, SQL, BI and machine learning projects.
 
----
+The simulator reproduces common real-world data quality issues found in property market datasets while preserving realistic market behaviour, pricing patterns and housing market conditions across Australia from 2020–2025.
 
-## What this is
-
-A single Python script that generates a realistic, intentionally **uncleaned** Australian residential property dataset as a CSV file.
-
-Every run produces a **fresh, unique dataset** — different records, different mess patterns, different missing value distributions. The market-level signals (prices, RBA cash rate, auction clearance rates, listing volume, sentiment) are grounded in real conditions for the period and states you choose.
-
-This is the **input** to a data cleaning pipeline, EDA notebook, or ETL process — not the output.
+Unlike simple random data generators, this project models actual Australian housing market dynamics, including RBA cash rate changes, auction clearance rates, buyer sentiment, lockdown impacts and regional market trends.
 
 ---
 
-## Why it exists
+# Business Problem
 
-Anyone working with real Australian property data — scrapes from Domain.com.au, DataVic VPSR reports, CoreLogic exports — immediately encounters dirty, inconsistent, multi-format data. This generator replicates those exact issues synthetically, so you have a reproducible dirty dataset to practise cleaning without needing to scrape anything yourself.
+Real-world property datasets rarely arrive in a clean and analysis-ready format.
+
+Analysts, data engineers and BI developers frequently encounter:
+
+* Missing values
+* Duplicate records
+* Mixed date formats
+* Inconsistent categorical values
+* Incorrect postcodes
+* Free-text price fields
+* Data entry errors
+* Outliers and anomalies
+
+Obtaining realistic dirty datasets for learning and portfolio projects is often difficult due to privacy restrictions, licensing costs and limited public access.
+
+This project addresses that challenge by generating realistic synthetic housing market data that can be used to practise data cleaning, ETL development, SQL analysis, dashboarding and machine learning workflows.
 
 ---
 
-## Quick start
+# Why I Built This Project
+
+I built this project to simulate the types of data quality problems commonly encountered in real Australian property datasets sourced from:
+
+* Domain
+* realestate.com.au
+* CoreLogic
+* Government property transaction datasets
+* Third-party data providers
+
+The objective was to create a realistic testing environment where analysts and engineers can practise cleaning and transforming messy data before performing analysis.
+
+---
+
+# Key Features
+
+| Feature                   | Description                                                   |
+| ------------------------- | ------------------------------------------------------------- |
+| Geographic Coverage       | All Australian states and territories                         |
+| Time Period               | January 2020 – December 2025                                  |
+| Property Types            | Houses, Units, Apartments, Townhouses, Villas, Duplexes, Land |
+| Housing Market Conditions | Realistic monthly market scenarios                            |
+| Data Quality Issues       | 15 intentionally injected issues                              |
+| Output Format             | CSV                                                           |
+| Dependencies              | NumPy, Pandas                                                 |
+| Internet Required         | No                                                            |
+| API Keys Required         | No                                                            |
+
+---
+
+# Example Use Cases
+
+The generated datasets can be used for:
+
+* Data cleaning projects
+* ETL pipeline development
+* SQL practice
+* Data quality assessment
+* Exploratory data analysis
+* Power BI dashboards
+* Tableau dashboards
+* Machine learning feature engineering
+* Data warehouse testing
+
+---
+
+# Example Workflow
+
+```text
+Generate Synthetic Data
+           │
+           ▼
+Data Cleaning Pipeline
+           │
+           ▼
+Data Validation
+           │
+           ▼
+Database / Data Warehouse
+           │
+           ▼
+Analytics & Visualisation
+           │
+           ▼
+Business Insights
+```
+
+---
+
+# Market Realism
+
+The simulator models actual Australian housing market conditions between 2020 and 2025.
+
+Market variables include:
+
+* RBA cash rates
+* Auction clearance rates
+* Buyer sentiment
+* Listing volumes
+* Property prices
+* Days on market
+* Rental estimates
+
+Historical events incorporated into the simulation include:
+
+### 2020
+
+* COVID-19 pandemic
+* National lockdowns
+* Emergency RBA rate cuts
+* Collapse in auction volumes
+* Regional migration surge
+
+### 2021
+
+* Housing market boom
+* Record-low interest rates
+* Strong price growth
+* FOMO-driven buyer behaviour
+* Melbourne lockdown disruptions
+
+### 2022
+
+* Rapid interest rate increases
+* Falling property prices
+* Reduced borrowing capacity
+* Declining auction clearance rates
+
+### 2023
+
+* Housing market recovery
+* Population growth
+* Rental crisis
+* Supply shortages
+
+### 2024
+
+* Affordability pressures
+* Elevated interest rates
+* Longer selling times
+* Diverging capital city performance
+
+### 2025
+
+* Interest rate cuts
+* Improved confidence
+* Renewed price growth
+* Increased market activity
+
+---
+
+# Skills Demonstrated
+
+## Data Engineering
+
+* Synthetic data generation
+* Data quality simulation
+* Data modelling
+* ETL testing
+* Validation design
+
+## Python Development
+
+* Large-scale data generation
+* Randomised simulation
+* Configuration-driven architecture
+* Input validation
+* Modular code design
+
+## Data Quality Engineering
+
+* Missing value generation
+* Duplicate generation
+* Outlier simulation
+* Inconsistent formatting
+* Data standardisation challenges
+
+## Analytics Preparation
+
+* Feature generation
+* Data profiling
+* Data cleansing workflows
+* Exploratory analysis preparation
+* Machine learning dataset creation
+
+## Domain Knowledge
+
+* Australian housing markets
+* Property transaction data
+* RBA monetary policy
+* Auction market dynamics
+* Housing affordability trends
+
+---
+
+# Dataset Structure
+
+The generated dataset contains information relating to:
+
+## Property Information
+
+* Property type
+* Bedrooms
+* Bathrooms
+* Car spaces
+* Land size
+* Building area
+* Year built
+
+## Location Information
+
+* Address
+* Suburb
+* Postcode
+* Council area
+* State
+* Region
+* Distance to CBD
+
+## Transaction Information
+
+* Sale price
+* Sale date
+* Sale method
+* Days on market
+
+## Market Information
+
+* RBA cash rate
+* Auction clearance rates
+* Market sentiment
+* Rental estimates
+* Local market commentary
+
+---
+
+# Data Quality Issues Simulated
+
+The simulator intentionally introduces realistic data quality problems.
+
+## 1. Missing Values
+
+Examples:
+
+```text
+N/A
+NA
+unknown
+?
+(blank)
+```
+
+## 2. Mixed Date Formats
+
+Examples:
+
+```text
+15/03/2024
+2024-03-15
+15 Mar 2024
+Mar-24
+```
+
+## 3. Inconsistent Property Types
+
+Examples:
+
+```text
+House
+house
+HOUSE
+Hse
+Residential House
+```
+
+## 4. Sale Price Formatting
+
+Examples:
+
+```text
+$1,250,000
+$1.25M
+POA
+Contact Agent
+Offers Over $900,000
+```
+
+## 5. State Variations
+
+Examples:
+
+```text
+VIC
+Vic
+Victoria
+vic.
+V.I.C
+```
+
+## 6. Duplicate Records
+
+* Near duplicates
+* Exact duplicates
+
+## 7. Outliers
+
+Examples:
+
+```text
+Year Built = 1066
+Year Built = 9999
+```
+
+## 8. Incorrect Postcodes
+
+A subset of records intentionally contain postcode mismatches.
+
+## 9. Boolean Inconsistencies
+
+Examples:
+
+```text
+Yes
+Y
+True
+1
+```
+
+and
+
+```text
+No
+N
+False
+0
+```
+
+## 10. Field Swaps
+
+A small percentage of records contain incorrectly assigned fields.
+
+In total, the simulator introduces 15 different categories of data quality issues.
+
+---
+
+# Geographic Coverage
+
+The simulator covers all Australian states and territories.
+
+| State              | Example Suburbs                        |
+| ------------------ | -------------------------------------- |
+| Victoria           | Richmond, Toorak, Brighton, Geelong    |
+| New South Wales    | Bondi, Manly, Parramatta               |
+| Queensland         | Paddington, Gold Coast, Sunshine Coast |
+| Western Australia  | Fremantle, Subiaco, Cottesloe          |
+| South Australia    | Norwood, Glenelg                       |
+| Tasmania           | Sandy Bay, Launceston                  |
+| ACT                | Braddon, Gungahlin                     |
+| Northern Territory | Darwin CBD, Palmerston                 |
+
+---
+
+# Repository Structure
+
+```text
+housing-data-quality-simulator/
+│
+├── messy_data_generator.py
+├── README.md
+```
+
+---
+
+# Installation
+
+Install dependencies:
 
 ```bash
 pip install numpy pandas
+```
+
+---
+
+# Running the Simulator
+
+Run:
+
+```bash
 python messy_data_generator.py
 ```
 
-You'll be asked three questions:
+The simulator will prompt for:
 
-```
-Which year(s)?   2022
-Which month(s)?  mar-jun
-Which state(s)?  VIC, NSW
+```text
+Which year(s)?
+Which month(s)?
+Which state(s)?
 ```
 
-The CSV is saved automatically to your current working directory.
+Example:
+
+```text
+Which year(s)? 2022
+Which month(s)? mar-jun
+Which state(s)? VIC, NSW
+```
 
 ---
 
-## Input formats
+# Output
 
-### Years
+A CSV file is generated automatically.
 
-| Format | Example | Meaning |
-|---|---|---|
-| Specific (single) | `2021` | That year only |
-| Specific (list) | `2021, 2023` | Those two years |
-| Interval | `2021-2023` | Every year from 2021 to 2023 inclusive |
-| All | `all` | Every available year |
+Example:
 
-### Months
-
-| Format | Example | Meaning |
-|---|---|---|
-| Specific (name) | `jan` | January only |
-| Specific (number) | `3` | March only |
-| Specific (list) | `jan, mar, oct` | Those three months |
-| Specific (mixed) | `1, mar, 6` | January, March, June |
-| Interval (named) | `jan-jun` | January through June |
-| Interval (numeric) | `3-9` | March through September |
-| All | `all` | Every month |
-
-### States and territories
-
-| Format | Example | Meaning |
-|---|---|---|
-| Abbreviation | `VIC` | Victoria only |
-| List | `VIC, NSW, QLD` | Those states |
-| Full name | `Victoria` | Same as `VIC` |
-| All | `all` | All 8 states and territories |
-
-Supported states: `VIC` `NSW` `QLD` `WA` `SA` `TAS` `ACT` `NT`
-
-Full names also accepted: `Victoria`, `New South Wales`, `Queensland`, `Western Australia`, `South Australia`, `Tasmania`, `Australian Capital Territory`, `Northern Territory`, `Tassie`, `Canberra`
-
-**Data range:** January 2020 through to the most recently completed month. The script determines this automatically at runtime — you will never be able to request future data.
-
----
-
-## Input validation
-
-The script validates every input and re-prompts on error. It will never silently accept bad data.
-
-| What you enter | What happens |
-|---|---|
-| A year before 2020 | Rejected: *"before the data start date (January 2020)"* |
-| A future year | Rejected: *"in the future — no data exists yet"* |
-| A non-numeric year like `abc` | Rejected: *"not a valid year — only numbers are accepted"* |
-| A reversed year interval like `2023-2021` | Rejected: *"Year interval 2023-2021 is reversed"* |
-| A month number outside 1–12 | Rejected: *"must be between 1 (January) and 12 (December)"* |
-| An unrecognised month name like `foo` | Rejected: *"not a recognised month name or number"* |
-| A reversed month interval like `jun-jan` | Rejected: *"Month interval 'jun-jan' is reversed"* |
-| A future month in the current year | Warning shown, future months silently dropped, generation continues with available periods |
-| An unrecognised state like `XYZ` | Rejected: *"not a recognised Australian state or territory"* |
-
----
-
-## Output
-
-The CSV is saved to the directory you run the script from. The filename encodes your selection:
-
-```
-aus_housing_messy_<years>_<months>_<states>.csv
-```
-
-Examples:
-```
+```text
 aus_housing_messy_2022_mar-jun_vic-nsw.csv
-aus_housing_messy_2021-2023_all_wa.csv
-aus_housing_messy_2020_jan_all_states.csv
 ```
 
-Row count is derived automatically — roughly **300 rows per month per selection**, scaled by a market volume factor that reflects real activity levels. Lockdown months generate fewer rows; boom months generate more.
+The number of records generated depends on:
+
+* Selected time period
+* Selected states
+* Historical market activity
+
+Lockdown periods generate fewer records, while boom periods generate larger datasets.
 
 ---
 
-## Columns
+# Example Outputs
 
-| Column | Description | Key mess |
-|---|---|---|
-| `listing_id` | Unique record identifier | — |
-| `source` | Platform (Domain, REA, etc.) | Leading/trailing whitespace |
-| `address` | Street address | ~8% missing |
-| `suburb` | Suburb name | Mixed case, underscores, spaces |
-| `state` | State or territory | 7+ variants per state — e.g. `VIC`, `Vic`, `vic`, `Victoria`, `vic.`, `V.I.C` |
-| `postcode` | Postcode | Int vs string; ~6% wrong for the suburb |
-| `council_area` | Local government area | Mixed case; ~1% swapped with suburb |
-| `region` | Metropolitan region | ~12% missing |
-| `distance_to_cbd_km` | Distance to CBD | Numeric or `"12.5 km"` string |
-| `lat` / `lon` | Coordinates | ~25% missing |
-| `property_type` | Property type | 30+ variants of 7 clean types |
-| `bedrooms` | Bedroom count | `"3"`, `"three"`, `"3.0"`, `"3 bed"`, `"03"`, `"3 BR"` |
-| `bathrooms` | Bathroom count | `"1"`, `"1.0"`, `"1 bath"`, `"1 Bathrooms"` |
-| `car_spaces` | Parking spots | Int or `"2 car"` |
-| `toilets` | Toilet count | ~20% missing |
-| `land_size` | Land area | sqm int, `"650 sqm"`, `"0.065 ha"`, `"650m2"` |
-| `building_area` | Floor area | ~35% missing; sometimes `"203sqm"` |
-| `year_built` | Year built | ~28% missing; outliers: 1066, 9999, 2099 |
-| `has_pool` | Pool present | `Yes/yes/Y/True/true/1` vs `No/no/N/False/false/0` |
-| `has_garage` | Garage present | Same boolean mess |
-| `sale_price` | Sale price (string) | `"$1.25M"`, `"Contact Agent"`, `"POA"`, `"Offers Over $800,000"` |
-| `price_raw_aud` | Numeric price if extractable | ~6% missing or null string |
-| `sale_date` | Date of sale | 9 different date formats mixed throughout |
-| `sale_method` | Auction / Private Sale / EOI | Multiple abbreviation variants |
-| `days_on_market` | Days listed before sale | Int or `"N/A"`, `"-"`, `"unknown"` |
-| `inspection_note` | Inspection details | Lockdown periods inject virtual inspection notes |
-| `agent_name` | Agent name | Mixed case; ~8% missing |
-| `agency_name` | Agency name | Same name as `agent_name` but different casing |
-| `agent_phone` | Contact number | Formatted vs unformatted |
-| `rba_cash_rate_pct` | RBA cash rate in effect | Real rate for the record's month |
-| `market_sentiment` | Buyer sentiment label | Panic / FOMO / Falling / Resilient / Strong etc. |
-| `market_context` | One-line real-world context | ~15% missing |
-| `suburb_median_price` | Suburb median (AUD) | ~18% missing |
-| `auction_clearance_rate_pct` | Clearance rate | Real period average ± noise; ~30% missing |
-| `weekly_rent_aud` | Estimated weekly rent | ~45% missing |
-| `property_count_suburb` | Properties in suburb | ~15% missing |
+Include screenshots showing:
+
+* Terminal execution
+* Generated CSV opened in Excel
+* Examples of messy data values
+* Missing values and duplicates
+* Multiple date formats
+* Mixed property type categories
 
 ---
 
-## Mess catalogue
+# Business Value
 
-15 data quality issues deliberately injected:
+This project demonstrates how realistic synthetic data can be generated to support analytics and engineering workflows.
 
-1. **`sale_price` as string** — `"$1,250,000"`, `"$1.25M"`, `"Contact Agent"`, `"POA"`, `"Offers Over $800,000"`
-2. **Suburb casing** — `"Richmond"`, `"RICHMOND"`, `"richmond"`, `" richmond"`, `"richmond_"`
-3. **State variants** — 7+ representations per state (e.g. `VIC`, `Vic`, `vic`, `Victoria`, `victoria`, `vic.`, `V.I.C`)
-4. **Mixed date formats** — 9 formats: `DD/MM/YYYY`, `YYYY-MM-DD`, `DD Mon YYYY`, `Mon-YY`, and more
-5. **Property type fragmentation** — 30+ variants: `"h"`, `"House"`, `"HOUSE"`, `"house,cottage,villa"`, `"Residential House"`
-6. **Bedrooms as mixed types** — `"3"`, `"three"`, `"3.0"`, `"3 bed"`, `"03"`, `"3 BR"`, `-1` (outlier)
-7. **Land size units** — sqm integer, `"650 sqm"`, `"0.065 ha"`, `"650m2"`, `"0.065ha"`
-8. **Boolean inconsistency** — `"Yes"`, `"yes"`, `"Y"`, `"True"`, `"true"`, `"1"` all mean the same thing
-9. **Null proliferation** — `NaN`, `"N/A"`, `"n/a"`, `"NA"`, `"-"`, `"--"`, `"unknown"`, `" "`, `"?"`
-10. **Postcode mismatches** — ~6% of rows have a postcode that doesn't match the suburb
-11. **Year built outliers** — `1066`, `9999`, `2099`, `0`
-12. **Near-duplicate rows** — ~2.5% are re-listings of the same property with minor differences
-13. **Exact duplicate rows** — ~1% exact copies (common in multi-source scrapes)
-14. **Source whitespace** — `"Domain "`, `" REA"` (leading/trailing spaces)
-15. **Field confusion** — ~1% of rows have `suburb` and `council_area` swapped
+The simulator provides a reproducible environment for:
+
+* Testing ETL pipelines
+* Practising data cleaning
+* Evaluating data quality frameworks
+* Building analytics projects
+* Developing machine learning workflows
+
+without requiring access to proprietary property market datasets.
 
 ---
 
-## How market conditions affect the data
+# Future Improvements
 
-The generated data is not uniformly random. Each month's records reflect real conditions for that period.
+Potential future enhancements include:
 
-| Period | RBA rate | What it affects |
-|---|---|---|
-| Mar–Apr 2020 | 0.25% | Auction volumes ~40% of normal; clearance rates ~25–30%; lockdown virtual inspection notes injected for VIC |
-| Nov 2020 – Apr 2021 | 0.10% | HomeBuilder rush; regional tree-change price premium; volumes recovering |
-| 2021 | 0.10% | Peak FOMO; prices +13–19% above Jan 2020 base; boom volumes; very short days-on-market |
-| Jul–Oct 2021 | 0.10% | Melbourne lockdowns #5 and #6; Sydney Delta lockdown; auction volumes suppressed |
-| May–Dec 2022 | 0.35% → 3.10% | Prices falling; clearance rates 43–56%; longer days-on-market; `Falling` / `Distressed` sentiment |
-| 2023 | 3.10% → 4.35% | Surprise recovery despite high rates; `Resilient` sentiment; supply-constrained |
-| 2024 | 4.35% → 4.10% | Melbourne flat; elevated days-on-market; affordability stress; Dec cut lifts confidence |
-| 2025 | 4.35% → 3.60% | Three RBA cuts; renewed confidence; prices +8.6%; `Strong` sentiment returns |
+* Apartment rental market simulation
+* Commercial property simulation
+* Synthetic mortgage datasets
+* Population and demographic data generation
+* Interactive Streamlit interface
+* PostgreSQL export support
+* Parquet output support
+* Data quality scoring reports
 
 ---
 
-## Suburb coverage by state
+# Technologies Used
 
-Real suburbs with accurate postcodes, council areas, and price anchors:
-
-| State | Example suburbs |
-|---|---|
-| VIC | Richmond, Toorak, Brighton, Footscray, Geelong, Ballarat, Pakenham |
-| NSW | Surry Hills, Newtown, Bondi, Manly, Parramatta, Penrith |
-| QLD | Paddington, Sunnybank, Gold Coast, Sunshine Coast, Toowoomba |
-| WA | Subiaco, Cottesloe, Fremantle, Joondalup, Mandurah, Bunbury |
-| SA | Norwood, Unley, Glenelg, Prospect, Tea Tree Gully, Port Adelaide |
-| TAS | Sandy Bay, Glenorchy, Launceston, Devonport |
-| ACT | Braddon, Gungahlin, Tuggeranong, Woden Valley |
-| NT | Darwin CBD, Palmerston, Alice Springs |
-
----
-
-## What to do with the output
-
-This CSV is designed as the starting point for:
-
-- **Data cleaning notebook** — parse prices, standardise dates, resolve nulls, deduplicate, fix units
-- **MySQL / PostgreSQL ETL** — load after cleaning for dashboard or BI tool connection
-- **Power BI / Tableau** — connect post-cleaning for visualisation
-- **EDA** — explore distributions, outliers, missing patterns before cleaning
-- **ML feature engineering** — encode property type, impute missing values, engineer suburb features
-
----
-
-## Data realism
-
-- **Suburbs** are real properties from all 8 Australian states and territories with correct council areas and postcodes
-- **Price medians** reflect real 2020–2025 market levels per suburb, anchored to CoreLogic / Domain data
-- **RBA cash rates** are the actual rates in effect each month (verified against RBA records)
-- **Auction clearance rates** are calibrated to real Melbourne and Sydney historical averages
-- **Missing rates** reflect realistic scrape incompleteness (`building_area` ~35%, `lat/lon` ~25%)
-- **Listing volumes** scale with real market activity (lockdown months fewer rows, boom months more)
-- **Every run is unique** — seeded from the system clock so no two outputs are identical
-
----
-
-## Dependencies
-
-```
-numpy>=1.26
-pandas>=2.1
-```
-
-No API keys. No data downloads. No internet connection required.
+| Category            | Technology                          |
+| ------------------- | ----------------------------------- |
+| Programming         | Python                              |
+| Data Processing     | Pandas                              |
+| Numerical Computing | NumPy                               |
+| Output Format       | CSV                                 |
+| Domain              | Australian Housing Market Analytics |
 
 ---

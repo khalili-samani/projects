@@ -124,3 +124,42 @@ The staging table now contains only transactions with valid reporting dates. Inv
 ### Business Rationale
 
 Financial metrics must be stored as numeric data types to support accurate calculations, aggregations and DAX measures. Cleaning currency values before conversion ensures consistent financial reporting across the dashboard.
+
+## Step 6 – Duplicate Transaction Handling
+
+**Status:** Completed
+
+### Actions Performed
+
+- Identified duplicate records using `transaction_id`.
+- Removed duplicate transaction IDs from the analytical staging table.
+- Retained the first occurrence of each transaction ID.
+
+### Business Rationale
+
+Duplicate POS transactions can overstate revenue, units sold, transaction counts and staff performance. Removing duplicated transaction IDs ensures the analytical model reports each transaction once.
+
+### Outcome
+
+The staging table now contains one record per transaction ID.
+
+## Step 7 – Return Transaction Validation
+
+**Status:** Completed
+
+### Actions Performed
+
+* Standardised return indicator values to `Yes` and `No`.
+* Created a validation column to identify inconsistencies between the return flag and transaction quantity.
+* Flagged records where:
+
+  * a return was recorded with a positive quantity
+  * a negative quantity was not marked as a return
+
+### Business Rationale
+
+Return transactions directly affect revenue, units sold and profitability. Automatically correcting inconsistent records could alter historical transaction data, so records were validated and flagged for review rather than modified.
+
+### Outcome
+
+The dataset now includes a return validation field that supports data quality monitoring and enables questionable transactions to be reviewed before analysis.

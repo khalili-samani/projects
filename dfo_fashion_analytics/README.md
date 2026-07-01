@@ -1,1 +1,0 @@
-New Power BI dashboard is coming soon!

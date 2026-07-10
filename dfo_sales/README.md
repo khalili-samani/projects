@@ -66,10 +66,12 @@ Full reasoning for each decision — including the cases I chose *not* to "fix" 
 README.md
 ```
 
+Note: the five dimension tables (`Date`, `Product`, `Staff`, `Promotion`, `Customer Type`) are generated directly inside Power Query from the cleaned `Fact_Sales` table — they don't exist as separate source files, since there's nothing to import that Fact_Sales doesn't already contain. `data/cleaned/clean_sales.csv` is an export of `Fact_Sales` only; the dimension tables are documented in the data dictionary but live purely inside the `.pbix`.
+
 ## Tech and approach
 
 - **Power Query (M)** for all data cleaning — every transformation step is named as a plain-English action (e.g. *"Filled missing category from product code"*) so the cleaning logic is followable without reading M syntax
-- **Star schema data model** — one fact table (`Fact_Sales`) with five dimension tables (`Date`, `Product`, `Staff`, `Promotion`, `Customer Type`)
+- **Star schema data model** — one fact table (`Fact_Sales`) with five dimension tables (`Date`, `Product`, `Staff`, `Promotion`, `Customer Type`), each generated directly from `Fact_Sales` in Power Query rather than imported separately, since the raw export only ever recorded these attributes at transaction level
 - **DAX measures** organised into a dedicated measures table with display folders (Sales, Profitability, Returns, Data Quality, Time Intelligence)
 - Every report page includes a plain-language purpose statement, KPI explanations, and a recommendation callout — written for a non-technical reader, not just for whoever built it
 

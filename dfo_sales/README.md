@@ -2,7 +2,13 @@
 
 A Power BI dashboard analysing two years of transaction-level sales data from Armani Outlet, DFO South Wharf, built to answer real retail management questions around profitability, promotions, and customer capture.
 
-**Status:** Executive Overview page complete. Product & Category, Promotions, Staff, and Customer pages in progress.
+**Tools:** Power BI · Power Query (M) · DAX
+
+**A note on the data:** This dataset was deliberately generated with realistic messiness — duplicate transactions, inconsistent formatting, missing values — specifically to demonstrate data-cleaning and Power Query skills, rather than sourced from an actual retailer. "Armani Outlet" and all staff names are illustrative and used for educational/portfolio purposes only.
+
+**Status:** All five dashboard pages complete — Executive Overview, Product & Category, Promotions, Staff, and Customer.
+
+**Headline numbers (Jul 2024 – Jul 2026):** $2.37M net sales · $917K gross profit · 38.71% margin · $382.06 average order value · 3.24% return rate.
 
 ---
 
@@ -18,12 +24,11 @@ Rather than build charts for the sake of it, this dashboard was built around spe
 
 ## What the data showed
 
-A few findings worth calling out, since they shaped both the cleaning approach and the dashboard's recommendations:
-
-- **Promotions are the clearest story in the dataset.** Deep-discount events (EOFY Clearance, Black Friday, Boxing Day) drive volume but collapse margin well below baseline. One campaign — VIP Weekend — holds margin near baseline while still driving real volume, making it the template worth repeating over the heavier discount events.
-- **Outerwear underperforms on margin** despite being a strong revenue category — it sells well but returns noticeably less profit per dollar than every other category.
-- **No single product is unprofitable overall**, but certain items (trench coats, chinos, boots) are disproportionately likely to go margin-negative on individual heavily-discounted sales.
-- **41% of transactions have no customer ID captured**, concentrated in Walk-in and Tourist segments — a real gap in the store's ability to re-contact a large share of its customer base, not a data error.
+- **Promotions are the clearest story in the dataset.** Deep-discount events (EOFY Clearance, Black Friday, Boxing Day) drive volume but collapse margin well below baseline — EOFY Clearance runs the deepest average discount and the lowest margin of any campaign. VIP Weekend is the exception: margin holds near the no-campaign baseline while still moving real volume, making it the template worth repeating over the heavier discount events.
+- **Outerwear underperforms on margin** despite being the second-highest revenue category ($493,875) — it returns the lowest margin (32.69%) of any category, well behind Accessories (42.88%), which is the smallest category by revenue but the most profitable per dollar sold.
+- **No single product is unprofitable overall**, but trench coats, chinos, and boots are disproportionately likely to go margin-negative on individual heavily-discounted sales.
+- **Customer contact capture is a genuine gap, not a data error.** Only 44.10% of transactions capture an email — meaning over half the store's customers can't be re-contacted. Walk-in and Tourist segments drive the bulk of revenue ($938,998 and $406,918 respectively) yet carry the lowest capture rates in the store, so the gap sits exactly where the revenue is.
+- **Staff performance is tight, not spread out.** Net sales and average order value across the team sit in a narrow band with no clear outlier — more useful as a baseline to monitor after a process change than as a tool for singling anyone out.
 
 ## Data quality — the interesting part
 
@@ -39,21 +44,27 @@ The raw export (`data/raw/raw_sales.csv`, ~6,300 rows) needed significant repair
 | Sign errors on returns | 13 return transactions recorded quantity as positive when 187 others correctly used negative | Corrected using `is_return` as the source of truth, verified against `net_sales` first |
 | Inconsistent staff naming | Same 10 staff members recorded under 2–3 name variants each (e.g. "O. Martin" / "Oliver Martin") | Standardised via a canonical lookup table keyed on staff ID |
 
-Full reasoning for each decision — including the cases I chose *not* to "fix" (unexplained future-dated transactions, missing customer IDs) — is in the Power Query step names themselves, which are written in plain English specifically so this logic doesn't require reading M code to follow.
+Full reasoning for each decision — including the cases I chose *not* to "fix" (unexplained future-dated transactions, missing customer IDs) — is in the Power Query step names themselves, written in plain English so this logic doesn't require reading M code to follow. A step-by-step summary is also in [`power_bi/power_query_steps.md`](power_bi/power_query_steps.md).
 
 ## Repo structure
 
 ```
 /data
-  /raw/raw_sales.csv         — original, untouched export
+  /raw/raw_sales.csv
+  /cleaned/clean_sales.csv
+  data_dictionary.md
 /power_bi
   dfo_sales.pbix
+  dax_measures.md
+  power_query_steps.md
 /screenshots
   executive_overview.jpeg
+  product_and_category.jpeg
+  promotions.jpeg
+  staff.jpeg
+  customer.jpeg
 README.md
 ```
-
-*(Note: this project currently uses the standard `.pbix` format rather than the text-based `.pbip` project format, so Power Query and DAX logic live inside the file itself rather than as separate readable text files in this repo.)*
 
 ## Tech and approach
 
@@ -64,16 +75,19 @@ README.md
 
 ## Dashboard preview
 
-**Executive Overview**
-
+**Executive Overview** — *Is the store growing, and is that growth profitable?*
 ![Executive Overview](screenshots/executive_overview.jpeg)
 
-*(Further pages added as they're built.)*
+**Product & Category** — *Which products and categories earn their shelf space?*
+![Product and Category](screenshots/product_and_category.jpeg)
 
-## What's next
+**Promotions** — *Are sale events making money, or just pulling forward sales at a loss?*
+![Promotions](screenshots/promotions.jpeg)
 
-- [ ] Product & Category page
-- [ ] Promotions page
-- [ ] Staff page
-- [ ] Customer page
-- [ ] Full screenshot set
+**Staff** — *How does the team compare, and where does coaching matter more than concern?*
+![Staff](screenshots/staff.jpeg)
+
+**Customer** — *Who's buying, and how well is the store capturing their details?*
+![Customer](screenshots/customer.jpeg)
+
+---

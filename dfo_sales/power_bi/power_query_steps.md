@@ -1,6 +1,6 @@
 # Power Query Steps — Plain-English Summary
 
-This file mirrors the Applied Steps pane in Power Query for each table in the model, in order, written in plain English so the cleaning logic can be followed without reading M code. See the [data dictionary](data/data_dictionary.md) for column-level detail and the README for the business context behind each decision.
+This file mirrors the Applied Steps pane in Power Query for each table in the model, in order, written in plain English so the cleaning logic can be followed without reading M code. See the [data dictionary](../data/data_dictionary.md) for column-level detail and the README for the business context behind each decision.
 
 ---
 

@@ -80,7 +80,7 @@ Note: the five dimension tables (`Date`, `Product`, `Staff`, `Promotion`, `Custo
 **Executive Overview**, *Is the store growing, and is that growth profitable?*
 ![Executive Overview](screenshots/executive_overview.jpeg)
 
-**Product & Category**, *Which products and categories earn their shelf space?*
+**Product and Category**, *Which products and categories earn their shelf space?*
 ![Product and Category](screenshots/product_and_category.jpeg)
 
 **Promotions**, *Are sale events making money, or just pulling forward sales at a loss?*

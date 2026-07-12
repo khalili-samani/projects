@@ -1,12 +1,12 @@
-# Armani Outlet Sales Analysis — Power BI Dashboard
+# Armani Outlet Sales Analysis, Power BI Dashboard
 
 A Power BI dashboard analysing two years of transaction-level sales data from Armani Outlet, DFO South Wharf, built to answer real retail management questions around profitability, promotions, and customer capture.
 
 **Tools:** Power BI · Power Query (M) · DAX
 
-**A note on the data:** This dataset was deliberately generated with realistic messiness — duplicate transactions, inconsistent formatting, missing values — specifically to demonstrate data-cleaning and Power Query skills, rather than sourced from an actual retailer. "Armani Outlet" and all staff names are illustrative and used for educational/portfolio purposes only.
+**A note on the data:** This dataset was deliberately generated with realistic messiness, duplicate transactions, inconsistent formatting, and missing values, specifically to demonstrate data-cleaning and Power Query skills, rather than sourced from an actual retailer. "Armani Outlet" and all staff names are illustrative and used for educational/portfolio purposes only.
 
-**Status:** All five dashboard pages complete — Executive Overview, Product & Category, Promotions, Staff, and Customer.
+**Status:** All five dashboard pages complete, Executive Overview, Product and Category, Promotions, Staff, and Customer.
 
 **Headline numbers (Jul 2024 – Jul 2026):** $2.37M net sales · $917K gross profit · 38.71% margin · $382.06 average order value · 3.24% return rate.
 
@@ -24,8 +24,8 @@ Rather than build charts for the sake of it, this dashboard was built around spe
 
 ## What the data showed
 
-- **Promotions are the clearest story in the dataset.** Deep-discount events (EOFY Clearance, Black Friday, Boxing Day) drive volume but collapse margin well below baseline — EOFY Clearance runs the deepest average discount and the lowest margin of any campaign. VIP Weekend is the exception: margin holds near the no-campaign baseline while still moving real volume, making it the template worth repeating over the heavier discount events.
-- **Outerwear underperforms on margin** despite being the second-highest revenue category ($493,875) — it returns the lowest margin (32.69%) of any category, well behind Accessories (42.88%), which is the smallest category by revenue but the most profitable per dollar sold.
+- **Promotions are the clearest story in the dataset.** Deep-discount events (EOFY Clearance, Black Friday, Boxing Day) drive volume but collapse margin well below baseline, EOFY Clearance runs the deepest average discount and the lowest margin of any campaign. VIP Weekend is the exception: margin holds near the no-campaign baseline while still moving real volume, making it the template worth repeating over the heavier discount events.
+- **Outerwear underperforms on margin** despite being the second-highest revenue category ($493,875), it returns the lowest margin (32.69%) of any category, well behind Accessories (42.88%), which is the smallest category by revenue but the most profitable per dollar sold.
 - **No single product is unprofitable overall**, but trench coats, chinos, and boots are disproportionately likely to go margin-negative on individual heavily-discounted sales.
 - **Customer contact capture is a genuine gap, not a data error.** Only 44.10% of transactions capture an email — meaning over half the store's customers can't be re-contacted. Walk-in and Tourist segments drive the bulk of revenue ($938,998 and $406,918 respectively) yet carry the lowest capture rates in the store, so the gap sits exactly where the revenue is.
 - **Staff performance is tight, not spread out.** Net sales and average order value across the team sit in a narrow band with no clear outlier — more useful as a baseline to monitor after a process change than as a tool for singling anyone out.
@@ -44,7 +44,7 @@ The raw export (`data/raw/raw_sales.csv`, ~6,300 rows) needed significant repair
 | Sign errors on returns | 13 return transactions recorded quantity as positive when 187 others correctly used negative | Corrected using `is_return` as the source of truth, verified against `net_sales` first |
 | Inconsistent staff naming | Same 10 staff members recorded under 2–3 name variants each (e.g. "O. Martin" / "Oliver Martin") | Standardised via a canonical lookup table keyed on staff ID |
 
-Full reasoning for each decision — including the cases I chose *not* to "fix" (unexplained future-dated transactions, missing customer IDs) — is in the Power Query step names themselves, written in plain English so this logic doesn't require reading M code to follow. A step-by-step summary is also in [`power_bi/power_query_steps.md`](power_bi/power_query_steps.md).
+Full reasoning for each decision, including the cases I chose *not* to "fix" (unexplained future-dated transactions, missing customer IDs), is in the Power Query step names themselves, written in plain English so this logic doesn't require reading M code to follow. A step-by-step summary is also in [`power_bi/power_query_steps.md`](power_bi/power_query_steps.md).
 
 ## Repo structure
 
@@ -66,30 +66,30 @@ Full reasoning for each decision — including the cases I chose *not* to "fix" 
 README.md
 ```
 
-Note: the five dimension tables (`Date`, `Product`, `Staff`, `Promotion`, `Customer Type`) are generated directly inside Power Query from the cleaned `Fact_Sales` table — they don't exist as separate source files, since there's nothing to import that Fact_Sales doesn't already contain. `data/cleaned/clean_sales.csv` is an export of `Fact_Sales` only; the dimension tables are documented in the data dictionary but live purely inside the `.pbix`.
+Note: the five dimension tables (`Date`, `Product`, `Staff`, `Promotion`, `Customer Type`) are generated directly inside Power Query from the cleaned `Fact_Sales` table, they don't exist as separate source files, since there's nothing to import that Fact_Sales doesn't already contain. `data/cleaned/clean_sales.csv` is an export of `Fact_Sales` only; the dimension tables are documented in the data dictionary but live purely inside the `.pbix`.
 
 ## Tech and approach
 
-- **Power Query (M)** for all data cleaning — every transformation step is named as a plain-English action (e.g. *"Filled missing category from product code"*) so the cleaning logic is followable without reading M syntax
+- **Power Query (M)** for all data cleaning, every transformation step is named as a plain-English action (e.g. *"Filled missing category from product code"*) so the cleaning logic is followable without reading M syntax
 - **Star schema data model** — one fact table (`Fact_Sales`) with five dimension tables (`Date`, `Product`, `Staff`, `Promotion`, `Customer Type`), each generated directly from `Fact_Sales` in Power Query rather than imported separately, since the raw export only ever recorded these attributes at transaction level
 - **DAX measures** organised into a dedicated measures table with display folders (Sales, Profitability, Returns, Data Quality, Time Intelligence)
 - Every report page includes a plain-language purpose statement, KPI explanations, and a recommendation callout — written for a non-technical reader, not just for whoever built it
 
 ## Dashboard preview
 
-**Executive Overview** — *Is the store growing, and is that growth profitable?*
+**Executive Overview**, *Is the store growing, and is that growth profitable?*
 ![Executive Overview](screenshots/executive_overview.jpeg)
 
-**Product & Category** — *Which products and categories earn their shelf space?*
+**Product & Category**, *Which products and categories earn their shelf space?*
 ![Product and Category](screenshots/product_and_category.jpeg)
 
-**Promotions** — *Are sale events making money, or just pulling forward sales at a loss?*
+**Promotions**, *Are sale events making money, or just pulling forward sales at a loss?*
 ![Promotions](screenshots/promotions.jpeg)
 
-**Staff** — *How does the team compare, and where does coaching matter more than concern?*
+**Staff**, *How does the team compare, and where does coaching matter more than concern?*
 ![Staff](screenshots/staff.jpeg)
 
-**Customer** — *Who's buying, and how well is the store capturing their details?*
+**Customer**, *Who's buying, and how well is the store capturing their details?*
 ![Customer](screenshots/customer.jpeg)
 
 ---

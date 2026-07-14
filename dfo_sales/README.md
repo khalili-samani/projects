@@ -26,36 +26,97 @@ The dashboard is designed for a store manager or regional retail manager who nee
 
 The dashboard is intended to support investigation and prioritisation. Because the data is synthetic and observational, it does not establish causal business impact.
 
-## What the data showed
+## Data scope and model grain
 
-- **Promotions are the clearest story in the dataset.** Deep-discount events (EOFY Clearance, Black Friday, Boxing Day) drive volume but collapse margin well below baseline, EOFY Clearance runs the deepest average discount and the lowest margin of any campaign. VIP Weekend is the exception: margin holds near the no-campaign baseline while still moving real volume, making it the template worth repeating over the heavier discount events.
-- **Outerwear underperforms on margin** despite being the second-highest revenue category ($493,875), it returns the lowest margin (32.69%) of any category, well behind Accessories (42.88%), which is the smallest category by revenue but the most profitable per dollar sold.
-- **No single product is unprofitable overall**, but trench coats, chinos, and boots are disproportionately likely to go margin-negative on individual heavily-discounted sales.
-- **Customer contact capture is a genuine gap, not a data error.** Only 44.10% of transactions capture an email — meaning over half the store's customers can't be re-contacted. Walk-in and Tourist segments drive the bulk of revenue ($938,998 and $406,918 respectively) yet carry the lowest capture rates in the store, so the gap sits exactly where the revenue is.
-- **Staff performance is tight, not spread out.** Net sales and average order value across the team sit in a narrow band with no clear outlier — more useful as a baseline to monitor after a process change than as a tool for singling anyone out.
+- **Raw rows:** 6,287
+- **Rows with missing transaction ID removed:** 1
+- **Unique normalised transaction IDs after deduplication:** 6,200
+- **Date range:** 1 July 2024 to 10 July 2026
+- **Unparseable transaction dates after cleaning:** 19
+- **Fact table grain:** one retained row per normalised transaction ID in the current model
 
-## Data quality — the interesting part
+## Data preparation and quality controls
 
-The raw export (`data/raw/raw_sales.csv`, ~6,300 rows) needed significant repair before it was analysis-ready. Rather than hide this, I've documented it because the judgement calls involved are arguably more representative of real analyst work than the final charts:
+The raw CSV was cleaned in Power Query before modelling. Key transformations included:
 
-| Issue | What I found | How it was handled |
+| Data-quality issue | Treatment | Validation or risk |
 |---|---|---|
-| Duplicate transactions | 70 exact duplicate rows, plus 16 more hidden behind a `-MANUAL` suffix on the transaction ID | Suffix stripped before dedup so both types collapse correctly |
-| Inconsistent currency formatting | Money columns mixed `$566.97`, `AUD 609.43`, and plain numbers | Stripped and converted to proper numeric types |
-| Two date formats | `D/M/YYYY` and `DD-Mon-YY` mixed throughout | Parsed with a fallback chain, unparseable dates left null for review rather than guessed |
-| Inconsistent categorical text | Store names, categories, and payment methods each had 5–30+ spelling/casing variants | Standardised via text cleaning and, where a single outlet, hardcoded to the correct value |
-| Missing product codes / categories (35 / 28 rows) | Product names follow a predictable colour + style pattern, and category is embedded in the product code prefix | Recovered ~97% of both fields using pattern-matching logic built directly into the query, rather than dropping the rows |
-| Sign errors on returns | 13 return transactions recorded quantity as positive when 187 others correctly used negative | Corrected using `is_return` as the source of truth, verified against `net_sales` first |
-| Inconsistent staff naming | Same 10 staff members recorded under 2–3 name variants each (e.g. "O. Martin" / "Oliver Martin") | Standardised via a canonical lookup table keyed on staff ID |
+| Missing transaction IDs | Rows without an ID were removed because they could not be reliably linked to a sale | 1 raw row is affected |
+| Duplicate and manually adjusted IDs | Transaction IDs were uppercased and the `-MANUAL` suffix was removed before deduplication | 6,200 unique normalised IDs remain from 6,287 raw rows |
+| Mixed currency formats | `$`, `AUD` and thousands separators were removed before numeric conversion | `[AUTHOR TO ADD: conversion-error count after type assignment]` |
+| Mixed date formats | Dates were parsed using two expected formats; unresolved values were left null | 19 unresolved dates in the full cleaned population |
+| Missing net sales | Recalculated as gross sales less discount amount | `[AUTHOR TO ADD: number of values recovered and reconciliation tolerance]` |
+| Missing product codes | Recovered using a style-name lookup built from matching product records | The lookup currently keeps the first matching code and does not test for collisions |
+| Missing categories | Recovered from the product-code prefix | `[AUTHOR TO ADD: unrecovered product and category counts after transformation]` |
+| Return quantity sign errors | Positive quantities on rows flagged as returns were reversed | `Is Return` is treated as the source of truth |
+| Staff name variants | Resolved through a canonical staff-ID lookup | 10 staff IDs are represented |
+| Missing customer IDs | Retained as a genuine operational data gap rather than imputed | Customer ID and email-capture status should not be treated as equivalent fields |
 
-Full reasoning for each decision, including the cases I chose *not* to "fix" (unexplained future-dated transactions, missing customer IDs), is in the Power Query step names themselves, written in plain English so this logic doesn't require reading M code to follow. A step-by-step summary is also in [`power_bi/power_query_steps.md`](power_bi/power_query_steps.md).
+The cleaning process removed 86 records after transaction IDs were normalised, leaving 6,200 unique IDs. Of the source rows, 42 were fully identical across all columns.
+
+## Data model
+
+The Power BI model uses a star-schema pattern:
+
+- `Fact_Sales`
+- `Date`
+- `Product`
+- `Staff`
+- `Promotion`
+- `Customer Type`
+- a dedicated measures table
+
+Dimension tables are generated in Power Query from the cleaned fact data because no independent master-data sources were supplied.
+
+## Measures and metric definitions
+
+Core measures are implemented in DAX and organised into display folders.
+
+| Metric | Definition |
+|---|---|
+| Transactions | Distinct count of normalised transaction IDs |
+| Net Sales | Sum of net sales after discount |
+| Gross Profit | Sum of net sales less estimated cost |
+| Gross Margin | Gross profit divided by net sales |
+| Average Order Value | Net sales divided by distinct transactions |
+| Return Rate | Distinct returned transactions divided by all distinct transactions |
+| Email Capture Rate | Distinct transactions flagged as email captured divided by all distinct transactions |
+| Discount | Total discount amount divided by gross sales |
+
+The supplied raw data reproduces the dashboard headline figures after the documented ID normalisation and deduplication:
+
+| KPI | Recalculated result | Dashboard result |
+|---|---:|---:|
+| Net sales | $2,368,788.63 | $2.37M |
+| Gross profit | $917,028.73 | $917.03K |
+| Gross margin | 38.713% | 38.71% |
+| Average order value | $382.06 | $382.06 |
+| Return rate | 3.242% | 3.24% |
+| Email capture rate | 44.097% | 44.10% |
+
+### Measured results
+
+- Walk-in customers generated the highest net sales at $938,998, followed by loyalty members at $804,961.
+- Overall email capture was 44.10%. Capture rates by customer segment were relatively close, ranging from 43.47% for tourists to 47.81% for VIP customers.
+- Womenswear generated the highest category sales at $693,468. Accessories generated the lowest sales at $224,939 but the highest gross margin at 42.88%.
+- Outerwear generated $493,875 in net sales and had the lowest category margin at 32.69%.
+- No-campaign trading had the highest observed gross margin among the displayed promotion groups. VIP Weekend and Fashion Week retained materially higher margins than the deepest-discount events.
+- Staff sales and average-order-value results were visually concentrated, with no obvious extreme outlier in the displayed rankings.
+
+### Management hypotheses
+
+- Review outerwear pricing, cost assumptions and discount depth because the category combines meaningful revenue with a lower gross margin.
+- Test whether accessories deserve greater visibility or attachment-selling support, while accounting for stock availability and customer demand.
+- Compare VIP-style targeted promotions with broad discount events using incremental profit, not only observed margin.
+- Improve point-of-sale email-capture processes, but first confirm consent, privacy notice and system usability requirements.
+- Use staff results as a baseline for process monitoring rather than as a standalone performance-management tool.
 
 ## Repo structure
 
 ```
 /data
   /raw/raw_sales.csv
-  /cleaned/clean_sales.csv
+  /cleaned/clean_sales.csv		will be added soon
   data_dictionary.md
 /power_bi
   dfo_sales.pbix
@@ -70,30 +131,36 @@ Full reasoning for each decision, including the cases I chose *not* to "fix" (un
 README.md
 ```
 
-Note: the five dimension tables (`Date`, `Product`, `Staff`, `Promotion`, `Customer Type`) are generated directly inside Power Query from the cleaned `Fact_Sales` table, they don't exist as separate source files, since there's nothing to import that Fact_Sales doesn't already contain. `data/cleaned/clean_sales.csv` is an export of `Fact_Sales` only; the dimension tables are documented in the data dictionary but live purely inside the `.pbix`.
-
-## Tech and approach
-
-- **Power Query (M)** for all data cleaning, every transformation step is named as a plain-English action (e.g. *"Filled missing category from product code"*) so the cleaning logic is followable without reading M syntax
-- **Star schema data model** — one fact table (`Fact_Sales`) with five dimension tables (`Date`, `Product`, `Staff`, `Promotion`, `Customer Type`), each generated directly from `Fact_Sales` in Power Query rather than imported separately, since the raw export only ever recorded these attributes at transaction level
-- **DAX measures** organised into a dedicated measures table with display folders (Sales, Profitability, Returns, Data Quality, Time Intelligence)
-- Every report page includes a plain-language purpose statement, KPI explanations, and a recommendation callout — written for a non-technical reader, not just for whoever built it
-
 ## Dashboard preview
 
-**Executive Overview**, *Is the store growing, and is that growth profitable?*
+### Executive overview
+
+Provides headline sales, profit, margin, average-order-value and return-rate KPIs, plus monthly category and promotion context.
+
 ![Executive Overview](screenshots/executive_overview.jpeg)
 
-**Product and Category**, *Which products and categories earn their shelf space?*
+### Product and category
+
+Compares category revenue, gross margin and units sold.
+
 ![Product and Category](screenshots/product_and_category.jpeg)
 
-**Promotions**, *Are sale events making money, or just pulling forward sales at a loss?*
+### Promotions
+
+Compares gross margin, net sales and aggregate discount by promotion.
+
 ![Promotions](screenshots/promotions.jpeg)
 
-**Staff**, *How does the team compare, and where does coaching matter more than concern?*
+### Staff
+
+Compares staff net sales, average order value and transaction counts.
+
 ![Staff](screenshots/staff.jpeg)
 
-**Customer**, *Who's buying, and how well is the store capturing their details?*
+### Customer
+
+Compares customer-segment sales, average order value and email capture.
+
 ![Customer](screenshots/customer.jpeg)
 
 ---

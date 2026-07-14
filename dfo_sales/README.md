@@ -1,26 +1,30 @@
-# Armani Outlet Sales Analysis, Power BI Dashboard
+# Luxury Fashion Outlet Sales Analysis | Power BI
 
-A Power BI dashboard analysing two years of transaction-level sales data from Armani Outlet, DFO South Wharf, built to answer real retail management questions around profitability, promotions, and customer capture.
+A five-page Power BI dashboard built from a synthetic retail transaction dataset to support store-management decisions across profitability, promotions, product mix, staff performance and customer contact capture.
 
-**Tools:** Power BI · Power Query (M) · DAX
+The project demonstrates practical Power Query cleaning, dimensional modelling, DAX measure design and stakeholder-focused dashboard communication.
 
-**A note on the data:** This dataset was deliberately generated with realistic messiness, duplicate transactions, inconsistent formatting, and missing values, specifically to demonstrate data-cleaning and Power Query skills, rather than sourced from an actual retailer. "Armani Outlet" and all staff names are illustrative and used for educational/portfolio purposes only.
+**Tools:** Power BI Desktop, Power Query (M), DAX
 
-**Status:** All five dashboard pages complete, Executive Overview, Product and Category, Promotions, Staff, and Customer.
+**Dataset:** Synthetic transaction-level data created for portfolio use. It is not sourced from, endorsed by or connected with Armani, DFO South Wharf or any real retailer. Staff names and commercial scenarios are fictional.
 
-**Headline numbers (Jul 2024 – Jul 2026):** $2.37M net sales · $917K gross profit · 38.71% margin · $382.06 average order value · 3.24% return rate.
+**Analysis period:** 1 July 2024 to 10 July 2026. This is a 25-month inclusive calendar span, with July 2026 representing a partial month.
+
+**Headline results:** $2.369 million net sales, $917,029 gross profit, 38.71% gross margin, $382.06 average order value, 3.24% transaction return rate and 44.10% email capture rate.
 
 ---
 
 ## The business questions
 
-Rather than build charts for the sake of it, this dashboard was built around specific questions a store or regional manager would actually ask:
+The dashboard is designed for a store manager or regional retail manager who needs a concise view of revenue quality, margin performance and operational opportunities. It supports five management questions:
 
-1. Is the store growing, and is that growth profitable?
-2. Which products and categories earn their shelf space, and which quietly cost the store money?
-3. Are promotional campaigns driving genuine profit, or just pulling forward sales at a loss?
-4. How does staff performance compare, and where does it matter?
-5. Who's actually buying, and how well is the store capturing their details for future contact?
+1. Are sales and gross profit moving in the same direction over time?
+2. Which product categories generate revenue efficiently, and which require closer margin review?
+3. How do promotional periods compare with normal trading on sales, discounts and gross margin?
+4. Is staff performance materially different across sales volume and average order value?
+5. Which customer segments generate revenue, and how consistently are contact details captured?
+
+The dashboard is intended to support investigation and prioritisation. Because the data is synthetic and observational, it does not establish causal business impact.
 
 ## What the data showed
 

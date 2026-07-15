@@ -116,7 +116,7 @@ The supplied raw data reproduces the dashboard headline figures after the docume
 ```
 /data
   /raw/raw_sales.csv
-  /cleaned/clean_sales.csv		will be added soon
+  /cleaned/clean_sales.csv
   data_dictionary.md
 /power_bi
   dfo_sales.pbix

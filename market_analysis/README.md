@@ -411,3 +411,7 @@ Potential future enhancements include:
 * Dividend-adjusted return calculations
 
 ---
+
+## License
+
+This project is licensed under the MIT License, see [LICENSE](LICENSE) for details.

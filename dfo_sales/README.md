@@ -164,3 +164,7 @@ Compares customer-segment sales, average order value and email capture.
 ![Customer](screenshots/customer.jpeg)
 
 ---
+
+## License
+
+This project is licensed under the MIT License, see [LICENSE](LICENSE) for details.

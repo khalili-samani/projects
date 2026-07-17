@@ -129,12 +129,6 @@ README.md
 **Customer** — segment sales, average order value and email capture
 ![Customer](screenshots/customer.jpeg)
 
-## Future Improvements
-
-- Extend the cost model beyond estimated cost to support true landed-margin analysis
-- Add a collision check to the product-code lookup recovery step
-- Build a row-level reconciliation report for the currency-conversion and net-sales-recovery steps
-
 ## License
 
 Licensed under the MIT License; see [LICENSE](LICENSE) for details.

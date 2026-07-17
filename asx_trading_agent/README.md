@@ -473,3 +473,7 @@ Potential future enhancements include:
 * Feature importance visualisations
 
 ---
+
+## License
+
+This project is licensed under the MIT License, see [LICENSE](LICENSE) for details.

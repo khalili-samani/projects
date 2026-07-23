@@ -1,0 +1,141 @@
+[build-system]
+requires = ["hatchling>=1.26,<2.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "qld-elective-surgery-optimiser"
+version = "0.1.0"
+description = "Decision-support system for elective surgery capacity allocation in Queensland."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+authors = [
+    { name = "Ali" }
+]
+keywords = [
+    "healthcare analytics",
+    "operations research",
+    "optimisation",
+    "elective surgery",
+    "public health",
+    "decision support"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Healthcare Industry",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Information Analysis"
+]
+
+dependencies = [
+    "duckdb>=1.2,<2.0",
+    "httpx>=0.28,<1.0",
+    "numpy>=2.1,<3.0",
+    "orjson>=3.10,<4.0",
+    "ortools>=9.12,<10.0",
+    "pandas>=2.2,<3.0",
+    "pandera[pandas]>=0.22,<1.0",
+    "pyarrow>=18,<21",
+    "pydantic>=2.10,<3.0",
+    "pydantic-settings>=2.7,<3.0",
+    "python-dotenv>=1.0,<2.0",
+    "PyYAML>=6.0,<7.0",
+    "typer>=0.15,<1.0"
+]
+
+[project.optional-dependencies]
+api = [
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.34,<1.0"
+]
+
+app = [
+    "plotly>=6.0,<7.0",
+    "streamlit>=1.42,<2.0"
+]
+
+dev = [
+    "mypy>=1.14,<2.0",
+    "pre-commit>=4.1,<5.0",
+    "pytest>=8.3,<9.0",
+    "pytest-cov>=6.0,<7.0",
+    "pytest-mock>=3.14,<4.0",
+    "respx>=0.22,<1.0",
+    "ruff>=0.9,<1.0",
+    "types-PyYAML>=6.0,<7.0"
+]
+
+all = [
+    "qld-elective-surgery-optimiser[api,app,dev]"
+]
+
+[project.scripts]
+qld-surgery = "qld_surgery_optimiser.cli:app"
+
+[project.urls]
+Repository = "https://github.com/YOUR_GITHUB_USERNAME/qld-elective-surgery-optimiser"
+Issues = "https://github.com/YOUR_GITHUB_USERNAME/qld-elective-surgery-optimiser/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/qld_surgery_optimiser"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra"
+]
+
+[tool.coverage.run]
+branch = true
+source = ["qld_surgery_optimiser"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 80
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "B",
+    "C4",
+    "E",
+    "F",
+    "I",
+    "N",
+    "PERF",
+    "PT",
+    "RUF",
+    "SIM",
+    "UP"
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["qld_surgery_optimiser"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+show_error_codes = true
+pretty = true
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = ["duckdb.*"]
+ignore_missing_imports = true

@@ -75,8 +75,8 @@ all = [
 qld-surgery = "qld_surgery_optimiser.cli:app"
 
 [project.urls]
-Repository = "https://github.com/YOUR_GITHUB_USERNAME/qld-elective-surgery-optimiser"
-Issues = "https://github.com/YOUR_GITHUB_USERNAME/qld-elective-surgery-optimiser/issues"
+Repository = "https://github.com/khalili-samani/projects/tree/main/qld-elective-surgery-optimiser"
+Issues = "https://github.com/khalili-samani/projects/tree/main/qld-elective-surgery-optimiser/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/qld_surgery_optimiser"]

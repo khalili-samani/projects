@@ -1,0 +1,74 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build artefacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Test and quality artefacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+logs/
+*.log
+
+# Local databases
+*.duckdb
+*.duckdb.wal
+*.db
+
+# Retrieved and generated data
+data/raw/*
+data/interim/*
+data/processed/*
+data/quarantine/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+!data/quarantine/.gitkeep
+
+# Generated reports
+reports/figures/*
+reports/outputs/*
+!reports/figures/.gitkeep
+!reports/outputs/.gitkeep
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Docker overrides
+docker-compose.override.yml

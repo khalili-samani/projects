@@ -1,0 +1,44 @@
+solver:
+  name: cp_sat
+  time_limit_seconds: 60
+  num_workers: 1
+  log_search_progress: false
+  relative_gap_limit: 0.01
+
+objective_weights:
+  long_waits_remaining: 1.0
+  urgency_burden: 2.0
+  inequitable_underallocation: 0.5
+  allocation_concentration: 0.2
+  unused_sessions: 1.0
+  allocation_instability: 0.1
+
+constraints:
+  require_integer_sessions: true
+  enforce_total_session_budget: true
+  enforce_facility_capacity: true
+  enforce_specialty_capacity: true
+  enforce_eligibility: true
+  prevent_negative_residual_backlog: true
+
+  minimum_sessions_per_eligible_combination: 0
+  maximum_share_per_facility: 0.20
+  maximum_change_from_previous_allocation: null
+
+  enforce_regional_coverage: true
+  minimum_regions_served: 3
+
+diagnostics:
+  generate_infeasibility_report: true
+  test_relaxation_groups:
+    - minimum_coverage
+    - regional_coverage
+    - facility_capacity
+    - specialty_capacity
+    - allocation_stability
+
+governance:
+  require_human_review: true
+  permit_patient_level_recommendations: false
+  withhold_output_when_mandatory_inputs_missing: true
+  withhold_output_when_solver_status_unknown: true

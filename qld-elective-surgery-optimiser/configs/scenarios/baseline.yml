@@ -1,0 +1,27 @@
+scenario:
+  name: baseline
+  description: Central planning scenario using moderate capacity and demand assumptions.
+  planning_periods: 1
+  incremental_sessions_available: 120
+  random_seed: 42
+
+capacity:
+  default_patients_per_session: 3.0
+  default_cancellation_rate: 0.08
+  emergency_displacement_rate: 0.05
+
+demand:
+  quarterly_growth_rate: 0.02
+  uncertainty_standard_deviation: 0.05
+
+policy:
+  minimum_sessions_per_eligible_combination: 0
+  maximum_share_per_facility: 0.20
+  enforce_regional_coverage: true
+  minimum_regions_served: 3
+
+simulation:
+  iterations: 1000
+  patients_per_session_standard_deviation: 0.40
+  cancellation_rate_standard_deviation: 0.02
+  demand_growth_standard_deviation: 0.03

@@ -1,0 +1,45 @@
+project:
+  name: qld-elective-surgery-optimiser
+  version: 0.1.0
+  geography: Queensland, Australia
+  decision_scope: aggregate-health-service-planning
+  patient_level_use_permitted: false
+
+sources:
+  queensland_open_data:
+    organisation: Queensland Government
+    api_base_url: https://www.data.qld.gov.au/api/3/action
+    dataset_search_terms:
+      - elective surgery specialty
+      - elective surgery urgency
+    allowed_formats:
+      - CSV
+      - csv
+
+storage:
+  raw_format: csv
+  processed_format: parquet
+  preserve_raw_files: true
+  calculate_sha256: true
+  overwrite_raw_files: false
+
+validation:
+  fail_on_missing_required_columns: true
+  fail_on_duplicate_business_keys: true
+  quarantine_invalid_rows: true
+  allow_unexpected_columns: true
+  maximum_unresolved_entity_rate: 0.01
+  percentage_minimum: 0.0
+  percentage_maximum: 100.0
+
+warehouse:
+  database_schema: main
+  replace_derived_tables: true
+  preserve_run_metadata: true
+
+reporting:
+  include_data_freshness: true
+  include_scenario_provenance: true
+  include_solver_status: true
+  include_limitations: true
+  include_responsible_use_notice: true

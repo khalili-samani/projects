@@ -1,0 +1,27 @@
+scenario:
+  name: demand-surge
+  description: Elevated incoming demand with unchanged incremental session availability.
+  planning_periods: 1
+  incremental_sessions_available: 120
+  random_seed: 42
+
+capacity:
+  default_patients_per_session: 3.0
+  default_cancellation_rate: 0.09
+  emergency_displacement_rate: 0.06
+
+demand:
+  quarterly_growth_rate: 0.10
+  uncertainty_standard_deviation: 0.08
+
+policy:
+  minimum_sessions_per_eligible_combination: 0
+  maximum_share_per_facility: 0.20
+  enforce_regional_coverage: true
+  minimum_regions_served: 3
+
+simulation:
+  iterations: 1000
+  patients_per_session_standard_deviation: 0.45
+  cancellation_rate_standard_deviation: 0.025
+  demand_growth_standard_deviation: 0.05

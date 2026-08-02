@@ -1,0 +1,138 @@
+"""Command-line interface for project administration and pipeline execution."""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+from typing import Annotated
+
+import typer
+
+from qld_surgery_optimiser import __version__
+from qld_surgery_optimiser.config import (
+    create_required_directories,
+    get_settings,
+    load_base_config,
+    load_scenario_config,
+)
+from qld_surgery_optimiser.exceptions import ConfigurationError
+from qld_surgery_optimiser.logging_config import configure_logging
+
+app = typer.Typer(
+    name="qld-surgery",
+    help="Queensland elective surgery capacity optimisation tools.",
+    no_args_is_help=True,
+)
+
+logger = logging.getLogger(__name__)
+
+
+def _serialise_path(value: object) -> object:
+    """Convert paths to strings for JSON output."""
+    if isinstance(value, Path):
+        return str(value)
+    raise TypeError(f"Object is not JSON serialisable: {type(value).__name__}")
+
+
+@app.callback()
+def main(
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            help="Display the installed package version.",
+            is_eager=True,
+        ),
+    ] = False,
+) -> None:
+    """Run project administration and pipeline commands."""
+    if version:
+        typer.echo(__version__)
+        raise typer.Exit()
+
+
+@app.command("doctor")
+def doctor() -> None:
+    """Validate local configuration and create required directories."""
+    settings = get_settings()
+    configure_logging(settings.log_level, json_output=True)
+
+    try:
+        base_config = load_base_config(settings.base_config_path)
+        scenario = load_scenario_config(settings.default_scenario_path)
+        created_directories = create_required_directories(settings)
+    except ConfigurationError as exc:
+        logger.error(
+            "Configuration health check failed",
+            extra={"error": str(exc)},
+        )
+        typer.echo(f"Configuration error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    logger.info(
+        "Configuration health check passed",
+        extra={
+            "project": base_config.project.name,
+            "scenario": scenario.scenario.name,
+            "created_directories": [str(path) for path in created_directories],
+        },
+    )
+
+    typer.echo("Configuration health check passed.")
+    typer.echo(f"Project: {base_config.project.name}")
+    typer.echo(f"Default scenario: {scenario.scenario.name}")
+
+    if created_directories:
+        typer.echo("Created directories:")
+        for path in created_directories:
+            typer.echo(f"  - {path}")
+    else:
+        typer.echo("All required directories already exist.")
+
+
+@app.command("show-config")
+def show_config(
+    scenario_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--scenario",
+            help="Optional scenario YAML file to display.",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ] = None,
+) -> None:
+    """Display resolved non-secret application and scenario configuration."""
+    settings = get_settings()
+    configure_logging(settings.log_level, json_output=True)
+
+    selected_scenario = scenario_path or settings.default_scenario_path
+
+    try:
+        base_config = load_base_config(settings.base_config_path)
+        scenario = load_scenario_config(selected_scenario)
+    except ConfigurationError as exc:
+        typer.echo(f"Configuration error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    payload = {
+        "settings": settings.model_dump(mode="python"),
+        "base_config": base_config.model_dump(mode="python"),
+        "scenario": scenario.model_dump(mode="python"),
+    }
+
+    typer.echo(
+        json.dumps(
+            payload,
+            indent=2,
+            default=_serialise_path,
+            ensure_ascii=False,
+        )
+    )
+
+
+if __name__ == "__main__":
+    app()

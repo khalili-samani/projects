@@ -150,6 +150,6 @@ The raw and cleaned CSV files, lookup workbooks, data dictionary, methodology an
 
 ## Licence and acknowledgement
 
-Repository documentation and workbook structure are supplied under the MIT Licence. The synthetic dataset is supplied for portfolio reuse with attribution under Creative Commons Attribution 4.0. See `docs/data_source_and_licence.md`.
+This project is licensed under the MIT License. See [`LICENSE`](LICENSE) for details. The synthetic dataset is supplied for portfolio reuse with attribution under Creative Commons Attribution 4.0. See `docs/data_source_and_licence.md`.
 
 **Independent portfolio analysis. Not affiliated with, endorsed by or produced for any Australian healthcare organisation or government agency.**

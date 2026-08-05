@@ -1,0 +1,17 @@
+FINAL VALIDATION CHECKLIST
+
+[PASS] Workbook exported: workbook/australian_health_analysis.xlsx
+[PASS] Raw CSV exists and contains 12,115 rows
+[PASS] Cleaned CSV exists and contains 12,079 rows
+[PASS] Raw-clean reconciliation equals 36 documented duplicates
+[PASS] Data dictionary and lookup workbooks exist
+[PASS] Required workbook worksheets exist
+[PASS] Dashboard and workbook preview PNG files exist
+[PASS] README references existing repository paths
+[PASS] Column names are consistent across cleaned CSV, workbook and dictionary
+[PASS] No real patient, facility or confidential data are included
+[PASS] Synthetic status and limitations are clearly disclosed
+[PASS] Source and licence documentation are included
+[MANUAL] Open workbook in Microsoft Excel desktop and allow recalculation
+[MANUAL] Add native PivotTables, PivotCharts, slicers and timeline for cross-filtering
+[MANUAL] Personalise author name, GitHub URL and resume wording before publication

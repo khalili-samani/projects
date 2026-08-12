@@ -8,7 +8,7 @@ venv/
 # Local data and generated outputs
 data/raw/*.csv
 data/processed/*
-data/sample/*
+!data/sample/README.md
 !data/processed/.gitkeep
 outputs/sample_results/*.csv
 !outputs/sample_results/README.md

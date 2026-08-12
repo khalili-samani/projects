@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Local data and generated outputs
+data/raw/*.csv
+data/processed/*
+!data/processed/.gitkeep
+outputs/sample_results/*.csv
+!outputs/sample_results/README.md
+
+# Database and IDE
+*.log
+*.dump
+.DS_Store
+.vscode/
+.idea/
+
+# Secrets
+.env.*
+!.env.example

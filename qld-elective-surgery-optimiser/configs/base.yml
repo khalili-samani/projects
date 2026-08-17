@@ -9,12 +9,24 @@ sources:
   queensland_open_data:
     organisation: Queensland Government
     api_base_url: https://www.data.qld.gov.au/api/3/action
-    dataset_search_terms:
-      - elective surgery specialty
-      - elective surgery urgency
+    dataset_id: elective-surgery
+
     allowed_formats:
       - CSV
-      - csv
+
+    category_patterns:
+      - "summary 1"
+      - "by category"
+      - "bycat"
+
+    specialty_patterns:
+      - "summary 2"
+      - "by speciality"
+      - "by specialty"
+      - "byspeciality"
+      - "byspecialty"
+
+    include_historical_resources: true
 
 storage:
   raw_format: csv

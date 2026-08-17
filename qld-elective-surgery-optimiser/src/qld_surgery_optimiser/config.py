@@ -26,14 +26,20 @@ class ProjectConfig(BaseModel):
 
 
 class QueenslandOpenDataConfig(BaseModel):
-    """Queensland Open Data CKAN configuration."""
+    """Queensland Government Open Data CKAN configuration."""
 
     model_config = ConfigDict(extra="forbid")
 
     organisation: str
     api_base_url: str
-    dataset_search_terms: list[str] = Field(min_length=1)
+    dataset_id: str
+
     allowed_formats: list[str] = Field(min_length=1)
+
+    category_patterns: list[str] = Field(min_length=1)
+    specialty_patterns: list[str] = Field(min_length=1)
+
+    include_historical_resources: bool = True
 
 
 class SourcesConfig(BaseModel):
@@ -232,9 +238,13 @@ def _read_yaml(path: Path) -> dict[str, Any]:
         with path.open("r", encoding="utf-8") as file:
             content = yaml.safe_load(file)
     except OSError as exc:
-        raise ConfigurationError(f"Could not read configuration file: {path}") from exc
+        raise ConfigurationError(
+            f"Could not read configuration file: {path}"
+        ) from exc
     except yaml.YAMLError as exc:
-        raise ConfigurationError(f"Invalid YAML in configuration file: {path}") from exc
+        raise ConfigurationError(
+            f"Invalid YAML in configuration file: {path}"
+        ) from exc
 
     if not isinstance(content, dict):
         raise ConfigurationError(
@@ -270,12 +280,10 @@ def get_settings() -> AppSettings:
     return AppSettings()
 
 
-def create_required_directories(settings: AppSettings) -> list[Path]:
-    """Create missing local execution directories.
-
-    Returns:
-        Paths created during this call.
-    """
+def create_required_directories(
+    settings: AppSettings,
+) -> list[Path]:
+    """Create missing local execution directories."""
     created: list[Path] = []
 
     for directory in settings.required_directories:

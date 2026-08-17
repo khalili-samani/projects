@@ -1,0 +1,9 @@
+observed_format,row_count,row_pct
+Other,3387,30.27
+D Mon YYYY,1264,11.3
+DD/MM/YYYY or MM/DD/YYYY,1256,11.22
+"Mon D, YYYY",1195,10.68
+Mon-YY (month precision),1184,10.58
+DD-MM-YYYY,1179,10.54
+YYYY-MM-DD,1150,10.28
+Missing or marker,575,5.14

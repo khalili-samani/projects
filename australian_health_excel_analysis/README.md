@@ -65,10 +65,6 @@ australian_health_excel_analysis/
 ├── images/
 │   ├── dashboard_preview.png
 │   └── workbook_structure.png
-└── portfolio/
-    ├── resume_bullets.md
-    ├── linkedin_description.md
-    └── interview_talking_points.md
 
 ```
 

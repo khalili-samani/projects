@@ -244,9 +244,6 @@ The implementation adds composite B-tree indexes for common date, geography, pro
 
 Advanced MySQL, analytical SQL, dimensional modelling, data-quality engineering, ETL/ELT, incremental loading, reconciliation, query optimisation, Python database loading, technical documentation, privacy-aware reporting and GitHub project organisation.
 
-## Relevance to Australian data roles
-
-The project reflects common selection criteria for Australian data analyst, BI analyst, analytics engineer and SQL developer roles: translating a business problem into tested data products, building reusable SQL transformations, defining trusted metrics, documenting assumptions, communicating limitations and supporting auditability.
 
 ## Licence
 

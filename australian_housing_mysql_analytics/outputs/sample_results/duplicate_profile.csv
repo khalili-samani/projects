@@ -1,0 +1,9 @@
+metric,observed_value
+source_rows,11190
+source_columns,37
+exact_duplicate_extra_rows,128
+exact_duplicate_groups,115
+rows_with_repeated_listing_id,630
+repeated_listing_ids,270
+unique_listing_ids,10830
+sha256,ae7942a79e3d50ebe8276e14ac90bef7d8fd61e28d956531e33fc4be793ed3b0

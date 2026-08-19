@@ -16,7 +16,13 @@ from qld_surgery_optimiser.config import (
     load_base_config,
     load_scenario_config,
 )
-from qld_surgery_optimiser.exceptions import ConfigurationError
+from qld_surgery_optimiser.exceptions import (
+    ConfigurationError,
+    DownloadError,
+    SourceDiscoveryError,
+)
+from qld_surgery_optimiser.ingestion.ckan_client import CkanClient
+from qld_surgery_optimiser.ingestion.pipeline import run_ingestion
 from qld_surgery_optimiser.logging_config import configure_logging
 
 app = typer.Typer(
@@ -32,7 +38,10 @@ def _serialise_path(value: object) -> object:
     """Convert paths to strings for JSON output."""
     if isinstance(value, Path):
         return str(value)
-    raise TypeError(f"Object is not JSON serialisable: {type(value).__name__}")
+
+    raise TypeError(
+        f"Object is not JSON serialisable: {type(value).__name__}"
+    )
 
 
 @app.callback()
@@ -60,35 +69,39 @@ def doctor() -> None:
 
     try:
         base_config = load_base_config(settings.base_config_path)
-        scenario = load_scenario_config(settings.default_scenario_path)
+        scenario = load_scenario_config(
+            settings.default_scenario_path
+        )
         created_directories = create_required_directories(settings)
+
     except ConfigurationError as exc:
         logger.error(
             "Configuration health check failed",
             extra={"error": str(exc)},
         )
-        typer.echo(f"Configuration error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
 
-    logger.info(
-        "Configuration health check passed",
-        extra={
-            "project": base_config.project.name,
-            "scenario": scenario.scenario.name,
-            "created_directories": [str(path) for path in created_directories],
-        },
-    )
+        typer.echo(
+            f"Configuration error: {exc}",
+            err=True,
+        )
+
+        raise typer.Exit(code=1) from exc
 
     typer.echo("Configuration health check passed.")
     typer.echo(f"Project: {base_config.project.name}")
-    typer.echo(f"Default scenario: {scenario.scenario.name}")
+    typer.echo(
+        f"Default scenario: {scenario.scenario.name}"
+    )
 
     if created_directories:
         typer.echo("Created directories:")
+
         for path in created_directories:
             typer.echo(f"  - {path}")
     else:
-        typer.echo("All required directories already exist.")
+        typer.echo(
+            "All required directories already exist."
+        )
 
 
 @app.command("show-config")
@@ -105,17 +118,33 @@ def show_config(
         ),
     ] = None,
 ) -> None:
-    """Display resolved non-secret application and scenario configuration."""
+    """Display resolved non-secret application configuration."""
     settings = get_settings()
-    configure_logging(settings.log_level, json_output=True)
+    configure_logging(
+        settings.log_level,
+        json_output=True,
+    )
 
-    selected_scenario = scenario_path or settings.default_scenario_path
+    selected_scenario = (
+        scenario_path
+        or settings.default_scenario_path
+    )
 
     try:
-        base_config = load_base_config(settings.base_config_path)
-        scenario = load_scenario_config(selected_scenario)
+        base_config = load_base_config(
+            settings.base_config_path
+        )
+
+        scenario = load_scenario_config(
+            selected_scenario
+        )
+
     except ConfigurationError as exc:
-        typer.echo(f"Configuration error: {exc}", err=True)
+        typer.echo(
+            f"Configuration error: {exc}",
+            err=True,
+        )
+
         raise typer.Exit(code=1) from exc
 
     payload = {
@@ -131,6 +160,135 @@ def show_config(
             default=_serialise_path,
             ensure_ascii=False,
         )
+    )
+
+
+@app.command("discover")
+def discover() -> None:
+    """Discover eligible upstream elective-surgery resources."""
+    settings = get_settings()
+    configure_logging(
+        settings.log_level,
+        json_output=True,
+    )
+
+    try:
+        base_config = load_base_config(
+            settings.base_config_path
+        )
+
+        source_config = (
+            base_config.sources.queensland_open_data
+        )
+
+        with CkanClient(
+            source_config,
+            timeout_seconds=settings.request_timeout_seconds,
+            max_retries=settings.request_max_retries,
+            retry_backoff_seconds=(
+                settings.request_retry_backoff_seconds
+            ),
+            user_agent=settings.user_agent,
+        ) as client:
+            dataset, resources = client.get_dataset()
+
+    except (
+        ConfigurationError,
+        SourceDiscoveryError,
+    ) as exc:
+        typer.echo(
+            f"Discovery failed: {exc}",
+            err=True,
+        )
+
+        raise typer.Exit(code=1) from exc
+
+    typer.echo(f"Dataset: {dataset.title}")
+    typer.echo(
+        f"Eligible resources: {len(resources)}"
+    )
+
+    for resource in resources:
+        typer.echo(
+            f"[{resource.resource_kind}] "
+            f"{resource.name} "
+            f"({resource.resource_id})"
+        )
+
+
+@app.command("ingest")
+def ingest(
+    latest_only: Annotated[
+        bool,
+        typer.Option(
+            "--latest-only",
+            help=(
+                "Retrieve only the most recent Category and "
+                "Speciality resources."
+            ),
+        ),
+    ] = False,
+) -> None:
+    """Download raw source resources and update the lineage manifest."""
+    settings = get_settings()
+    configure_logging(
+        settings.log_level,
+        json_output=True,
+    )
+
+    try:
+        create_required_directories(settings)
+
+        base_config = load_base_config(
+            settings.base_config_path
+        )
+
+        summary = run_ingestion(
+            settings=settings,
+            base_config=base_config,
+            latest_only=latest_only,
+        )
+
+    except (
+        ConfigurationError,
+        SourceDiscoveryError,
+        DownloadError,
+    ) as exc:
+        logger.exception(
+            "Ingestion failed",
+            extra={"error": str(exc)},
+        )
+
+        typer.echo(
+            f"Ingestion failed: {exc}",
+            err=True,
+        )
+
+        raise typer.Exit(code=1) from exc
+
+    typer.echo("Ingestion completed successfully.")
+    typer.echo(
+        f"Resources discovered: "
+        f"{summary.resources_discovered}"
+    )
+    typer.echo(
+        f"Resources selected: "
+        f"{summary.resources_selected}"
+    )
+    typer.echo(
+        f"New raw files: "
+        f"{summary.resources_downloaded}"
+    )
+    typer.echo(
+        f"Already present: "
+        f"{summary.resources_already_present}"
+    )
+    typer.echo(
+        f"Manifest records added: "
+        f"{summary.manifest_records_added}"
+    )
+    typer.echo(
+        f"Manifest: {summary.manifest_path}"
     )
 
 

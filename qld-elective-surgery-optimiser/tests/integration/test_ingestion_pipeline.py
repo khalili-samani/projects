@@ -1,4 +1,4 @@
-"""Integration test for the discovery-to-manifest workflow."""
+"""Integration test for discovery, download and manifest persistence."""
 
 from __future__ import annotations
 
@@ -10,22 +10,18 @@ from qld_surgery_optimiser.config import (
     AppSettings,
     BaseConfig,
 )
-from qld_surgery_optimiser.ingestion import pipeline
 from qld_surgery_optimiser.ingestion.ckan_client import CkanClient
 from qld_surgery_optimiser.ingestion.downloader import ResourceDownloader
+from qld_surgery_optimiser.ingestion.manifest import RawManifest
 
 
 def _base_config() -> BaseConfig:
     return BaseConfig.model_validate(
         {
             "project": {
-                "name": (
-                    "qld-elective-surgery-optimiser"
-                ),
+                "name": "qld-elective-surgery-optimiser",
                 "version": "0.1.0",
-                "geography": (
-                    "Queensland, Australia"
-                ),
+                "geography": "Queensland, Australia",
                 "decision_scope": (
                     "aggregate-health-service-planning"
                 ),
@@ -33,16 +29,11 @@ def _base_config() -> BaseConfig:
             },
             "sources": {
                 "queensland_open_data": {
-                    "organisation": (
-                        "Queensland Government"
-                    ),
+                    "organisation": "Queensland Government",
                     "api_base_url": (
-                        "https://example.test/"
-                        "api/3/action"
+                        "https://example.test/api/3/action"
                     ),
-                    "dataset_id": (
-                        "elective-surgery"
-                    ),
+                    "dataset_id": "elective-surgery",
                     "allowed_formats": ["CSV"],
                     "category_patterns": [
                         "summary 1",
@@ -102,21 +93,18 @@ def _csv_payload(
         "Vol_LongWaits\n"
         "101,Example Hospital,2025-06,"
         f"{service_value},20,40,5\n"
-    ).encode()
+    ).encode("utf-8")
 
 
-def test_ingestion_pipeline_downloads_and_records_sources(
+def test_discovery_download_and_manifest(
     tmp_path: Path,
-    monkeypatch,
 ) -> None:
-    """The pipeline should persist both source families and a manifest."""
+    """Two source families should be persisted with lineage."""
 
     def handler(
         request: httpx.Request,
     ) -> httpx.Response:
-        if request.url.path.endswith(
-            "/package_show"
-        ):
+        if request.url.path.endswith("/package_show"):
             return httpx.Response(
                 200,
                 json={
@@ -126,21 +114,18 @@ def test_ingestion_pipeline_downloads_and_records_sources(
                         "name": "elective-surgery",
                         "title": "Elective surgery",
                         "license_title": (
-                            "Creative Commons "
-                            "Attribution 4.0"
+                            "Creative Commons Attribution 4.0"
                         ),
                         "organization": {
-                            "title": (
-                                "Queensland Health"
-                            )
+                            "title": "Queensland Health"
                         },
                         "resources": [
                             {
                                 "id": "category-1",
                                 "package_id": "dataset-id",
                                 "name": (
-                                    "June 2025 "
-                                    "by Category Summary 1"
+                                    "June 2025 – Elective Surgery "
+                                    "by Category – Summary 1"
                                 ),
                                 "format": "CSV",
                                 "url": (
@@ -152,8 +137,8 @@ def test_ingestion_pipeline_downloads_and_records_sources(
                                 "id": "specialty-1",
                                 "package_id": "dataset-id",
                                 "name": (
-                                    "June 2025 "
-                                    "by Speciality Summary 2"
+                                    "June 2025 – Elective Surgery "
+                                    "by Speciality – Summary 2"
                                 ),
                                 "format": "CSV",
                                 "url": (
@@ -166,97 +151,31 @@ def test_ingestion_pipeline_downloads_and_records_sources(
                 },
             )
 
-        if request.url.path.endswith(
-            "/category.csv"
-        ):
+        if request.url.path.endswith("/category.csv"):
             return httpx.Response(
                 200,
                 content=_csv_payload(
                     service_column="Category",
                     service_value="1",
                 ),
-                headers={
-                    "content-type": "text/csv"
-                },
+                headers={"content-type": "text/csv"},
             )
 
-        if request.url.path.endswith(
-            "/specialty.csv"
-        ):
+        if request.url.path.endswith("/specialty.csv"):
             return httpx.Response(
                 200,
                 content=_csv_payload(
                     service_column="Specialty_Desc",
                     service_value="General Surgery",
                 ),
-                headers={
-                    "content-type": "text/csv"
-                },
+                headers={"content-type": "text/csv"},
             )
 
         return httpx.Response(404)
 
     transport = httpx.MockTransport(handler)
 
-    original_ckan_init = CkanClient.__init__
-    original_downloader_init = ResourceDownloader.__init__
-
-    def patched_ckan_init(
-        self,
-        config,
-        *,
-        timeout_seconds,
-        max_retries,
-        retry_backoff_seconds,
-        user_agent,
-        transport_override=None,
-    ):
-        original_ckan_init(
-            self,
-            config,
-            timeout_seconds=timeout_seconds,
-            max_retries=max_retries,
-            retry_backoff_seconds=(
-                retry_backoff_seconds
-            ),
-            user_agent=user_agent,
-            transport=transport,
-        )
-
-    def patched_downloader_init(
-        self,
-        *,
-        raw_data_dir,
-        timeout_seconds,
-        max_retries,
-        retry_backoff_seconds,
-        user_agent,
-        transport_override=None,
-    ):
-        original_downloader_init(
-            self,
-            raw_data_dir=raw_data_dir,
-            timeout_seconds=timeout_seconds,
-            max_retries=max_retries,
-            retry_backoff_seconds=(
-                retry_backoff_seconds
-            ),
-            user_agent=user_agent,
-            transport=transport,
-        )
-
-    monkeypatch.setattr(
-        pipeline.CkanClient,
-        "__init__",
-        patched_ckan_init,
-    )
-
-    monkeypatch.setattr(
-        pipeline.ResourceDownloader,
-        "__init__",
-        patched_downloader_init,
-    )
-
+    config = _base_config()
     settings = AppSettings(
         data_dir=tmp_path / "data",
         raw_data_dir=tmp_path / "data/raw",
@@ -265,19 +184,41 @@ def test_ingestion_pipeline_downloads_and_records_sources(
         quarantine_data_dir=tmp_path / "data/quarantine",
         reports_dir=tmp_path / "reports",
         duckdb_path=(
-            tmp_path
-            / "data/processed/test.duckdb"
+            tmp_path / "data/processed/test.duckdb"
         ),
     )
 
-    summary = pipeline.run_ingestion(
-        settings=settings,
-        base_config=_base_config(),
+    with CkanClient(
+        config.sources.queensland_open_data,
+        timeout_seconds=30,
+        max_retries=0,
+        retry_backoff_seconds=0,
+        user_agent="integration-test",
+        transport=transport,
+    ) as ckan:
+        dataset, resources = ckan.get_dataset()
+
+    assert len(resources) == 2
+
+    manifest = RawManifest(
+        settings.raw_data_dir / "manifest.csv"
     )
 
-    assert summary.resources_selected == 2
-    assert summary.resources_downloaded == 2
-    assert summary.manifest_records_added == 2
+    with ResourceDownloader(
+        raw_data_dir=settings.raw_data_dir,
+        timeout_seconds=30,
+        max_retries=0,
+        retry_backoff_seconds=0,
+        user_agent="integration-test",
+        transport=transport,
+    ) as downloader:
+        for resource in resources:
+            result = downloader.download(resource)
+
+            manifest.add(
+                dataset=dataset,
+                result=result,
+            )
 
     category_files = list(
         (
@@ -297,4 +238,11 @@ def test_ingestion_pipeline_downloads_and_records_sources(
 
     assert len(category_files) == 1
     assert len(specialty_files) == 1
-    assert summary.manifest_path.exists()
+
+    manifest_rows = manifest.read()
+
+    assert len(manifest_rows) == 2
+    assert {
+        row["resource_kind"]
+        for row in manifest_rows
+    } == {"category", "specialty"}

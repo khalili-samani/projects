@@ -1,20 +1,23 @@
 PYTHON ?= python
 PACKAGE := qld_surgery_optimiser
 
-.PHONY: help install install-all doctor show-config format lint typecheck test coverage clean
+.PHONY: help install install-all doctor show-config discover ingest ingest-latest format lint typecheck test coverage clean
 
 help:
 	@echo "Available commands:"
-	@echo "  make install       Install core and development dependencies"
-	@echo "  make install-all   Install API, application and development dependencies"
-	@echo "  make doctor        Validate configuration and create required directories"
-	@echo "  make show-config   Print resolved non-secret configuration"
-	@echo "  make format        Format Python files with Ruff"
-	@echo "  make lint          Run Ruff linting and formatting checks"
-	@echo "  make typecheck     Run mypy"
-	@echo "  make test          Run the test suite"
-	@echo "  make coverage      Run tests with coverage"
-	@echo "  make clean         Remove generated development artefacts"
+	@echo "  make install        Install core and development dependencies"
+	@echo "  make install-all    Install API, application and development dependencies"
+	@echo "  make doctor         Validate configuration and create directories"
+	@echo "  make show-config    Print resolved non-secret configuration"
+	@echo "  make discover       Discover eligible Queensland source resources"
+	@echo "  make ingest         Download all eligible historical source resources"
+	@echo "  make ingest-latest  Download latest Category and Speciality resources"
+	@echo "  make format         Format Python files with Ruff"
+	@echo "  make lint           Run Ruff checks"
+	@echo "  make typecheck      Run mypy"
+	@echo "  make test           Run the test suite"
+	@echo "  make coverage       Run tests with coverage"
+	@echo "  make clean          Remove development artefacts"
 
 install:
 	$(PYTHON) -m pip install --upgrade pip
@@ -29,6 +32,15 @@ doctor:
 
 show-config:
 	$(PYTHON) -m $(PACKAGE).cli show-config
+
+discover:
+	$(PYTHON) -m $(PACKAGE).cli discover
+
+ingest:
+	$(PYTHON) -m $(PACKAGE).cli ingest
+
+ingest-latest:
+	$(PYTHON) -m $(PACKAGE).cli ingest --latest-only
 
 format:
 	$(PYTHON) -m ruff format .

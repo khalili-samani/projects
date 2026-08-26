@@ -1,17 +1,18 @@
 PYTHON ?= python
 PACKAGE := qld_surgery_optimiser
 
-.PHONY: help install install-all doctor show-config discover ingest ingest-latest format lint typecheck test coverage clean
+.PHONY: help install install-all doctor show-config discover ingest ingest-latest validate format lint typecheck test coverage clean
 
 help:
 	@echo "Available commands:"
 	@echo "  make install        Install core and development dependencies"
-	@echo "  make install-all    Install API, application and development dependencies"
+	@echo "  make install-all    Install all optional dependencies"
 	@echo "  make doctor         Validate configuration and create directories"
-	@echo "  make show-config    Print resolved non-secret configuration"
-	@echo "  make discover       Discover eligible Queensland source resources"
-	@echo "  make ingest         Download all eligible historical source resources"
+	@echo "  make show-config    Print resolved configuration"
+	@echo "  make discover       Discover Queensland elective-surgery resources"
+	@echo "  make ingest         Download all eligible historical resources"
 	@echo "  make ingest-latest  Download latest Category and Speciality resources"
+	@echo "  make validate       Validate raw resources and quarantine bad rows"
 	@echo "  make format         Format Python files with Ruff"
 	@echo "  make lint           Run Ruff checks"
 	@echo "  make typecheck      Run mypy"
@@ -41,6 +42,9 @@ ingest:
 
 ingest-latest:
 	$(PYTHON) -m $(PACKAGE).cli ingest --latest-only
+
+validate:
+	$(PYTHON) -m $(PACKAGE).cli validate
 
 format:
 	$(PYTHON) -m ruff format .

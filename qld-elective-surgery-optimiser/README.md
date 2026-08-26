@@ -16,78 +16,128 @@ A production-style healthcare operations analytics project for allocating additi
 
 ## Value proposition
 
-Transform quarterly public elective-surgery performance data into a reproducible decision-support workflow that helps health-service planners identify system pressure and, ultimately, compare transparent capacity-allocation strategies under constrained resources.
+Transform quarterly public elective-surgery performance data into a reproducible, quality-controlled decision-support workflow that helps health-service planners identify system pressure and evaluate transparent capacity-allocation strategies under constrained resources.
 
 ---
 
-## Project status
+# Project status
 
 **Status: active development**
 
-The repository is being built incrementally so that each layer is executable, tested and internally consistent before the next layer is introduced.
+The repository is being developed incrementally. Each phase introduces a complete and testable layer before downstream modelling is added.
 
-### Implemented
+## Implemented
+
+### Project foundation
 
 * Python 3.12 package structure
 * dependency and build configuration through `pyproject.toml`
-* typed environment configuration using Pydantic Settings
-* validated YAML project and planning-scenario configuration
+* typed application configuration using Pydantic Settings
+* validated YAML project configuration
+* reproducible planning-scenario configuration
 * structured JSON logging
 * project-specific exception hierarchy
 * Typer command-line interface
-* Queensland Open Data CKAN dataset discovery
-* deterministic identification of elective-surgery Category and Speciality CSV resources
+* Ruff formatting and linting configuration
+* mypy static type checking
+* pytest test framework
+
+### Source ingestion
+
+* Queensland Open Data CKAN integration
+* deterministic elective-surgery dataset discovery
+* Category and Speciality resource classification
+* configurable resource-pattern matching
 * retry-aware HTTP retrieval
-* response and source-identity validation
-* protection against HTML/error-page downloads being stored as CSV
+* HTTP response validation
+* HTML/error-page rejection
+* UTF-8 and CSV-header checks
 * SHA-256 content hashing
-* immutable versioned raw-file storage
+* immutable raw-file versioning
 * duplicate-content detection
-* raw-source lineage manifest
-* latest-only and historical ingestion modes
-* unit tests for configuration and ingestion components
-* integration test covering discovery, download and manifest persistence
-* reproducible baseline, constrained-capacity and demand-surge configuration files
+* raw-source retrieval manifest
+* latest-only ingestion
+* historical-resource ingestion
+* source metadata and licence capture
 
-### In development
+### Data validation
 
-* source-data schema validation
-* row-level quality rules
-* quarantine handling
+* source-family column contracts
+* configurable required columns
 * schema-drift detection
-* normalisation
-* facility entity resolution
-* longitudinal analytical modelling
+* controlled numeric coercion
+* controlled percentage coercion
+* controlled date coercion
+* explicit textual-null handling
+* non-null parse-failure detection
+* required identifier checks
+* non-negative volume validation
+* percentage-range validation
+* duplicate business-key detection
+* long-wait consistency checks
+* long-wait component diagnostics
+* row-level quarantine
+* machine-readable quality-rule identifiers
+* validated Parquet outputs
+* quarantine Parquet outputs
+* JSON data-quality summary
+* CLI validation workflow
 
-### Planned
+### Testing
+
+* configuration tests
+* CKAN metadata parsing tests
+* downloader tests
+* checksum/versioning tests
+* source-manifest tests
+* coercion tests
+* healthcare data-quality rule tests
+* quarantine tests
+* ingestion integration test
+* validation integration test
+
+---
+
+## In development
+
+* canonical source normalisation
+* facility entity resolution
+* longitudinal source reconciliation
+* source-to-canonical field mapping
+
+---
+
+## Planned
 
 * DuckDB analytical warehouse
 * backlog and throughput analytics
-* baseline allocation policies
-* demand and capacity scenario modelling
-* OR-Tools capacity optimisation
+* facility and specialty pressure measures
+* baseline capacity-allocation policies
+* demand and capacity modelling
+* OR-Tools optimisation
 * infeasibility diagnostics
-* Monte Carlo policy simulation
+* Monte Carlo simulation
+* robustness analysis
 * FastAPI decision service
 * Streamlit planning application
-* monitoring and operational health reporting
-* Docker packaging
+* operational monitoring
+* Docker deployment
 * GitHub Actions CI
 * verified analytical and optimisation results
 
 ---
 
-## Result labelling
+# Result labelling
 
-Outputs in this repository use the following terminology:
+Outputs use the following terminology:
 
-* **Verified:** produced by executed repository code using retrieved source data.
-* **Illustrative:** included only to explain an expected output, workflow or interpretation.
+* **Verified:** generated by executed repository code using retrieved source data.
+* **Illustrative:** included only to demonstrate expected structure, interpretation or workflow.
 * **Scenario-based:** generated from explicitly documented planning assumptions.
-* **Planned:** designed but not yet implemented or executed.
+* **Planned:** designed but not yet implemented.
 * **Synthetic:** programmatically generated and explicitly separated from observed data.
 
-No optimisation-performance, forecasting-performance or operational-impact claims are considered verified until the relevant pipeline stages have been implemented, executed and validated.
+No optimisation, forecasting or operational-impact claim is considered verified until the corresponding implementation has been executed and evaluated.
 
 ---
 
@@ -96,28 +146,31 @@ No optimisation-performance, forecasting-performance or operational-impact claim
 Elective-surgery planning requires health services to balance:
 
 * patients waiting beyond clinically recommended timeframes;
-* differences between facilities and surgical specialties;
-* limited operating-theatre capacity;
-* workforce and recovery constraints;
+* different levels of pressure across facilities and specialties;
+* finite operating-theatre capacity;
+* workforce availability;
+* recovery capacity;
 * cancellations;
 * emergency-demand displacement;
 * regional access;
 * future additions to waiting lists;
 * and uncertainty in treatment productivity.
 
-Public reporting provides valuable evidence about historical and current performance, but reporting alone does not answer the operational allocation question:
+Public reporting provides evidence about historical and current elective-surgery performance, but reporting alone does not answer the operational question:
 
 > Given a limited pool of additional elective-surgery sessions, how should capacity be distributed across facilities and specialties to reduce long waits while maintaining realistic and equitable service coverage?
 
-A purely throughput-focused policy could concentrate capacity in services capable of treating the largest number of patients per session. While potentially efficient, such a strategy may overlook:
+A policy based entirely on throughput could direct capacity towards services capable of treating the most patients per session.
+
+That may reduce total waiting volume while overlooking:
 
 * clinical urgency;
 * persistent long waits;
-* smaller regional services;
+* regional service coverage;
+* smaller facilities;
 * minimum service requirements;
-* geographic access;
 * operational feasibility;
-* and uncertainty around expected treatment capacity.
+* and uncertainty.
 
 This project therefore treats elective-surgery capacity allocation as a **constrained decision problem**, rather than simply a forecasting or dashboarding exercise.
 
@@ -135,7 +188,7 @@ Queensland Health statewide elective-surgery planning and performance teams.
 * surgical-services managers
 * operating-theatre managers
 * health-service performance analysts
-* public-sector data and analytics teams
+* public-sector analytics teams
 * health-system funding and commissioning teams
 
 ---
@@ -144,443 +197,727 @@ Queensland Health statewide elective-surgery planning and performance teams.
 
 The primary end user is a health-service planner preparing periodic capacity-allocation recommendations.
 
-The planner needs to understand:
+The planner needs visibility into:
 
-* current waiting-list pressure;
+* waiting-list pressure;
 * long-wait exposure;
-* specialty-level pressure;
+* specialty-level demand;
 * facility treatment throughput;
 * available incremental capacity;
 * policy constraints;
-* regional and service-level equity;
-* scenario uncertainty;
-* data freshness;
+* regional coverage;
+* data quality;
+* source freshness;
+* scenario assumptions;
+* uncertainty;
 * and the expected implications of alternative allocation policies.
 
 ---
 
 # Decision supported
 
-The completed system is intended to recommend how many incremental elective-surgery sessions should be allocated to eligible facility-specialty combinations over a configurable planning horizon.
+The completed system is intended to recommend how many incremental elective-surgery sessions should be allocated to eligible facility-specialty combinations.
 
-The system is intended to support questions such as:
+It will support questions such as:
 
-1. Which facility-specialty combinations face the greatest persistent pressure?
-2. How many additional sessions should each eligible service receive?
-3. What reduction in long waits could reasonably be expected?
-4. Which services remain under pressure after allocation?
-5. How does an optimised policy compare with equal or proportional allocation?
-6. How sensitive are recommendations to demand and capacity assumptions?
-7. What trade-offs arise between throughput and equitable service coverage?
-8. Which constraints prevent a feasible allocation?
+1. Which facilities and specialties have persistent long-wait pressure?
+2. Which services are experiencing increasing waiting volume?
+3. Where is treatment throughput insufficient relative to waiting pressure?
+4. Which facility-specialty combinations should receive incremental capacity?
+5. How many sessions should each combination receive?
+6. What long-wait reduction could reasonably be expected?
+7. Which services remain under pressure following allocation?
+8. How does an optimised allocation compare with simple baseline policies?
+9. How sensitive are recommendations to uncertain capacity and demand?
+10. Which constraints make a proposed allocation infeasible?
 
-Recommendations will remain subject to human review and confirmation of local operational feasibility.
+Recommendations remain subject to human review and confirmation of local operational feasibility.
 
 ---
 
 # Decisions not supported
 
-The system must not be used to:
+The project must not be used to:
 
 * rank individual patients;
 * schedule individual patients;
-* change clinical urgency categories;
+* change patient urgency categories;
 * diagnose conditions;
 * recommend treatment;
-* estimate individual deterioration or mortality risk;
-* override clinicians or hospital management;
+* estimate individual clinical deterioration;
+* predict individual mortality;
+* override clinical judgement;
 * automate individual funding decisions;
-* deny an individual access to care;
-* infer patient characteristics from aggregate data;
+* deny care;
+* infer patient-level characteristics from aggregate data;
 * or represent planning assumptions as observed hospital operations.
 
 ---
 
-# Analytical questions
+# Architecture
 
-The project is designed to answer:
+```mermaid id="2g3hjq"
+flowchart TD
+    A[Queensland Open Data CKAN API] --> B[Dataset and Resource Discovery]
 
-1. Which facilities and specialties have persistent long-wait pressure?
-2. Where is waiting volume increasing relative to treatment throughput?
-3. Which services show deteriorating in-time performance?
-4. Which facility-specialty combinations carry the greatest urgency-weighted waiting burden?
-5. How much incremental capacity would be required to meet selected backlog-reduction targets?
-6. How should additional sessions be allocated under a fixed capacity budget?
-7. How does allocation change when urgency, throughput or regional coverage receives greater weight?
-8. What is the trade-off between total backlog reduction and equitable service coverage?
-9. Which recommendations remain stable when demand, cancellations and treatment productivity vary?
-10. Which constraints make a proposed allocation infeasible?
-11. How does the optimised policy compare with realistic baseline allocation strategies?
-12. Under which conditions should a recommendation be withheld?
+    B --> C[Category and Speciality CSV Resources]
+
+    C --> D[Verified HTTP Downloader]
+
+    D --> E[Transport and Source Identity Checks]
+
+    E --> F[SHA-256 Versioned Raw Store]
+
+    F --> G[Raw Retrieval Manifest]
+
+    G --> H[Source Schema Inspection]
+
+    H --> I[Controlled Type Coercion]
+
+    I --> J[Healthcare Data Quality Rules]
+
+    J -->|Valid rows| K[Validated Parquet Store]
+
+    J -->|Invalid rows| L[Quarantine Store]
+
+    J --> M[Data Quality Summary]
+
+    K --> N[Canonical Normalisation]
+
+    N --> O[Facility Entity Resolution]
+
+    O --> P[(DuckDB Analytical Warehouse)]
+
+    P --> Q[Backlog and Throughput Analytics]
+
+    Q --> R[Scenario Builder]
+
+    S[Planner Constraints YAML] --> R
+    S --> T[OR-Tools Capacity Optimiser]
+
+    R --> T
+
+    T --> U[Allocation Recommendations]
+    T --> V[Infeasibility Diagnostics]
+
+    U --> W[Monte Carlo Policy Simulation]
+
+    W --> X[Baseline and Robustness Evaluation]
+
+    X --> Y[FastAPI Decision Service]
+    X --> Z[Streamlit Planning Application]
+    X --> AA[Monitoring Reports]
+```
 
 ---
 
-# Solution architecture
+# Architecture status
 
-```mermaid
-flowchart TD
-    A[Queensland Open Data CKAN API] --> B[CKAN Resource Discovery]
-    B --> C[Eligible Category and Speciality Resources]
-
-    C --> D[Verified HTTP Downloader]
-    D --> E[Response Identity Checks]
-    E --> F[SHA-256 Versioned Raw Store]
-    F --> G[Raw Source Manifest]
-
-    G --> H[Data Validation and Quality Rules]
-    H -->|Valid| I[Normalisation and Entity Resolution]
-    H -->|Invalid| J[Quarantine Store]
-
-    I --> K[(DuckDB Analytical Warehouse)]
-    K --> L[Backlog and Throughput Analytics]
-    L --> M[Demand and Capacity Scenario Builder]
-
-    N[Planner Constraints in YAML] --> M
-    N --> O[OR-Tools Capacity Optimiser]
-    M --> O
-
-    O --> P[Allocation Recommendations]
-    O --> Q[Infeasibility Diagnostics]
-
-    P --> R[Monte Carlo Policy Simulation]
-    R --> S[Baseline and Robustness Evaluation]
-
-    S --> T[FastAPI Decision Service]
-    S --> U[Streamlit Planning Application]
-    S --> V[Monitoring Reports]
-```
-
-### Architecture status
-
-| Layer                  | Status         |
-| ---------------------- | -------------- |
-| Project configuration  | Implemented    |
-| Structured logging     | Implemented    |
-| CKAN discovery         | Implemented    |
-| Verified raw ingestion | Implemented    |
-| SHA-256 versioning     | Implemented    |
-| Source manifest        | Implemented    |
-| Data validation        | In development |
-| Quarantine workflow    | In development |
-| Normalisation          | Planned next   |
-| DuckDB warehouse       | Planned        |
-| Analytics              | Planned        |
-| Optimisation           | Planned        |
-| Simulation             | Planned        |
-| API                    | Planned        |
-| Streamlit application  | Planned        |
-| Monitoring             | Planned        |
+| Layer                    | Status         |
+| ------------------------ | -------------- |
+| Project configuration    | Implemented    |
+| Structured logging       | Implemented    |
+| CLI                      | Implemented    |
+| CKAN discovery           | Implemented    |
+| Verified raw ingestion   | Implemented    |
+| SHA-256 versioning       | Implemented    |
+| Source manifest          | Implemented    |
+| Source schema contracts  | Implemented    |
+| Controlled coercion      | Implemented    |
+| Business-rule validation | Implemented    |
+| Quarantine workflow      | Implemented    |
+| Data-quality reporting   | Implemented    |
+| Canonical normalisation  | In development |
+| Entity resolution        | Planned        |
+| DuckDB warehouse         | Planned        |
+| Analytics                | Planned        |
+| Baseline policies        | Planned        |
+| Optimisation             | Planned        |
+| Simulation               | Planned        |
+| API                      | Planned        |
+| Streamlit                | Planned        |
+| Monitoring               | Planned        |
 
 ---
 
 # Technology stack
 
-| Component              | Technology                      | Purpose                                      |
-| ---------------------- | ------------------------------- | -------------------------------------------- |
-| Language               | Python 3.12                     | Core implementation                          |
-| HTTP client            | HTTPX                           | CKAN and CSV retrieval                       |
-| Configuration          | Pydantic Settings + YAML        | Typed application and scenario configuration |
-| Logging                | Python logging + JSON formatter | Structured execution and failure records     |
-| Tabular processing     | Pandas                          | Planned cleaning and analytics               |
-| Validation             | Pandera                         | Planned source-data contracts                |
-| Analytical database    | DuckDB                          | Planned longitudinal analytical warehouse    |
-| Storage                | CSV / Parquet                   | Raw and processed data                       |
-| Optimisation           | OR-Tools CP-SAT                 | Planned integer capacity-allocation model    |
-| Simulation             | NumPy                           | Planned Monte Carlo scenario analysis        |
-| API                    | FastAPI                         | Planned decision-service interface           |
-| Application            | Streamlit                       | Planned planning interface                   |
-| Testing                | pytest                          | Unit and integration testing                 |
-| Type checking          | mypy                            | Static analysis                              |
-| Formatting and linting | Ruff                            | Code-quality enforcement                     |
-| Packaging              | Hatchling / `pyproject.toml`    | Reproducible package installation            |
-| Containerisation       | Docker                          | Planned reproducible deployment              |
-| CI                     | GitHub Actions                  | Planned automated validation                 |
-
-Technologies are included only where they support the planning problem, system reliability, reproducibility or maintainability.
+| Component           | Technology                       | Purpose                                |
+| ------------------- | -------------------------------- | -------------------------------------- |
+| Language            | Python 3.12                      | Core implementation                    |
+| HTTP client         | HTTPX                            | Source retrieval                       |
+| Configuration       | Pydantic Settings + YAML         | Typed application configuration        |
+| Raw processing      | Pandas                           | Source parsing and validation          |
+| Validation          | Explicit quality rules / Pandera | Source and canonical data contracts    |
+| Analytical database | DuckDB                           | Planned analytical warehouse           |
+| Processed storage   | Parquet                          | Typed intermediate and analytical data |
+| Optimisation        | OR-Tools CP-SAT                  | Planned capacity-allocation model      |
+| Simulation          | NumPy                            | Planned Monte Carlo analysis           |
+| API                 | FastAPI                          | Planned decision-service layer         |
+| Application         | Streamlit                        | Planned planning interface             |
+| Testing             | pytest                           | Automated verification                 |
+| HTTP testing        | HTTPX MockTransport              | Deterministic external-source testing  |
+| Type checking       | mypy                             | Static validation                      |
+| Linting             | Ruff                             | Code-quality enforcement               |
+| Packaging           | Hatchling                        | Python package builds                  |
+| Logging             | Python structured logging        | Failure and execution records          |
+| Containerisation    | Docker                           | Planned reproducible deployment        |
+| CI                  | GitHub Actions                   | Planned automated quality gates        |
 
 ---
 
 # Data sources
 
-## Queensland Government Open Data Portal
+## Queensland Government Open Data
 
 The primary source is the Queensland Government Open Data elective-surgery dataset.
 
-The ingestion pipeline targets the CKAN dataset identifier:
+The ingestion layer targets the configured CKAN dataset identifier:
 
-```text
+```text id="8nijq5"
 elective-surgery
 ```
 
-The implementation discovers eligible quarterly resources through the CKAN `package_show` action rather than relying on a manually maintained quarterly CSV URL.
+Resources are discovered using CKAN metadata instead of manually maintained quarterly URLs.
 
-The resource-discovery layer currently recognises two source families:
+Two resource families are currently identified:
 
 * **Category / Summary 1**
 * **Speciality / Summary 2**
 
 Only configured CSV resources are eligible for ingestion.
 
-Resources such as unrelated description workbooks are excluded from the ingestion workflow.
+---
 
-### Typical source fields
+# Source discovery
 
-Published files include fields representing areas such as:
+The CKAN client retrieves:
 
-* facility code;
-* facility name;
-* reporting month;
-* specialty or category;
-* treatment volume;
-* waiting volume;
-* long-wait volume;
-* and in-time performance measures.
+* dataset identifier;
+* dataset title;
+* organisation;
+* licence;
+* dataset metadata timestamps;
+* resource identifiers;
+* resource names;
+* source URLs;
+* source formats;
+* resource hashes where available;
+* resource creation timestamps;
+* and source modification timestamps.
 
-The validation layer will define exact accepted schemas rather than assuming that field types and column structures remain constant between quarterly releases.
+This allows the ingestion workflow to respond to new quarterly releases without manually editing source URLs.
 
 ---
 
 # Raw-data ingestion
 
-The ingestion layer is currently implemented.
+## Verified HTTP retrieval
 
-## 1. Deterministic dataset discovery
+`ResourceDownloader` applies:
 
-`CkanClient` queries:
+* configurable timeouts;
+* retries with exponential backoff;
+* HTTP status checks;
+* redirect handling;
+* empty-body checks;
+* content-type inspection;
+* HTML-response detection;
+* UTF-8 validation;
+* CSV-header parsing;
+* and mandatory source-identity checks.
 
-```text
-/api/3/action/package_show
-```
+The raw ingestion layer requires:
 
-using the configured dataset ID.
-
-It retrieves:
-
-* dataset ID;
-* dataset name;
-* dataset title;
-* source organisation;
-* licence metadata;
-* dataset metadata timestamps;
-* resource identifiers;
-* resource titles;
-* download URLs;
-* formats;
-* source hashes where published;
-* creation timestamps;
-* and last-modified timestamps.
-
-Resources are filtered against configured:
-
-* file formats;
-* Category naming patterns;
-* and Speciality naming patterns.
-
----
-
-## 2. Verified HTTP downloads
-
-Raw files are downloaded through `ResourceDownloader`.
-
-The downloader:
-
-* applies configurable HTTP timeouts;
-* retries transient request failures;
-* follows redirects;
-* rejects unsuccessful HTTP responses;
-* rejects empty response bodies;
-* rejects HTML content returned instead of CSV;
-* validates UTF-8 compatibility;
-* parses the CSV header;
-* verifies mandatory source-identity fields;
-* and refuses to persist structurally unrelated CSV files.
-
-Mandatory identity fields currently include:
-
-```text
+```text id="57y71q"
 Facility_Code
 Facility_Name
 Report_Month
 ```
 
-Detailed clinical and analytical field validation is handled separately by the forthcoming validation layer.
+before accepting a response as an elective-surgery source file.
+
+Detailed business validation occurs in the validation layer.
 
 ---
 
-## 3. Immutable raw-file versioning
+# Immutable source storage
 
-Every accepted response is hashed with SHA-256.
+Accepted source files are hashed using SHA-256.
 
-Raw files are stored under:
+Files are stored as:
 
-```text
-data/raw/<resource-kind>/<resource-id>/
+```text id="jegj1f"
+data/raw/<resource-kind>/<resource-id>/<sha256-prefix>_<source-file>.csv
 ```
 
-using a filename containing the leading portion of the SHA-256 digest.
+For example:
 
-Example:
-
-```text
+```text id="57zl0k"
 data/raw/
 ├── category/
 │   └── <resource-id>/
-│       └── <sha256-prefix>_<source-filename>.csv
+│       └── <checksum>_category.csv
 └── specialty/
     └── <resource-id>/
-        └── <sha256-prefix>_<source-filename>.csv
+        └── <checksum>_speciality.csv
 ```
 
-If identical source content is retrieved again:
+Identical source content is not rewritten.
 
-* the existing file is reused;
-* the raw file is not rewritten;
-* and a duplicate resource/checksum entry is not added to the lineage manifest.
-
-This makes source retrieval reproducible and protects historical source versions from silent replacement.
+This protects historical releases from accidental replacement and allows downstream outputs to be linked to exact source bytes.
 
 ---
 
-# Source lineage manifest
+# Retrieval manifest
 
-Raw-resource provenance is stored in:
+Raw-source lineage is recorded in:
 
-```text
+```text id="pqmn23"
 data/raw/manifest.csv
 ```
 
-The manifest records:
+Recorded metadata includes:
 
-| Field                  | Purpose                           |
-| ---------------------- | --------------------------------- |
-| `dataset_id`           | CKAN dataset identifier           |
-| `dataset_title`        | Published dataset title           |
-| `source_organisation`  | Publishing organisation           |
-| `source_licence`       | Published licence                 |
-| `resource_id`          | CKAN resource identifier          |
-| `resource_name`        | Published resource title          |
-| `resource_kind`        | Category or Speciality            |
-| `resource_format`      | Published resource format         |
-| `source_url`           | Original download URL             |
-| `source_hash`          | Upstream hash when available      |
-| `source_created`       | Upstream creation timestamp       |
-| `source_last_modified` | Upstream modification timestamp   |
-| `retrieved_at`         | Local retrieval timestamp         |
-| `local_path`           | Immutable local raw-file path     |
-| `sha256`               | Locally calculated SHA-256 digest |
-| `byte_count`           | Download size                     |
-| `content_type`         | HTTP response content type        |
+| Field                  | Purpose                       |
+| ---------------------- | ----------------------------- |
+| `dataset_id`           | Upstream dataset identifier   |
+| `dataset_title`        | Published dataset name        |
+| `source_organisation`  | Publisher                     |
+| `source_licence`       | Source licence                |
+| `resource_id`          | CKAN resource identifier      |
+| `resource_name`        | Published resource name       |
+| `resource_kind`        | Category or Speciality        |
+| `resource_format`      | File format                   |
+| `source_url`           | Original source URL           |
+| `source_hash`          | Upstream hash where available |
+| `source_created`       | Resource creation time        |
+| `source_last_modified` | Resource modification time    |
+| `retrieved_at`         | Local retrieval timestamp     |
+| `local_path`           | Raw source path               |
+| `sha256`               | Locally calculated checksum   |
+| `byte_count`           | Retrieved file size           |
+| `content_type`         | HTTP content type             |
 
-The manifest uses the combination of:
+Duplicate entries for the same:
 
-```text
+```text id="bf73kh"
 resource_id + sha256
 ```
 
-to prevent duplicate lineage records for unchanged content.
+are not added.
 
 ---
 
-# Planned data validation
+# Data validation
 
-The next implementation layer will validate source data using explicit schemas and quality rules.
+Phase 3 introduces a separate validation layer after ingestion.
 
-Planned checks include:
+The design deliberately separates:
 
-* required columns;
-* schema drift;
-* numeric parsing;
-* percentage parsing;
-* reporting-date validity;
-* missing facility codes;
-* missing facility names;
-* negative volumes;
-* duplicate business keys;
-* waiting volume below long-wait volume;
-* malformed values;
-* unexpected nulls;
-* incomplete reporting coverage;
-* and source freshness.
-
-Invalid observations will not be silently discarded.
-
-Where appropriate they will be:
-
-1. retained in the original raw source;
-2. excluded from validated analytical data;
-3. written to a quarantine dataset;
-4. assigned machine-readable failure reasons;
-5. and summarised in a data-quality report.
-
----
-
-# Planned normalisation
-
-The processing layer will standardise:
-
-* facility identifiers;
-* facility names;
-* specialty labels;
-* urgency/category labels;
-* reporting periods;
-* numeric values;
-* percentage representations;
-* null values;
-* and source metadata.
-
-Facility aliases will be resolved through a version-controlled reference table rather than approximate string matching without review.
-
-Unresolved entities will remain visible as data-quality events.
-
----
-
-# Planned analytical warehouse
-
-The longitudinal DuckDB model is expected to include:
-
-```text
-dim_facility
-dim_specialty
-dim_urgency_category
-dim_reporting_period
-dim_source_resource
-
-fact_elective_surgery_performance
-fact_data_quality_event
-fact_optimisation_run
-fact_allocation_recommendation
-fact_simulation_result
+```text id="0b4duo"
+external source retrieval
+        ↓
+raw immutable data
+        ↓
+data validation
+        ↓
+validated analytical input
 ```
 
-The analytical grain will preserve source lineage and reporting-period context.
+This prevents source-retrieval concerns from becoming mixed with analytical data-quality rules.
 
-Derived measures are expected to include:
+---
 
-* treatment volume;
-* waiting volume;
-* long-wait volume;
-* long-wait share;
-* percentage treated within time;
-* percentage waiting within time;
-* quarterly backlog change;
-* treatment-to-waiting ratio;
-* trailing treatment throughput;
-* waiting-list growth;
-* service-pressure indicators;
-* reporting completeness;
-* and data freshness.
+# Source schema contracts
+
+Different source families have different business keys.
+
+## Common required fields
+
+```text id="2yfdrj"
+Facility_Code
+Facility_Name
+Report_Month
+Vol_Treated
+Vol_Waiting
+Vol_LongWaits
+```
+
+## Speciality identity fields
+
+```text id="7j5w0c"
+Specialty_Code
+Specialty_Desc
+```
+
+## Category identity field
+
+```text id="ma3aov"
+Category
+```
+
+Unexpected additional columns are reported as schema-drift warnings rather than automatically rejected.
+
+Missing mandatory columns are treated as file-level failures.
+
+---
+
+# Controlled type coercion
+
+Raw CSVs are initially read conservatively as strings.
+
+Known fields are then explicitly converted.
+
+## Volume fields
+
+Configured fields include:
+
+```text id="ltn8mp"
+Vol_Treated
+Vol_Waiting
+Vol_LongWaits
+Vol_LongWaits_RFS
+Vol_LongWaits_NRFS
+```
+
+The parser handles representations such as:
+
+```text id="il491y"
+1234
+1,234
+ 50
+0
+```
+
+A non-null value that cannot be converted is recorded as:
+
+```text id="g8uc46"
+PARSE_FAILURE
+```
+
+and the affected row is quarantined.
+
+---
+
+# Percentage parsing
+
+Configured percentage columns include:
+
+```text id="971vwh"
+Percent_Treated_InTime
+Percent_Variation_Treated_Prior_Year
+Percent_Waiting_InTime_Total
+Percent_Waiting_InTime_RFS
+```
+
+Values such as:
+
+```text id="p5jwbv"
+95
+95%
+87.5 %
+```
+
+are normalised to numeric percentage values.
+
+A configured valid range of:
+
+```text id="si7x4u"
+0 <= percentage <= 100
+```
+
+is then applied.
+
+---
+
+# Null handling
+
+Configured textual null representations include:
+
+```text id="veiuig"
+""
+NA
+N/A
+NULL
+null
+-
+--
+```
+
+These are converted to missing values before type validation.
+
+A null token is different from an invalid non-null value.
+
+For example:
+
+```text id="eodl0f"
+NA
+```
+
+may be accepted as missing, while:
+
+```text id="zyrk93"
+unknown-value
+```
+
+in a numeric field produces a parse failure.
+
+---
+
+# Data-quality rules
+
+The validation layer currently evaluates the following rules.
+
+## Required identifiers
+
+Rows must contain:
+
+* facility code;
+* facility name;
+* reporting period.
+
+Missing required identity values are quarantined.
+
+Rule:
+
+```text id="wgvabz"
+MISSING_REQUIRED_VALUE
+```
+
+---
+
+## Non-negative volumes
+
+Patient-count measures must not be negative.
+
+Rule:
+
+```text id="vy88nz"
+NEGATIVE_VOLUME
+```
+
+---
+
+## Percentage range
+
+Configured percentage measures must remain between 0 and 100.
+
+Rule:
+
+```text id="xv7h3h"
+PERCENTAGE_OUT_OF_RANGE
+```
+
+---
+
+## Long-wait consistency
+
+Long-wait volume cannot exceed total waiting volume.
+
+Required relationship:
+
+$$
+\text{Vol\_LongWaits}
+\le
+\text{Vol\_Waiting}
+$$
+
+Rule:
+
+```text id="dh0zz7"
+LONG_WAITS_EXCEED_WAITING
+```
+
+---
+
+## Duplicate business keys
+
+Speciality records are checked using:
+
+```text id="b2lzba"
+Facility_Code
++ Report_Month
++ Specialty_Code
+```
+
+Category records use:
+
+```text id="yxggwa"
+Facility_Code
++ Report_Month
++ Category
+```
+
+Duplicated source observations are quarantined.
+
+Rule:
+
+```text id="jf7hlp"
+DUPLICATE_BUSINESS_KEY
+```
+
+---
+
+## Long-wait component consistency
+
+Where all relevant fields exist:
+
+$$
+\text{Vol\_LongWaits\_RFS}
++
+\text{Vol\_LongWaits\_NRFS}
+=
+\text{Vol\_LongWaits}
+$$
+
+Differences are currently treated as warnings rather than blocking errors because source reporting definitions may require further verification.
+
+Rule:
+
+```text id="ntmfgf"
+LONG_WAIT_COMPONENT_MISMATCH
+```
+
+---
+
+# Error and warning policy
+
+| Check                        | Severity | Treatment             |
+| ---------------------------- | -------- | --------------------- |
+| Missing mandatory column     | Error    | File fails validation |
+| Invalid numeric parsing      | Error    | Row quarantined       |
+| Invalid percentage parsing   | Error    | Row quarantined       |
+| Invalid date parsing         | Error    | Row quarantined       |
+| Missing facility identity    | Error    | Row quarantined       |
+| Negative volume              | Error    | Row quarantined       |
+| Percentage outside 0–100     | Error    | Row quarantined       |
+| Long waits above total waits | Error    | Row quarantined       |
+| Duplicate business key       | Error    | Row quarantined       |
+| Unexpected source column     | Warning  | Retained and reported |
+| Long-wait component mismatch | Warning  | Retained and reported |
+
+The distinction is deliberate.
+
+A newly introduced publisher column should not automatically make an otherwise valid quarterly release unusable.
+
+A missing mandatory field or logically impossible volume relationship is materially different and is treated as blocking.
+
+---
+
+# Quarantine workflow
+
+Rows that fail blocking quality rules are preserved rather than silently removed.
+
+Quarantine records contain:
+
+* the original source values;
+* original row index;
+* source path;
+* resource family;
+* quality-rule identifiers;
+* and human-readable failure messages.
+
+Example generated structure:
+
+```text id="vax2vz"
+data/quarantine/
+├── category/
+│   └── <source>_quarantine.parquet
+└── specialty/
+    └── <source>_quarantine.parquet
+```
+
+Quarantine files are written only when invalid observations exist.
+
+---
+
+# Validated outputs
+
+Rows that pass blocking quality rules are written as Parquet.
+
+```text id="o7vqvm"
+data/interim/
+├── category/
+│   └── <source>_validated.parquet
+└── specialty/
+    └── <source>_validated.parquet
+```
+
+These files form the input to Phase 4 normalisation.
+
+Raw files remain unchanged.
+
+---
+
+# Data-quality report
+
+Every validation run generates:
+
+```text id="gwtnfj"
+reports/outputs/data_quality_summary.json
+```
+
+The report records:
+
+* generation timestamp;
+* files processed;
+* files passed;
+* files failed;
+* rows read;
+* rows valid;
+* rows quarantined;
+* counts by quality rule;
+* missing columns;
+* unexpected columns;
+* and detailed file-level issues.
+
+This report provides an auditable bridge between raw public data and downstream analytics.
+
+---
+
+# Current pipeline
+
+The implemented workflow is now:
+
+```text id="rx3htk"
+Queensland Open Data
+        ↓
+CKAN discovery
+        ↓
+eligible resources
+        ↓
+verified HTTP retrieval
+        ↓
+SHA-256 raw source
+        ↓
+retrieval manifest
+        ↓
+schema inspection
+        ↓
+controlled coercion
+        ↓
+quality rules
+       ↙   ↘
+ valid     invalid
+   ↓         ↓
+interim   quarantine
+   ↓         ↓
+Parquet   Parquet
+       \   /
+        ↓
+data_quality_summary.json
+```
 
 ---
 
 # Planning scenarios
 
-Three initial scenario configurations are already included.
+Three configuration-driven scenarios are currently included.
 
 ## Baseline
 
-Represents central planning assumptions.
-
-```yaml
+```yaml id="1gp3cv"
 scenario:
   name: baseline
   planning_periods: 1
@@ -599,145 +936,123 @@ demand:
 
 ## Constrained capacity
 
-Represents:
-
-* fewer available incremental sessions;
-* reduced treatment productivity;
-* higher cancellation pressure;
-* and greater operational displacement.
+Represents lower capacity availability and higher operational pressure.
 
 ## Demand surge
 
-Represents:
+Represents materially increased incoming demand with unchanged central incremental capacity.
 
-* materially higher incoming waiting-list demand;
-* unchanged central session availability;
-* and greater demand uncertainty.
+These parameters are **scenario assumptions**.
 
-These values are **scenario assumptions**, not observed Queensland hospital operating parameters.
+They are not observed Queensland hospital operating parameters.
 
-Their purpose is to provide reproducible inputs for the optimisation and simulation layers once those components are implemented.
+---
+
+# Planned canonical model
+
+Phase 4 will convert validated source data into stable analytical structures independent of source-quarter schema variation.
+
+Planned canonical dimensions include:
+
+```text id="on9exf"
+dim_facility
+dim_specialty
+dim_urgency_category
+dim_reporting_period
+dim_source_resource
+```
+
+Planned facts include:
+
+```text id="2crd7d"
+fact_elective_surgery_performance
+fact_data_quality_event
+fact_optimisation_run
+fact_allocation_recommendation
+fact_simulation_result
+```
 
 ---
 
 # Planned optimisation model
 
-## Model type
+For each eligible facility \(f\) and specialty \(s\), the optimisation decision variable will represent:
 
-The initial optimisation design uses OR-Tools CP-SAT.
-
-For each eligible facility (f) and specialty (s):
-
-[
+$$
 x_{f,s}
-=======
+=
+\text{incremental elective-surgery sessions allocated}
+$$
 
-\text{incremental sessions allocated}
-]
+The planned objective combines:
 
-Decision variables will be non-negative integers.
-
-## Objective
-
-The planned objective minimises a configurable weighted combination of:
-
-* long waits remaining;
+* remaining long waits;
 * urgency-weighted burden;
-* inequitable under-allocation;
+* equity;
 * allocation concentration;
 * unused capacity;
 * and allocation instability.
 
 Conceptually:
 
-[
+$$
 \min
-\left(
+(
 \alpha L +
 \beta O +
 \gamma E +
 \delta C +
 \eta U +
 \theta S
-\right)
-]
+)
+$$
 
-where:
-
-* (L) = long waits remaining;
-* (O) = urgency-weighted overdue burden;
-* (E) = equity or minimum-coverage penalty;
-* (C) = allocation-concentration penalty;
-* (U) = unused capacity;
-* (S) = instability relative to a prior allocation.
-
-The implemented formulation will use solver-compatible integer or linearised representations of these terms.
-
-## Planned constraints
-
-* statewide incremental-session budget;
-* non-negative integer allocations;
-* facility capacity;
-* specialty capacity;
-* facility-specialty eligibility;
-* non-negative residual backlog;
-* minimum service coverage;
-* maximum facility allocation share;
-* regional coverage;
-* protected capacity;
-* and configurable change limits.
+subject to operational and policy constraints.
 
 ---
 
-# Baseline allocation policies
+# Planned baseline policies
 
-The optimiser will be compared against realistic alternatives.
+The optimisation policy will be compared against:
 
-Planned baselines include:
+1. no additional capacity;
+2. equal allocation;
+3. proportional waiting-volume allocation;
+4. proportional long-wait allocation;
+5. previous allocation where available;
+6. greedy pressure allocation.
 
-1. **No additional capacity**
-2. **Equal allocation**
-3. **Allocation proportional to waiting volume**
-4. **Allocation proportional to long-wait volume**
-5. **Previous-period allocation**, where available
-6. **Greedy pressure allocation**
-
-The optimiser will not be considered useful merely because it produces a feasible solution. It must demonstrate value relative to credible operational baselines.
+The optimiser must demonstrate value relative to credible baselines rather than merely produce a feasible mathematical solution.
 
 ---
 
-# Simulation and uncertainty
+# Planned uncertainty analysis
 
-Operational capacity cannot be represented as a deterministic quantity with complete confidence.
+Monte Carlo simulation will vary assumptions such as:
 
-The planned Monte Carlo layer will vary assumptions such as:
-
-* future waiting-list additions;
+* incoming waiting-list additions;
 * patients treated per session;
-* cancellation rates;
+* cancellations;
 * emergency displacement;
-* facility capacity;
+* capacity availability;
 * and specialty productivity.
 
 Planned outputs include:
 
 * expected backlog reduction;
-* median outcome;
 * uncertainty intervals;
-* probability of reaching a target;
-* downside outcomes;
+* target-attainment probability;
+* fifth-percentile outcomes;
 * allocation stability;
+* expected regret;
 * facility-selection frequency;
-* policy regret;
-* and sensitivity to objective weights.
+* and sensitivity to policy weights.
 
 ---
 
 # Repository structure
 
-The repository currently combines implemented modules with directories reserved for later project stages.
-
-```text
+```text id="pkpu7j"
 qld-elective-surgery-optimiser/
 ├── README.md
 ├── LICENSE
@@ -757,19 +1072,29 @@ qld-elective-surgery-optimiser/
 ├── data/
 │   ├── raw/
 │   │   ├── .gitkeep
-│   │   └── manifest.csv              # generated after ingestion
+│   │   ├── manifest.csv
+│   │   ├── category/
+│   │   └── specialty/
+│   │
 │   ├── interim/
-│   │   └── .gitkeep
+│   │   ├── .gitkeep
+│   │   ├── category/
+│   │   └── specialty/
+│   │
 │   ├── processed/
 │   │   └── .gitkeep
+│   │
 │   └── quarantine/
-│       └── .gitkeep
+│       ├── .gitkeep
+│       ├── category/
+│       └── specialty/
 │
 ├── reports/
 │   ├── figures/
 │   │   └── .gitkeep
 │   └── outputs/
-│       └── .gitkeep
+│       ├── .gitkeep
+│       └── data_quality_summary.json
 │
 ├── src/
 │   └── qld_surgery_optimiser/
@@ -779,31 +1104,45 @@ qld-elective-surgery-optimiser/
 │       ├── exceptions.py
 │       ├── logging_config.py
 │       │
-│       └── ingestion/
+│       ├── ingestion/
+│       │   ├── __init__.py
+│       │   ├── models.py
+│       │   ├── ckan_client.py
+│       │   ├── downloader.py
+│       │   ├── manifest.py
+│       │   └── pipeline.py
+│       │
+│       └── validation/
 │           ├── __init__.py
 │           ├── models.py
-│           ├── ckan_client.py
-│           ├── downloader.py
-│           ├── manifest.py
+│           ├── schemas.py
+│           ├── coercion.py
+│           ├── quality_rules.py
+│           ├── quarantine.py
+│           ├── report.py
 │           └── pipeline.py
 │
 └── tests/
     ├── conftest.py
+    │
     ├── unit/
     │   ├── test_config.py
     │   ├── test_ckan_client.py
     │   ├── test_downloader.py
-    │   └── test_manifest.py
+    │   ├── test_manifest.py
+    │   ├── test_coercion.py
+    │   ├── test_quality_rules.py
+    │   └── test_quarantine.py
     │
     └── integration/
-        └── test_ingestion_pipeline.py
+        ├── test_ingestion_pipeline.py
+        └── test_validation_pipeline.py
 ```
 
-### Planned later structure
+Planned later packages include:
 
-```text
+```text id="cl9fqh"
 src/qld_surgery_optimiser/
-├── validation/
 ├── processing/
 ├── analytics/
 ├── forecasting/
@@ -820,7 +1159,7 @@ docs/
 .github/workflows/
 ```
 
-These later modules should only be added to the repository when their implementation exists.
+These directories should be added when their implementations exist rather than being maintained as empty architectural placeholders.
 
 ---
 
@@ -832,9 +1171,9 @@ These later modules should only be added to the repository when their implementa
 * Git
 * Make, optional
 
-Clone the repository:
+Clone:
 
-```bash
+```bash id="ytrzqh"
 git clone https://github.com/<your-github-username>/qld-elective-surgery-optimiser.git
 cd qld-elective-surgery-optimiser
 ```
@@ -843,33 +1182,28 @@ Create a virtual environment.
 
 ### Windows PowerShell
 
-```powershell
+```powershell id="h5p3up"
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
 
-### macOS or Linux
+### macOS/Linux
 
-```bash
+```bash id="wex7oz"
 python -m venv .venv
 source .venv/bin/activate
 ```
 
-Upgrade `pip`:
+Install:
 
-```bash
+```bash id="khuidm"
 python -m pip install --upgrade pip
-```
-
-Install the package with development dependencies:
-
-```bash
 pip install -e ".[dev]"
 ```
 
-Or:
+Alternatively:
 
-```bash
+```bash id="kxtciw"
 make install
 ```
 
@@ -877,23 +1211,21 @@ make install
 
 # Environment configuration
 
-Copy the example environment file.
+Copy:
 
-### macOS or Linux
-
-```bash
+```bash id="j8my88"
 cp .env.example .env
 ```
 
-### Windows PowerShell
+Windows:
 
-```powershell
+```powershell id="qg65bk"
 Copy-Item .env.example .env
 ```
 
-Current settings include:
+Expected settings include:
 
-```env
+```env id="c17h5u"
 APP_ENV=development
 LOG_LEVEL=INFO
 
@@ -920,238 +1252,229 @@ SOLVER_TIME_LIMIT_SECONDS=60
 SOLVER_NUM_WORKERS=1
 ```
 
-No authentication credentials are required for the public Queensland Open Data source used by the current ingestion layer.
+---
+
+# CLI
+
+Available commands:
+
+```text id="ohxsjh"
+qld-surgery doctor
+qld-surgery show-config
+qld-surgery discover
+qld-surgery ingest
+qld-surgery validate
+```
 
 ---
 
-# Current CLI commands
+## Validate project configuration
 
-The package exposes the command:
-
-```bash
-qld-surgery
-```
-
-You can also execute the CLI using:
-
-```bash
-python -m qld_surgery_optimiser.cli
-```
-
-## Check configuration
-
-```bash
+```bash id="2hihls"
 qld-surgery doctor
 ```
 
-This:
+---
 
-* validates project configuration;
-* validates the default scenario;
-* creates required local directories;
-* and reports configuration problems clearly.
+## Display configuration
 
-## Inspect configuration
-
-```bash
+```bash id="avlgfk"
 qld-surgery show-config
 ```
 
 Use another scenario:
 
-```bash
+```bash id="2ypkjx"
 qld-surgery show-config \
   --scenario configs/scenarios/demand_surge.yml
 ```
 
+---
+
 ## Discover source resources
 
-```bash
+```bash id="wteq7y"
 qld-surgery discover
 ```
 
-Equivalent Make command:
+Or:
 
-```bash
+```bash id="10zuls"
 make discover
 ```
 
-This retrieves CKAN dataset metadata and lists the Category and Speciality CSV resources currently eligible for ingestion.
-
-No raw source files are written by `discover`.
-
-## Retrieve only the latest resources
-
-Recommended for a first development run:
-
-```bash
-qld-surgery ingest --latest-only
-```
-
-Equivalent:
-
-```bash
-make ingest-latest
-```
-
-The command selects the most recent eligible resource for each resource family.
-
-## Retrieve all eligible historical resources
-
-```bash
-qld-surgery ingest
-```
-
-Equivalent:
-
-```bash
-make ingest
-```
-
-The complete historical retrieval mode is intended to provide the longitudinal raw-data foundation required by later analytical stages.
+This performs discovery only and does not persist raw files.
 
 ---
 
-# Raw-data output
+## Ingest latest resources
 
-Following ingestion, the expected structure is:
-
-```text
-data/raw/
-├── manifest.csv
-├── category/
-│   └── <resource-id>/
-│       └── <sha256-prefix>_<source-file>.csv
-└── specialty/
-    └── <resource-id>/
-        └── <sha256-prefix>_<source-file>.csv
+```bash id="pxc819"
+qld-surgery ingest --latest-only
 ```
 
-Raw data is intentionally excluded from Git through `.gitignore`.
+Or:
 
-The manifest itself may also be excluded from version control if it contains machine-specific local paths. A portable manifest-export stage can be added later for published repository artefacts.
+```bash id="79zur3"
+make ingest-latest
+```
+
+This is recommended during development.
+
+---
+
+## Ingest historical resources
+
+```bash id="5oqyg0"
+qld-surgery ingest
+```
+
+Or:
+
+```bash id="5scfzc"
+make ingest
+```
+
+---
+
+## Validate retrieved data
+
+```bash id="om8xzi"
+qld-surgery validate
+```
+
+Or:
+
+```bash id="9929d5"
+make validate
+```
+
+Example CLI summary:
+
+```text id="59hhzk"
+Validation completed.
+Files processed: <count>
+Files passed: <count>
+Files failed: <count>
+Rows read: <count>
+Rows valid: <count>
+Rows quarantined: <count>
+Validated data directory: data/interim
+Quarantine directory: data/quarantine
+Quality report: reports/outputs/data_quality_summary.json
+```
+
+Counts are generated at runtime and are not hard-coded project results.
+
+---
+
+# Recommended execution order
+
+```bash id="8qvuj9"
+qld-surgery doctor
+
+qld-surgery discover
+
+qld-surgery ingest --latest-only
+
+qld-surgery validate
+```
+
+For historical processing:
+
+```bash id="ksv9v9"
+qld-surgery ingest
+qld-surgery validate
+```
 
 ---
 
 # Testing
 
-The repository currently includes tests for the implemented foundation and ingestion layer.
+Run:
 
-## Configuration tests
-
-Tests verify:
-
-* the committed base configuration is valid;
-* the baseline scenario is valid;
-* invalid probability values are rejected;
-* missing configuration files raise project-specific errors;
-* required directories are created correctly;
-* and directory creation is idempotent.
-
-## CKAN discovery tests
-
-Tests verify:
-
-* direct lookup of the configured dataset ID;
-* parsing of CKAN metadata;
-* classification of Category resources;
-* classification of Speciality resources;
-* exclusion of unsupported formats;
-* and exclusion of unrelated resources.
-
-## Downloader tests
-
-Tests verify:
-
-* valid CSV responses are stored;
-* raw paths include the resource family and resource ID;
-* content-derived filenames contain the SHA-256 prefix;
-* repeated identical content is not rewritten;
-* HTML responses are rejected;
-* and unrelated CSV schemas fail source-identity validation.
-
-## Manifest tests
-
-Tests verify:
-
-* retrieval metadata is persisted;
-* source licence metadata is retained;
-* resource checksums are recorded;
-* and identical resource/checksum combinations are not duplicated.
-
-## Integration test
-
-The current integration test exercises:
-
-```text
-CKAN metadata
-      ↓
-Resource classification
-      ↓
-CSV download
-      ↓
-Source validation
-      ↓
-Immutable raw storage
-      ↓
-Lineage manifest
-```
-
-with mocked HTTP transport so the test suite does not depend on the live portal.
-
----
-
-# Run tests
-
-```bash
+```bash id="j9ca11"
 pytest
 ```
 
 Or:
 
-```bash
+```bash id="ph3wl9"
 make test
 ```
 
-Run coverage:
+Coverage:
 
-```bash
+```bash id="jl4kny"
 pytest \
   --cov=qld_surgery_optimiser \
   --cov-report=term-missing
 ```
 
-Or:
+---
 
-```bash
-make coverage
-```
+# Current test coverage
+
+## Configuration
+
+* valid repository configuration;
+* scenario validation;
+* invalid probability rejection;
+* missing configuration detection;
+* directory creation;
+* idempotent directory creation.
+
+## Ingestion
+
+* CKAN dataset lookup;
+* resource classification;
+* unsupported-resource exclusion;
+* valid CSV downloading;
+* immutable checksum-based paths;
+* duplicate-content handling;
+* HTML-response rejection;
+* source identity validation;
+* lineage manifest persistence;
+* duplicate manifest protection.
+
+## Validation
+
+* numeric parsing;
+* percentages containing `%`;
+* textual null values;
+* parse-failure detection;
+* negative-volume detection;
+* percentage-range detection;
+* long-wait consistency;
+* duplicate specialty business keys;
+* quarantine metadata preservation;
+* raw-to-validated integration flow.
 
 ---
 
-# Code-quality checks
+# Code quality
 
 Format:
 
-```bash
+```bash id="jgg8cc"
 make format
 ```
 
 Lint:
 
-```bash
+```bash id="e1fd2b"
 make lint
 ```
 
-Type-check:
+Type check:
 
-```bash
+```bash id="a03ehv"
 make typecheck
 ```
 
-Equivalent commands:
+Equivalent:
 
-```bash
+```bash id="ljsp3o"
 ruff format .
 ruff check .
 mypy src tests
@@ -1159,102 +1482,187 @@ mypy src tests
 
 ---
 
+# Data-quality metrics
+
+Future historical validation runs will report metrics such as:
+
+* files processed;
+* file-level validation failures;
+* valid-row rate;
+* quarantined-row rate;
+* parse-failure rate;
+* missing identifier rate;
+* negative-volume rate;
+* invalid-percentage rate;
+* duplicate-key rate;
+* long-wait inconsistency rate;
+* schema-drift events;
+* and reporting coverage.
+
+Observed values will only be published after execution and review.
+
+---
+
 # Evaluation framework
 
-The completed system will be evaluated at multiple levels.
+The completed project will be evaluated across five layers.
 
-## Data engineering
+## 1. Data engineering
 
-* successful resource-discovery rate;
+* source discovery reliability;
 * successful retrieval rate;
-* content-validation failures;
-* duplicate-content rate;
-* schema-drift events;
+* checksum reproducibility;
 * manifest completeness;
-* source freshness;
-* and raw-data reproducibility.
+* duplicate-content rate;
+* and source freshness.
 
-## Data quality
+## 2. Data quality
 
 * valid-row rate;
-* invalid-row count;
-* missing-value rate;
-* duplicate business keys;
-* invalid percentage rate;
-* negative volume rate;
-* contradictory wait-volume observations;
-* unresolved facilities;
-* and quarantined observations.
+* quarantined observations;
+* schema drift;
+* parse failures;
+* duplicates;
+* contradictory metrics;
+* reporting completeness;
+* and unresolved entities.
 
-## Operational analytics
+## 3. Operational analytics
 
 * waiting volume;
 * long-wait volume;
 * long-wait share;
-* urgency-weighted burden;
 * throughput;
 * backlog movement;
-* and service-pressure persistence.
+* service pressure;
+* and urgency-weighted burden.
 
-## Allocation performance
+## 4. Optimisation
 
-* expected long-wait reduction;
-* urgency-weighted backlog reduction;
-* session utilisation;
-* residual waiting volume;
-* facility coverage;
-* allocation concentration;
-* and regional distribution.
-
-## Optimisation health
-
-* solver status;
+* long-wait reduction;
+* baseline improvement;
+* capacity utilisation;
 * feasibility;
 * solve time;
-* best bound;
-* optimality gap where available;
-* constraint violations;
-* unused sessions;
-* and solution reproducibility.
+* allocation concentration;
+* regional coverage;
+* and stability.
 
-## Robustness
+## 5. Robustness
 
-* probability of meeting planning targets;
-* fifth-percentile performance;
+* probability of meeting targets;
 * expected regret;
-* sensitivity to treatment productivity;
-* sensitivity to cancellation rates;
-* sensitivity to future demand;
-* allocation stability;
-* and sensitivity to objective weights.
+* downside outcomes;
+* sensitivity to productivity;
+* sensitivity to cancellations;
+* sensitivity to demand;
+* and recommendation stability.
 
 ---
 
 # Success criteria
 
-The project will be considered technically complete when:
+## Phase 1 — Foundation
 
-* [x] project configuration is typed and validated;
-* [x] planning scenarios are reproducible;
-* [x] public source resources can be discovered programmatically;
-* [x] source files can be retrieved with retries and response checks;
-* [x] raw files are content-versioned using SHA-256;
-* [x] unchanged raw files are not silently overwritten;
-* [x] source lineage is recorded;
-* [x] ingestion behaviour is covered by unit and integration tests;
-* [ ] source schemas are validated;
-* [ ] invalid records are quarantined and reported;
-* [ ] longitudinal analytical tables are built reproducibly;
-* [ ] baseline allocation policies are implemented;
-* [ ] the optimiser returns either a feasible allocation or an explicit diagnostic;
-* [ ] mandatory constraints are tested;
-* [ ] simulation results are reproducible under fixed seeds;
-* [ ] recommendation robustness is reported;
-* [ ] API contracts are implemented and tested;
-* [ ] the planning application exposes provenance and freshness;
-* [ ] monitoring checks are implemented;
-* [ ] CI executes quality gates automatically;
-* [ ] verified results are published without overstating findings.
+* [x] installable Python package
+* [x] typed configuration
+* [x] reproducible planning scenarios
+* [x] structured logging
+* [x] CLI
+* [x] automated tests
+
+## Phase 2 — Ingestion
+
+* [x] deterministic CKAN discovery
+* [x] resource classification
+* [x] verified HTTP retrieval
+* [x] retry handling
+* [x] invalid-response detection
+* [x] SHA-256 hashing
+* [x] immutable raw storage
+* [x] source lineage
+* [x] manifest deduplication
+* [x] ingestion integration testing
+
+## Phase 3 — Data quality
+
+* [x] source-family schema contracts
+* [x] explicit null handling
+* [x] controlled numeric parsing
+* [x] controlled percentage parsing
+* [x] controlled date parsing
+* [x] parse-failure detection
+* [x] required-value validation
+* [x] negative-volume validation
+* [x] percentage-range validation
+* [x] long-wait consistency validation
+* [x] duplicate-key detection
+* [x] schema-drift reporting
+* [x] row-level quarantine
+* [x] validated Parquet output
+* [x] quality-summary reporting
+* [x] validation tests
+
+## Phase 4 — Processing and warehouse
+
+* [ ] canonical field naming
+* [ ] facility normalisation
+* [ ] specialty normalisation
+* [ ] category normalisation
+* [ ] facility alias resolution
+* [ ] canonical source lineage
+* [ ] longitudinal model
+* [ ] DuckDB analytical warehouse
+* [ ] reconciliation checks
+
+## Phase 5 — Analytics
+
+* [ ] backlog analysis
+* [ ] throughput analysis
+* [ ] pressure indicators
+* [ ] regional analysis
+* [ ] equity analysis
+* [ ] baseline allocation policies
+
+## Phase 6 — Optimisation
+
+* [ ] optimisation contracts
+* [ ] decision variables
+* [ ] objective functions
+* [ ] operational constraints
+* [ ] equity constraints
+* [ ] infeasibility diagnostics
+* [ ] baseline evaluation
+
+## Phase 7 — Simulation
+
+* [ ] Monte Carlo framework
+* [ ] demand uncertainty
+* [ ] productivity uncertainty
+* [ ] cancellation uncertainty
+* [ ] policy robustness
+* [ ] regret analysis
+* [ ] recommendation stability
+
+## Phase 8 — Delivery
+
+* [ ] FastAPI
+* [ ] Streamlit
+* [ ] report exports
+* [ ] monitoring
+* [ ] Docker
+* [ ] GitHub Actions
+
+## Phase 9 — Verification
+
+* [ ] execute full historical ingestion
+* [ ] review data-quality findings
+* [ ] reconcile longitudinal warehouse
+* [ ] execute analytical pipeline
+* [ ] validate optimisation
+* [ ] execute simulation
+* [ ] publish verified results
+* [ ] complete final repository review
 
 ---
 
@@ -1262,450 +1670,282 @@ The project will be considered technically complete when:
 
 ## Aggregate planning boundary
 
-The system operates on aggregate service-level data.
+The project operates on aggregate service-level data.
 
-It is not designed for patient-level prioritisation.
+It is not intended for patient-level clinical prioritisation.
 
-Extending the project to patient-level health information would require a separate assessment covering:
+Patient-level use would require an entirely separate:
 
-* clinical safety;
-* privacy;
-* information security;
-* governance;
-* regulatory obligations;
-* and validation requirements.
+* privacy assessment;
+* security assessment;
+* legal assessment;
+* clinical-safety assessment;
+* validation framework;
+* and governance process.
+
+---
 
 ## Equity
 
-A purely efficiency-focused objective may systematically favour:
+A purely efficiency-focused allocation may favour:
 
-* larger facilities;
-* higher-throughput specialties;
-* metropolitan services;
-* or services with historically greater capacity.
+* large hospitals;
+* metropolitan facilities;
+* high-throughput specialties;
+* or services that historically received greater capacity.
 
-The optimisation design therefore anticipates:
+The planned optimisation layer therefore supports explicit:
 
-* minimum coverage constraints;
-* regional allocation floors;
+* regional coverage;
+* minimum service coverage;
 * concentration limits;
-* alternative objective weights;
-* and explicit reporting of distributional consequences.
+* alternative policy weights;
+* and distributional reporting.
 
-These are policy choices and must be transparent.
+Equity assumptions must remain visible rather than being embedded invisibly within code.
+
+---
 
 ## Historical bias
 
-Historical throughput may reflect:
+Historical service performance may reflect:
 
-* historical funding;
-* existing workforce constraints;
+* workforce limitations;
 * geographic barriers;
-* reporting differences;
-* unequal access;
-* and prior policy decisions.
+* historical funding;
+* prior access inequalities;
+* capacity restrictions;
+* and reporting practices.
 
-Historical performance is therefore evidence about the existing system, not automatically a normative target for future allocation.
+Observed historical throughput therefore describes the current system but is not automatically treated as the optimal future allocation.
+
+---
 
 ## Human review
 
-Before any recommendation is used operationally, the planner should review:
+Operational use would require review of:
 
 * source freshness;
-* data-quality warnings;
-* scenario assumptions;
-* objective weights;
+* validation results;
+* quarantined observations;
+* assumptions;
+* capacity settings;
 * active constraints;
-* infeasibility diagnostics;
+* model diagnostics;
 * sensitivity results;
-* and known limitations.
+* and limitations.
 
-The software provides decision support rather than autonomous decision-making.
+The software provides decision support rather than autonomous allocation.
 
 ---
 
 # Privacy and security
 
-The public portfolio implementation uses aggregate public data and is not intended to contain patient-identifiable information.
+The public portfolio implementation uses aggregate public data.
 
 The repository must not contain:
 
 * patient names;
-* medical-record numbers;
+* medical record numbers;
 * dates of birth;
 * addresses;
-* individual procedure histories;
-* or other patient-level health information.
+* patient-level procedure histories;
+* or other identifiable health information.
 
-Any future integration with restricted operational data would require appropriate:
+Future restricted-data integration would require appropriate:
 
-* authentication;
 * access control;
+* identity management;
 * encryption;
-* audit logging;
+* audit logs;
 * retention controls;
-* data classification;
-* privacy assessment;
+* secret management;
+* privacy review;
 * and an approved operating environment.
-
-Secrets must not be committed to Git.
-
----
-
-# Regulatory considerations
-
-This repository is designed as an aggregate health-service planning project.
-
-It does not claim to be:
-
-* a medical device;
-* clinical decision-support software;
-* a patient scheduling application;
-* a Queensland Health production system;
-* or an approved operational allocation system.
-
-Operational adoption would require assessment against the policies, legal requirements, security obligations and assurance standards applicable to the intended deployment environment.
 
 ---
 
 # Failure modes
 
-The system may fail or produce unusable recommendations when:
+The pipeline may fail when:
 
-* the upstream data portal is unavailable;
-* a quarterly source changes structure;
-* required columns disappear;
+* the source portal is unavailable;
+* a resource URL becomes invalid;
+* the publisher returns an error page;
+* source columns disappear;
+* source data changes format;
+* numeric fields contain unexpected values;
+* reporting periods are malformed;
+* duplicate business keys occur;
+* waiting measures contradict one another;
 * facility identifiers change;
-* reporting periods are incomplete;
-* public data is too stale;
-* operational assumptions are unrealistic;
-* facility constraints are incomplete;
-* policy constraints conflict;
-* the optimisation model is infeasible;
-* or recommendations are unstable under plausible scenarios.
+* downstream assumptions are incomplete;
+* capacity constraints conflict;
+* or public reporting becomes too stale for the decision.
 
-Critical failures should cause the system to **withhold a new recommendation**, rather than manufacture a result.
+The system should fail explicitly rather than silently creating unsupported analytical outputs.
 
 ---
 
-# Monitoring approach
+# Current results
 
-## Source monitoring
+## Engineering status
 
-Planned monitoring includes:
+The repository currently implements the pipeline from public-source discovery through validated and quarantined analytical inputs:
 
-* upstream resource availability;
-* HTTP failures;
-* checksum changes;
-* new quarterly resources;
-* source modification timestamps;
-* and retrieval failures.
-
-## Data-quality monitoring
-
-Planned monitoring includes:
-
-* missing required columns;
-* unexpected schema changes;
-* invalid values;
-* duplicate records;
-* missing reporting periods;
-* unresolved facility identifiers;
-* and inconsistent waiting measures.
-
-## Optimisation monitoring
-
-Planned monitoring includes:
-
-* solver status;
-* solve time;
-* infeasibility;
-* optimality gap;
-* capacity utilisation;
-* allocation concentration;
-* and performance relative to baseline policies.
-
-## Policy monitoring
-
-Where later observed data permits evaluation, planned monitoring includes:
-
-* realised treatment throughput;
-* realised waiting-list changes;
-* long-wait movement;
-* target attainment;
-* allocation stability;
-* regional distribution;
-* and persistent service pressure.
-
----
-
-# Expected future outputs
-
-Once downstream layers are implemented, planned outputs include:
-
-```text
-reports/outputs/
-├── data_quality_summary.json
-├── source_manifest.csv
-├── facility_pressure.csv
-├── specialty_pressure.csv
-├── urgency_pressure.csv
-├── baseline_allocations.csv
-├── allocation_recommendations.csv
-├── baseline_comparison.csv
-├── simulation_summary.csv
-├── allocation_stability.csv
-├── infeasibility_report.json
-├── optimisation_run_metadata.json
-└── monitoring_report.html
+```text id="muvchq"
+Source discovery
+      ↓
+Verified ingestion
+      ↓
+Immutable raw data
+      ↓
+Source lineage
+      ↓
+Schema inspection
+      ↓
+Controlled coercion
+      ↓
+Data-quality rules
+      ↓
+Validated + quarantined outputs
 ```
-
-Planned visual outputs include:
-
-```text
-reports/figures/
-├── facility_waiting_pressure.png
-├── specialty_long_wait_share.png
-├── backlog_change_by_facility.png
-├── recommended_session_allocation.png
-├── baseline_policy_comparison.png
-├── allocation_equity_tradeoff.png
-├── simulation_outcome_distribution.png
-└── recommendation_stability.png
-```
-
-These files are **planned outputs**, not verified project results.
-
----
-
-# Results
-
-## Current verified implementation result
-
-The repository currently demonstrates the design and implementation of a reproducible public-data ingestion foundation.
-
-The code is designed to:
-
-* discover the configured Queensland elective-surgery dataset through CKAN;
-* identify eligible Category and Speciality CSV resources;
-* validate source responses before persistence;
-* version raw files by their content hash;
-* avoid unnecessary overwrites;
-* and preserve source lineage in a manifest.
-
-Actual source counts, retrieval coverage and data-quality findings should only be added here after the repository has been executed against the live source and the resulting outputs have been reviewed.
 
 ## Analytical results
 
-**Not yet available.**
+No facility-performance, specialty-pressure, backlog-reduction or optimisation findings are currently claimed.
 
-No findings about:
-
-* facility performance;
-* specialty pressure;
-* backlog trends;
-* allocation policy performance;
-* or optimisation outcomes
-
-are claimed until the relevant pipeline stages have been implemented and executed.
+These will only be added once downstream analytical stages have been implemented, executed and reconciled.
 
 ---
 
 # Skills demonstrated
 
-## Currently demonstrated
+## Software engineering
 
-### Software engineering
-
-* modular Python package design;
-* typed configuration;
-* environment configuration;
-* custom exception hierarchy;
+* modular Python architecture;
+* typed application configuration;
+* environment management;
+* CLI development;
+* custom exception design;
 * structured logging;
-* command-line application development;
-* deterministic paths;
-* dependency management;
-* and reproducible execution configuration.
+* reproducible package configuration;
+* and automated testing.
 
-### Data engineering
+## Data engineering
 
-* CKAN API integration;
-* metadata-driven source discovery;
-* external HTTP ingestion;
-* retries and failure handling;
-* content validation;
-* immutable raw storage;
-* SHA-256 hashing;
-* duplicate-content handling;
-* resource versioning;
+* CKAN APIs;
+* metadata-driven ingestion;
+* external HTTP integration;
+* retries;
+* file validation;
+* immutable source storage;
+* SHA-256 versioning;
 * source lineage;
-* and retrieval manifests.
+* manifest management;
+* Parquet outputs;
+* and pipeline separation.
 
-### Testing
+## Data quality
 
-* pytest;
-* HTTP mocking;
-* configuration validation tests;
-* downloader edge-case tests;
-* manifest tests;
-* and end-to-end ingestion integration testing.
+* source contracts;
+* schema-drift handling;
+* explicit type coercion;
+* missing-value semantics;
+* business-rule validation;
+* duplicate detection;
+* healthcare metric consistency rules;
+* quarantine design;
+* machine-readable quality events;
+* and data-quality reporting.
 
-### Governance
+## Testing
 
-* explicit use boundaries;
-* source provenance;
-* scenario/observed-data separation;
-* human-review requirements;
-* and documented limitations.
+* unit testing;
+* integration testing;
+* external API mocking;
+* invalid-input testing;
+* failure-path testing;
+* and deterministic pipeline verification.
 
-## Planned skills
+## Governance
 
-* Pandera data contracts;
-* quarantine workflows;
-* entity resolution;
-* DuckDB analytical modelling;
-* analytical SQL;
-* backlog and throughput analytics;
-* mathematical optimisation;
-* baseline policy evaluation;
-* Monte Carlo simulation;
-* sensitivity analysis;
-* FastAPI;
-* Streamlit;
-* system monitoring;
-* Docker;
-* and CI/CD.
+* aggregate-use boundaries;
+* provenance;
+* source/assumption separation;
+* human review;
+* transparent quality failures;
+* and responsible-use documentation.
 
 ---
 
-# Development roadmap
+# Next phase
 
-### Phase 1: Foundation
+## Phase 4 — Canonical processing and analytical warehouse
 
-* [x] README and system design
-* [x] Python packaging
-* [x] environment configuration
-* [x] typed YAML configuration
-* [x] scenario configuration
-* [x] structured logging
-* [x] CLI foundation
+The next phase will convert validated quarterly source files into a consistent analytical model.
 
-### Phase 2: Source ingestion
+It will add:
 
-* [x] deterministic CKAN discovery
-* [x] Category/Speciality resource classification
-* [x] verified CSV downloads
-* [x] HTTP retries
-* [x] HTML/error-response rejection
-* [x] SHA-256 content hashing
-* [x] immutable source versioning
-* [x] raw-source manifest
-* [x] duplicate-content handling
-* [x] ingestion unit tests
-* [x] ingestion integration test
+```text id="wfqurs"
+src/qld_surgery_optimiser/
+└── processing/
+    ├── __init__.py
+    ├── normalise.py
+    ├── entities.py
+    ├── longitudinal.py
+    └── warehouse.py
+```
 
-### Phase 3: Data quality
+along with:
 
-* [ ] source schemas
-* [ ] schema drift detection
-* [ ] row-level quality rules
-* [ ] invalid-row quarantine
-* [ ] quality-event model
-* [ ] data-quality summary
+```text id="eiorp5"
+data/reference/facility_aliases.csv
+sql/create_warehouse.sql
+sql/checks/reconciliation.sql
+tests/unit/test_normalisation.py
+tests/integration/test_warehouse_pipeline.py
+```
 
-### Phase 4: Processing and warehouse
-
-* [ ] source normalisation
-* [ ] facility entity resolution
-* [ ] longitudinal modelling
-* [ ] DuckDB warehouse
-* [ ] reconciliation checks
-
-### Phase 5: Analytics
-
-* [ ] waiting-list pressure measures
-* [ ] treatment throughput measures
-* [ ] backlog change
-* [ ] specialty analysis
-* [ ] regional/equity analysis
-* [ ] baseline allocation policies
-
-### Phase 6: Optimisation
-
-* [ ] optimisation input contracts
-* [ ] OR-Tools model
-* [ ] objective function
-* [ ] capacity constraints
-* [ ] coverage constraints
-* [ ] infeasibility diagnostics
-* [ ] baseline comparisons
-
-### Phase 7: Simulation
-
-* [ ] Monte Carlo scenarios
-* [ ] uncertainty distributions
-* [ ] policy robustness
-* [ ] regret analysis
-* [ ] allocation stability
-
-### Phase 8: Delivery
-
-* [ ] FastAPI
-* [ ] Streamlit planning application
-* [ ] reporting exports
-* [ ] monitoring
-* [ ] Docker
-* [ ] GitHub Actions
-* [ ] operational documentation
-
-### Phase 9: Results
-
-* [ ] execute historical ingestion
-* [ ] validate source coverage
-* [ ] publish data-quality findings
-* [ ] execute analytical pipeline
-* [ ] validate optimiser
-* [ ] execute simulation framework
-* [ ] publish verified results
-* [ ] complete repository consistency review
+Phase 4 will establish the canonical data layer required by all later analytics and optimisation work.
 
 ---
 
 # Future improvements
 
-Potential later extensions include:
+Potential extensions include:
 
-* richer geographic accessibility analysis;
-* remoteness and travel-time measures;
-* multi-period optimisation;
-* stochastic or robust optimisation;
+* geographic accessibility measures;
+* remoteness analysis;
+* travel-time modelling;
 * workforce constraints;
+* multi-period optimisation;
+* stochastic optimisation;
+* robust optimisation;
+* procedure-level capacity constraints;
 * recovery-bed constraints;
-* procedure-level capacity modelling where suitable data exists;
 * cancellation-risk modelling;
-* causal evaluation of capacity interventions;
 * planner-defined scenario templates;
-* role-based access control;
-* and integration with appropriately governed internal operational data.
-
-Any future expansion must preserve the distinction between aggregate service planning and patient-level clinical decision-making.
+* role-based application access;
+* and appropriately governed internal operational data.
 
 ---
 
 # Contributing
 
-Contributions should:
+Changes should:
 
-* preserve the aggregate planning boundary;
-* include tests for new behaviour;
+* maintain aggregate planning boundaries;
+* preserve source provenance;
+* include tests;
 * document new assumptions;
-* retain source attribution;
-* avoid committing patient-level or restricted health data;
+* retain invalid source information where appropriate;
+* avoid restricted health data;
 * and update relevant documentation.
 
-Before committing code:
+Before committing:
 
-```bash
+```bash id="iooq8u"
 make format
 make lint
 make typecheck
@@ -1716,9 +1956,11 @@ make test
 
 # Licence
 
-This project is available under the MIT License. See [`LICENSE`](LICENSE) for details.
+Project code is released under the MIT Licence.
 
-Source datasets retain their original licences, attribution requirements and usage restrictions. The repository licence does not override terms applied by external data publishers.
+External datasets retain their own licensing and attribution requirements.
+
+The repository licence does not replace or modify source-data terms.
 
 ---
 
@@ -1728,4 +1970,6 @@ This is an independent portfolio project.
 
 It is not produced, endorsed or approved by Queensland Health, the Queensland Government or the Australian Institute of Health and Welfare.
 
-The system is not a clinical tool, patient scheduling system or production health-service application. Its future analytical and optimisation outputs are intended to support planning analysis and must not be used as the sole basis for clinical, operational or funding decisions.
+The project is not a clinical tool, patient scheduling system or production health-service application.
+
+Its future analytical and optimisation outputs are intended to support planning analysis and must not be used as the sole basis for clinical, funding or operational decisions.

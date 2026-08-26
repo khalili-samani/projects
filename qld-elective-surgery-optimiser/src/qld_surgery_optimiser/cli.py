@@ -18,12 +18,15 @@ from qld_surgery_optimiser.config import (
 )
 from qld_surgery_optimiser.exceptions import (
     ConfigurationError,
+    DataValidationError,
     DownloadError,
     SourceDiscoveryError,
 )
 from qld_surgery_optimiser.ingestion.ckan_client import CkanClient
 from qld_surgery_optimiser.ingestion.pipeline import run_ingestion
 from qld_surgery_optimiser.logging_config import configure_logging
+from qld_surgery_optimiser.validation.pipeline import run_validation
+
 
 app = typer.Typer(
     name="qld-surgery",
@@ -40,7 +43,8 @@ def _serialise_path(value: object) -> object:
         return str(value)
 
     raise TypeError(
-        f"Object is not JSON serialisable: {type(value).__name__}"
+        f"Object is not JSON serialisable: "
+        f"{type(value).__name__}"
     )
 
 
@@ -65,19 +69,31 @@ def main(
 def doctor() -> None:
     """Validate local configuration and create required directories."""
     settings = get_settings()
-    configure_logging(settings.log_level, json_output=True)
+
+    configure_logging(
+        settings.log_level,
+        json_output=True,
+    )
 
     try:
-        base_config = load_base_config(settings.base_config_path)
+        base_config = load_base_config(
+            settings.base_config_path
+        )
+
         scenario = load_scenario_config(
             settings.default_scenario_path
         )
-        created_directories = create_required_directories(settings)
+
+        created_directories = create_required_directories(
+            settings
+        )
 
     except ConfigurationError as exc:
         logger.error(
             "Configuration health check failed",
-            extra={"error": str(exc)},
+            extra={
+                "error": str(exc),
+            },
         )
 
         typer.echo(
@@ -87,17 +103,40 @@ def doctor() -> None:
 
         raise typer.Exit(code=1) from exc
 
-    typer.echo("Configuration health check passed.")
-    typer.echo(f"Project: {base_config.project.name}")
+    logger.info(
+        "Configuration health check passed",
+        extra={
+            "project": base_config.project.name,
+            "scenario": scenario.scenario.name,
+            "created_directories": [
+                str(path)
+                for path in created_directories
+            ],
+        },
+    )
+
     typer.echo(
-        f"Default scenario: {scenario.scenario.name}"
+        "Configuration health check passed."
+    )
+
+    typer.echo(
+        f"Project: {base_config.project.name}"
+    )
+
+    typer.echo(
+        f"Default scenario: "
+        f"{scenario.scenario.name}"
     )
 
     if created_directories:
-        typer.echo("Created directories:")
+        typer.echo(
+            "Created directories:"
+        )
 
         for path in created_directories:
-            typer.echo(f"  - {path}")
+            typer.echo(
+                f"  - {path}"
+            )
     else:
         typer.echo(
             "All required directories already exist."
@@ -120,6 +159,7 @@ def show_config(
 ) -> None:
     """Display resolved non-secret application configuration."""
     settings = get_settings()
+
     configure_logging(
         settings.log_level,
         json_output=True,
@@ -140,6 +180,13 @@ def show_config(
         )
 
     except ConfigurationError as exc:
+        logger.error(
+            "Configuration display failed",
+            extra={
+                "error": str(exc),
+            },
+        )
+
         typer.echo(
             f"Configuration error: {exc}",
             err=True,
@@ -148,9 +195,15 @@ def show_config(
         raise typer.Exit(code=1) from exc
 
     payload = {
-        "settings": settings.model_dump(mode="python"),
-        "base_config": base_config.model_dump(mode="python"),
-        "scenario": scenario.model_dump(mode="python"),
+        "settings": settings.model_dump(
+            mode="python"
+        ),
+        "base_config": base_config.model_dump(
+            mode="python"
+        ),
+        "scenario": scenario.model_dump(
+            mode="python"
+        ),
     }
 
     typer.echo(
@@ -167,6 +220,7 @@ def show_config(
 def discover() -> None:
     """Discover eligible upstream elective-surgery resources."""
     settings = get_settings()
+
     configure_logging(
         settings.log_level,
         json_output=True,
@@ -183,8 +237,12 @@ def discover() -> None:
 
         with CkanClient(
             source_config,
-            timeout_seconds=settings.request_timeout_seconds,
-            max_retries=settings.request_max_retries,
+            timeout_seconds=(
+                settings.request_timeout_seconds
+            ),
+            max_retries=(
+                settings.request_max_retries
+            ),
             retry_backoff_seconds=(
                 settings.request_retry_backoff_seconds
             ),
@@ -196,6 +254,13 @@ def discover() -> None:
         ConfigurationError,
         SourceDiscoveryError,
     ) as exc:
+        logger.exception(
+            "Source discovery failed",
+            extra={
+                "error": str(exc),
+            },
+        )
+
         typer.echo(
             f"Discovery failed: {exc}",
             err=True,
@@ -203,10 +268,28 @@ def discover() -> None:
 
         raise typer.Exit(code=1) from exc
 
-    typer.echo(f"Dataset: {dataset.title}")
     typer.echo(
-        f"Eligible resources: {len(resources)}"
+        f"Dataset: {dataset.title}"
     )
+
+    typer.echo(
+        f"Eligible resources: "
+        f"{len(resources)}"
+    )
+
+    if dataset.organisation:
+        typer.echo(
+            f"Organisation: "
+            f"{dataset.organisation}"
+        )
+
+    if dataset.licence_title:
+        typer.echo(
+            f"Licence: "
+            f"{dataset.licence_title}"
+        )
+
+    typer.echo("")
 
     for resource in resources:
         typer.echo(
@@ -223,21 +306,24 @@ def ingest(
         typer.Option(
             "--latest-only",
             help=(
-                "Retrieve only the most recent Category and "
-                "Speciality resources."
+                "Retrieve only the most recent "
+                "Category and Speciality resources."
             ),
         ),
     ] = False,
 ) -> None:
     """Download raw source resources and update the lineage manifest."""
     settings = get_settings()
+
     configure_logging(
         settings.log_level,
         json_output=True,
     )
 
     try:
-        create_required_directories(settings)
+        create_required_directories(
+            settings
+        )
 
         base_config = load_base_config(
             settings.base_config_path
@@ -256,7 +342,9 @@ def ingest(
     ) as exc:
         logger.exception(
             "Ingestion failed",
-            extra={"error": str(exc)},
+            extra={
+                "error": str(exc),
+            },
         )
 
         typer.echo(
@@ -266,29 +354,135 @@ def ingest(
 
         raise typer.Exit(code=1) from exc
 
-    typer.echo("Ingestion completed successfully.")
+    typer.echo(
+        "Ingestion completed successfully."
+    )
+
+    typer.echo(
+        f"Dataset: "
+        f"{summary.dataset_id}"
+    )
+
     typer.echo(
         f"Resources discovered: "
         f"{summary.resources_discovered}"
     )
+
     typer.echo(
         f"Resources selected: "
         f"{summary.resources_selected}"
     )
+
     typer.echo(
         f"New raw files: "
         f"{summary.resources_downloaded}"
     )
+
     typer.echo(
         f"Already present: "
         f"{summary.resources_already_present}"
     )
+
     typer.echo(
         f"Manifest records added: "
         f"{summary.manifest_records_added}"
     )
+
     typer.echo(
-        f"Manifest: {summary.manifest_path}"
+        f"Manifest: "
+        f"{summary.manifest_path}"
+    )
+
+
+@app.command("validate")
+def validate() -> None:
+    """Validate all retrieved raw elective-surgery resources."""
+    settings = get_settings()
+
+    configure_logging(
+        settings.log_level,
+        json_output=True,
+    )
+
+    try:
+        create_required_directories(
+            settings
+        )
+
+        base_config = load_base_config(
+            settings.base_config_path
+        )
+
+        summary = run_validation(
+            settings=settings,
+            base_config=base_config,
+        )
+
+    except (
+        ConfigurationError,
+        DataValidationError,
+    ) as exc:
+        logger.exception(
+            "Validation failed",
+            extra={
+                "error": str(exc),
+            },
+        )
+
+        typer.echo(
+            f"Validation failed: {exc}",
+            err=True,
+        )
+
+        raise typer.Exit(code=1) from exc
+
+    typer.echo(
+        "Validation completed."
+    )
+
+    typer.echo(
+        f"Files processed: "
+        f"{summary.files_processed}"
+    )
+
+    typer.echo(
+        f"Files passed: "
+        f"{summary.files_passed}"
+    )
+
+    typer.echo(
+        f"Files failed: "
+        f"{summary.files_failed}"
+    )
+
+    typer.echo(
+        f"Rows read: "
+        f"{summary.rows_read}"
+    )
+
+    typer.echo(
+        f"Rows valid: "
+        f"{summary.rows_valid}"
+    )
+
+    typer.echo(
+        f"Rows quarantined: "
+        f"{summary.rows_quarantined}"
+    )
+
+    typer.echo(
+        f"Validated data directory: "
+        f"{summary.interim_directory}"
+    )
+
+    typer.echo(
+        f"Quarantine directory: "
+        f"{summary.quarantine_directory}"
+    )
+
+    typer.echo(
+        f"Quality report: "
+        f"{summary.report_path}"
     )
 
 

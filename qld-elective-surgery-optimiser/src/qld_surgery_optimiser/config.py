@@ -71,9 +71,24 @@ class ValidationConfig(BaseModel):
     fail_on_duplicate_business_keys: bool
     quarantine_invalid_rows: bool
     allow_unexpected_columns: bool
-    maximum_unresolved_entity_rate: float = Field(ge=0.0, le=1.0)
+
+    maximum_unresolved_entity_rate: float = Field(
+        ge=0.0,
+        le=1.0,
+    )
+
     percentage_minimum: float
     percentage_maximum: float
+
+    null_tokens: list[str] = Field(min_length=1)
+
+    required_common_columns: list[str] = Field(min_length=1)
+    category_identity_columns: list[str] = Field(min_length=1)
+    specialty_identity_columns: list[str] = Field(min_length=1)
+
+    numeric_volume_columns: list[str] = Field(min_length=1)
+    percentage_columns: list[str] = Field(min_length=1)
+    date_columns: list[str] = Field(min_length=1)
 
 
 class WarehouseConfig(BaseModel):

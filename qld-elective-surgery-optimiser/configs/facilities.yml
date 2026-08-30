@@ -1,0 +1,10 @@
+facility_resolution:
+  allow_unmapped_facilities: true
+  prefer_source_facility_code: true
+  normalise_whitespace: true
+  case_insensitive_alias_matching: true
+
+governance:
+  require_review_for_alias_changes: true
+  allow_fuzzy_matching: false
+  allow_automatic_code_replacement: false

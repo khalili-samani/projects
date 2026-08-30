@@ -207,6 +207,9 @@ class AppSettings(BaseSettings):
     base_config_path: Path = Path("configs/base.yml")
     optimisation_config_path: Path = Path("configs/optimisation.yml")
     default_scenario_path: Path = Path("configs/scenarios/baseline.yml")
+    facility_aliases_path: Path = Path(
+    "data/reference/facility_aliases.csv"
+    )
 
     data_dir: Path = Path("data")
     raw_data_dir: Path = Path("data/raw")

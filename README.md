@@ -2,15 +2,7 @@
 
 This repository contains a collection of end-to-end portfolio projects demonstrating my skills in data analytics, data engineering, machine learning and AI.
 
-The projects cover the complete analytics lifecycle, including data collection, ETL pipeline development, SQL database design, statistical analysis, predictive modelling, data visualisation and AI-assisted reporting. They are built using real-world or realistic datasets from domains such as energy markets, financial markets and the Australian housing sector.
-
-## Featured Projects
-
-- Australian National Electricity Market Price Forecasting
-- ASX Equity Intelligence Agent
-- Australian Energy Market Analysis Pipeline
-- Sector-Based Stock Market Analysis
-- Australian Housing Data Quality Simulator
+The projects cover the complete analytics lifecycle, including data collection, ETL pipeline development, SQL database design, statistical analysis, predictive modelling, data visualisation and AI-assisted reporting. They are built using real-world or realistic datasets.
 
 ## Technologies
 

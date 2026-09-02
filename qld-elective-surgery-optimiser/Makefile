@@ -1,22 +1,23 @@
 PYTHON ?= python
 PACKAGE := qld_surgery_optimiser
 
-.PHONY: help install install-all doctor show-config discover ingest ingest-latest validate format lint typecheck test coverage clean
+.PHONY: help install install-all doctor show-config discover ingest ingest-latest validate warehouse format lint typecheck test coverage clean
 
 help:
 	@echo "Available commands:"
 	@echo "  make install        Install core and development dependencies"
 	@echo "  make install-all    Install all optional dependencies"
-	@echo "  make doctor         Validate configuration and create directories"
+	@echo "  make doctor         Validate configuration"
 	@echo "  make show-config    Print resolved configuration"
-	@echo "  make discover       Discover Queensland elective-surgery resources"
-	@echo "  make ingest         Download all eligible historical resources"
-	@echo "  make ingest-latest  Download latest Category and Speciality resources"
-	@echo "  make validate       Validate raw resources and quarantine bad rows"
-	@echo "  make format         Format Python files with Ruff"
-	@echo "  make lint           Run Ruff checks"
+	@echo "  make discover       Discover source resources"
+	@echo "  make ingest         Download historical resources"
+	@echo "  make ingest-latest  Download latest resources"
+	@echo "  make validate       Validate and quarantine source records"
+	@echo "  make warehouse      Build canonical data and DuckDB warehouse"
+	@echo "  make format         Format Python files"
+	@echo "  make lint           Run Ruff"
 	@echo "  make typecheck      Run mypy"
-	@echo "  make test           Run the test suite"
+	@echo "  make test           Run tests"
 	@echo "  make coverage       Run tests with coverage"
 	@echo "  make clean          Remove development artefacts"
 
@@ -45,6 +46,9 @@ ingest-latest:
 
 validate:
 	$(PYTHON) -m $(PACKAGE).cli validate
+
+warehouse:
+	$(PYTHON) -m $(PACKAGE).cli warehouse
 
 format:
 	$(PYTHON) -m ruff format .

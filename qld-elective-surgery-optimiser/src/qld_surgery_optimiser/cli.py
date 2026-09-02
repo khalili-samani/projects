@@ -20,11 +20,13 @@ from qld_surgery_optimiser.exceptions import (
     ConfigurationError,
     DataValidationError,
     DownloadError,
+    EntityResolutionError,
     SourceDiscoveryError,
 )
 from qld_surgery_optimiser.ingestion.ckan_client import CkanClient
 from qld_surgery_optimiser.ingestion.pipeline import run_ingestion
 from qld_surgery_optimiser.logging_config import configure_logging
+from qld_surgery_optimiser.processing.warehouse import build_warehouse
 from qld_surgery_optimiser.validation.pipeline import run_validation
 
 
@@ -37,13 +39,15 @@ app = typer.Typer(
 logger = logging.getLogger(__name__)
 
 
-def _serialise_path(value: object) -> object:
+def _serialise_path(
+    value: object,
+) -> object:
     """Convert paths to strings for JSON output."""
     if isinstance(value, Path):
         return str(value)
 
     raise TypeError(
-        f"Object is not JSON serialisable: "
+        "Object is not JSON serialisable: "
         f"{type(value).__name__}"
     )
 
@@ -67,7 +71,7 @@ def main(
 
 @app.command("doctor")
 def doctor() -> None:
-    """Validate local configuration and create required directories."""
+    """Validate configuration and create required directories."""
     settings = get_settings()
 
     configure_logging(
@@ -84,16 +88,14 @@ def doctor() -> None:
             settings.default_scenario_path
         )
 
-        created_directories = create_required_directories(
+        created = create_required_directories(
             settings
         )
 
     except ConfigurationError as exc:
         logger.error(
             "Configuration health check failed",
-            extra={
-                "error": str(exc),
-            },
+            extra={"error": str(exc)},
         )
 
         typer.echo(
@@ -102,18 +104,6 @@ def doctor() -> None:
         )
 
         raise typer.Exit(code=1) from exc
-
-    logger.info(
-        "Configuration health check passed",
-        extra={
-            "project": base_config.project.name,
-            "scenario": scenario.scenario.name,
-            "created_directories": [
-                str(path)
-                for path in created_directories
-            ],
-        },
-    )
 
     typer.echo(
         "Configuration health check passed."
@@ -128,12 +118,12 @@ def doctor() -> None:
         f"{scenario.scenario.name}"
     )
 
-    if created_directories:
+    if created:
         typer.echo(
             "Created directories:"
         )
 
-        for path in created_directories:
+        for path in created:
             typer.echo(
                 f"  - {path}"
             )
@@ -157,7 +147,7 @@ def show_config(
         ),
     ] = None,
 ) -> None:
-    """Display resolved non-secret application configuration."""
+    """Display resolved non-secret configuration."""
     settings = get_settings()
 
     configure_logging(
@@ -180,13 +170,6 @@ def show_config(
         )
 
     except ConfigurationError as exc:
-        logger.error(
-            "Configuration display failed",
-            extra={
-                "error": str(exc),
-            },
-        )
-
         typer.echo(
             f"Configuration error: {exc}",
             err=True,
@@ -198,8 +181,10 @@ def show_config(
         "settings": settings.model_dump(
             mode="python"
         ),
-        "base_config": base_config.model_dump(
-            mode="python"
+        "base_config": (
+            base_config.model_dump(
+                mode="python"
+            )
         ),
         "scenario": scenario.model_dump(
             mode="python"
@@ -248,7 +233,9 @@ def discover() -> None:
             ),
             user_agent=settings.user_agent,
         ) as client:
-            dataset, resources = client.get_dataset()
+            dataset, resources = (
+                client.get_dataset()
+            )
 
     except (
         ConfigurationError,
@@ -256,9 +243,7 @@ def discover() -> None:
     ) as exc:
         logger.exception(
             "Source discovery failed",
-            extra={
-                "error": str(exc),
-            },
+            extra={"error": str(exc)},
         )
 
         typer.echo(
@@ -276,20 +261,6 @@ def discover() -> None:
         f"Eligible resources: "
         f"{len(resources)}"
     )
-
-    if dataset.organisation:
-        typer.echo(
-            f"Organisation: "
-            f"{dataset.organisation}"
-        )
-
-    if dataset.licence_title:
-        typer.echo(
-            f"Licence: "
-            f"{dataset.licence_title}"
-        )
-
-    typer.echo("")
 
     for resource in resources:
         typer.echo(
@@ -312,7 +283,7 @@ def ingest(
         ),
     ] = False,
 ) -> None:
-    """Download raw source resources and update the lineage manifest."""
+    """Download raw resources and update source lineage."""
     settings = get_settings()
 
     configure_logging(
@@ -342,9 +313,7 @@ def ingest(
     ) as exc:
         logger.exception(
             "Ingestion failed",
-            extra={
-                "error": str(exc),
-            },
+            extra={"error": str(exc)},
         )
 
         typer.echo(
@@ -356,11 +325,6 @@ def ingest(
 
     typer.echo(
         "Ingestion completed successfully."
-    )
-
-    typer.echo(
-        f"Dataset: "
-        f"{summary.dataset_id}"
     )
 
     typer.echo(
@@ -384,11 +348,6 @@ def ingest(
     )
 
     typer.echo(
-        f"Manifest records added: "
-        f"{summary.manifest_records_added}"
-    )
-
-    typer.echo(
         f"Manifest: "
         f"{summary.manifest_path}"
     )
@@ -396,7 +355,7 @@ def ingest(
 
 @app.command("validate")
 def validate() -> None:
-    """Validate all retrieved raw elective-surgery resources."""
+    """Validate raw resources and quarantine invalid observations."""
     settings = get_settings()
 
     configure_logging(
@@ -424,9 +383,7 @@ def validate() -> None:
     ) as exc:
         logger.exception(
             "Validation failed",
-            extra={
-                "error": str(exc),
-            },
+            extra={"error": str(exc)},
         )
 
         typer.echo(
@@ -471,18 +428,103 @@ def validate() -> None:
     )
 
     typer.echo(
-        f"Validated data directory: "
-        f"{summary.interim_directory}"
-    )
-
-    typer.echo(
-        f"Quarantine directory: "
-        f"{summary.quarantine_directory}"
-    )
-
-    typer.echo(
         f"Quality report: "
         f"{summary.report_path}"
+    )
+
+
+@app.command("warehouse")
+def warehouse() -> None:
+    """Build canonical Parquet datasets and DuckDB warehouse."""
+    settings = get_settings()
+
+    configure_logging(
+        settings.log_level,
+        json_output=True,
+    )
+
+    try:
+        create_required_directories(
+            settings
+        )
+
+        summary = build_warehouse(
+            settings=settings
+        )
+
+    except (
+        DataValidationError,
+        EntityResolutionError,
+    ) as exc:
+        logger.exception(
+            "Warehouse build failed",
+            extra={"error": str(exc)},
+        )
+
+        typer.echo(
+            f"Warehouse build failed: {exc}",
+            err=True,
+        )
+
+        raise typer.Exit(code=1) from exc
+
+    typer.echo(
+        "Warehouse build completed."
+    )
+
+    typer.echo(
+        f"Validated files: "
+        f"{summary.validated_files}"
+    )
+
+    typer.echo(
+        f"Canonical rows: "
+        f"{summary.canonical_rows}"
+    )
+
+    typer.echo(
+        f"Longitudinal rows: "
+        f"{summary.longitudinal_rows}"
+    )
+
+    typer.echo(
+        f"Canonical duplicates removed: "
+        f"{summary.duplicate_canonical_keys_removed}"
+    )
+
+    typer.echo(
+        f"Facilities: "
+        f"{summary.facility_count}"
+    )
+
+    typer.echo(
+        f"Specialties: "
+        f"{summary.specialty_count}"
+    )
+
+    typer.echo(
+        f"Urgency categories: "
+        f"{summary.urgency_category_count}"
+    )
+
+    typer.echo(
+        f"Reporting periods: "
+        f"{summary.reporting_period_count}"
+    )
+
+    typer.echo(
+        f"Facilities using source identity: "
+        f"{summary.unresolved_facilities}"
+    )
+
+    typer.echo(
+        f"DuckDB: "
+        f"{summary.database_path}"
+    )
+
+    typer.echo(
+        f"Reconciliation report: "
+        f"{summary.reconciliation_report_path}"
     )
 
 

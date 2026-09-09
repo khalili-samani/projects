@@ -1,16 +1,13 @@
-"""Verified and immutable raw-resource downloading."""
+"""Verified HTTP download and immutable raw-source persistence."""
 
 from __future__ import annotations
 
 import csv
 import hashlib
 import io
-import logging
-import re
 import time
-from datetime import UTC, datetime
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
+from urllib.parse import unquote, urlparse
 
 import httpx
 
@@ -20,44 +17,80 @@ from qld_surgery_optimiser.ingestion.models import (
     ResourceRef,
 )
 
-logger = logging.getLogger(__name__)
 
-
-_REQUIRED_HEADER_COLUMNS = {
-    "Facility_Code",
-    "Facility_Name",
-    "Report_Month",
-}
+REQUIRED_IDENTITY_COLUMNS = frozenset(
+    {
+        "Facility_Code",
+        "Facility_Name",
+        "Report_Month",
+    }
+)
 
 
 class ResourceDownloader:
-    """Download CKAN resources with basic transport and content validation."""
+    """Download and persist verified source resources.
+
+    The downloader is intentionally limited to transport-level and
+    lightweight source-identity validation.
+
+    Detailed analytical validation belongs to the validation package.
+    """
 
     def __init__(
         self,
         *,
         raw_data_dir: Path,
-        timeout_seconds: float,
+        timeout_seconds: int,
         max_retries: int,
         retry_backoff_seconds: float,
         user_agent: str,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
-        self._raw_data_dir = raw_data_dir
-        self._max_retries = max_retries
-        self._retry_backoff_seconds = retry_backoff_seconds
+        """Initialise the resource downloader."""
+
+        self.raw_data_dir = Path(
+            raw_data_dir
+        )
+
+        self.timeout_seconds = (
+            timeout_seconds
+        )
+
+        self.max_retries = (
+            max_retries
+        )
+
+        self.retry_backoff_seconds = (
+            retry_backoff_seconds
+        )
+
+        self.user_agent = (
+            user_agent
+        )
 
         self._client = httpx.Client(
-            timeout=timeout_seconds,
-            headers={
-                "Accept": "text/csv,application/csv,text/plain,*/*",
-                "User-Agent": user_agent,
-            },
+            timeout=httpx.Timeout(
+                timeout_seconds
+            ),
             follow_redirects=True,
+            headers={
+                "User-Agent": user_agent,
+                "Accept": (
+                    "text/csv,"
+                    "application/csv,"
+                    "text/plain,"
+                    "application/octet-stream,"
+                    "*/*"
+                ),
+            },
             transport=transport,
         )
 
-    def __enter__(self) -> ResourceDownloader:
+    def __enter__(
+        self,
+    ) -> ResourceDownloader:
+        """Enter the downloader context manager."""
+
         return self
 
     def __exit__(
@@ -66,21 +99,34 @@ class ResourceDownloader:
         exc_value: object,
         traceback: object,
     ) -> None:
+        """Close the HTTP client when leaving the context."""
+
         self.close()
 
-    def close(self) -> None:
+    def close(
+        self,
+    ) -> None:
         """Close the underlying HTTP client."""
+
         self._client.close()
 
     def download(
         self,
         resource: ResourceRef,
     ) -> DownloadResult:
-        """Retrieve, validate and persist one immutable resource."""
-        response = self._request(resource)
+        """Download, validate and version one source resource."""
+
+        response = self._request(
+            resource=resource
+        )
+
         payload = response.content
 
-        content_type = response.headers.get("content-type")
+        content_type = (
+            response.headers.get(
+                "content-type"
+            )
+        )
 
         self._validate_payload(
             payload=payload,
@@ -88,78 +134,114 @@ class ResourceDownloader:
             resource=resource,
         )
 
-        sha256 = hashlib.sha256(payload).hexdigest()
+        sha256 = hashlib.sha256(
+            payload
+        ).hexdigest()
 
-        target_path = self._target_path(
-            resource=resource,
-            sha256=sha256,
+        source_filename = (
+            self._source_filename(
+                resource=resource
+            )
         )
 
-        retrieved_at = datetime.now(UTC)
-
-        downloaded = self._write_if_new(
-            path=target_path,
-            payload=payload,
+        resource_directory = (
+            self.raw_data_dir
+            / resource.resource_kind
+            / resource.resource_id
         )
 
-        logger.info(
-            "Raw resource ready",
-            extra={
-                "resource_id": resource.resource_id,
-                "resource_kind": resource.resource_kind,
-                "local_path": str(target_path),
-                "sha256": sha256,
-                "byte_count": len(payload),
-                "downloaded": downloaded,
-            },
+        resource_directory.mkdir(
+            parents=True,
+            exist_ok=True,
         )
+
+        local_path = (
+            resource_directory
+            / (
+                f"{sha256[:16]}_"
+                f"{source_filename}"
+            )
+        )
+
+        already_exists = (
+            local_path.exists()
+        )
+
+        if not already_exists:
+            local_path.write_bytes(
+                payload
+            )
 
         return DownloadResult(
             resource=resource,
-            local_path=target_path,
+            local_path=local_path,
             sha256=sha256,
-            byte_count=len(payload),
-            retrieved_at=retrieved_at,
+            byte_count=len(
+                payload
+            ),
             content_type=content_type,
-            downloaded=downloaded,
+            already_exists=already_exists,
         )
 
     def _request(
         self,
+        *,
         resource: ResourceRef,
     ) -> httpx.Response:
-        last_error: Exception | None = None
+        """Retrieve one resource with bounded retry behaviour."""
 
-        for attempt in range(self._max_retries + 1):
+        attempts = (
+            self.max_retries
+            + 1
+        )
+
+        last_error: Exception | None = (
+            None
+        )
+
+        for attempt in range(
+            attempts
+        ):
             try:
-                response = self._client.get(resource.download_url)
-                response.raise_for_status()
-                return response
-
-            except httpx.HTTPError as exc:
-                last_error = exc
-
-                if attempt >= self._max_retries:
-                    break
-
-                delay = self._retry_backoff_seconds * (2**attempt)
-
-                logger.warning(
-                    "Resource download failed; retrying",
-                    extra={
-                        "resource_id": resource.resource_id,
-                        "attempt": attempt + 1,
-                        "delay_seconds": delay,
-                        "error": str(exc),
-                    },
+                response = (
+                    self._client.get(
+                        resource.url
+                    )
                 )
 
-                time.sleep(delay)
+                response.raise_for_status()
+
+                return response
+
+            except (
+                httpx.HTTPError,
+                httpx.TimeoutException,
+            ) as exc:
+                last_error = exc
+
+                final_attempt = (
+                    attempt
+                    >= attempts - 1
+                )
+
+                if final_attempt:
+                    break
+
+                delay = (
+                    self.retry_backoff_seconds
+                    * (2**attempt)
+                )
+
+                if delay > 0:
+                    time.sleep(
+                        delay
+                    )
 
         raise DownloadError(
-            f"Failed to download resource "
-            f"{resource.resource_id} after "
-            f"{self._max_retries + 1} attempt(s)."
+            "Failed to download resource "
+            f"{resource.resource_id} "
+            f"from {resource.url} "
+            f"after {attempts} attempt(s)."
         ) from last_error
 
     def _validate_payload(
@@ -169,9 +251,12 @@ class ResourceDownloader:
         content_type: str | None,
         resource: ResourceRef,
     ) -> None:
+        """Validate that a payload is plausibly the expected CSV."""
+
         if not payload:
             raise DownloadError(
-                f"Resource {resource.resource_id} returned an empty body."
+                f"Resource {resource.resource_id} "
+                "returned an empty body."
             )
 
         normalised_content_type = (
@@ -180,120 +265,170 @@ class ResourceDownloader:
             else ""
         )
 
-        if "text/html" in normalised_content_type:
+        if "text/html" in (
+            normalised_content_type
+        ):
             raise DownloadError(
-                f"Resource {resource.resource_id} returned HTML "
-                "instead of CSV."
+                f"Resource {resource.resource_id} "
+                "returned HTML instead of CSV."
             )
 
-        prefix = payload[:512].lstrip().casefold()
-
-        html_markers = (
-            b"<!doctype html",
-            b"<html",
-            b"<head",
-            b"<body",
+        # `payload` is bytes. bytes objects support `.lower()`,
+        # but they do not support str.casefold().
+        prefix = (
+            payload[:512]
+            .lstrip()
+            .lower()
         )
 
-        if any(prefix.startswith(marker) for marker in html_markers):
+        if (
+            prefix.startswith(
+                b"<!doctype html"
+            )
+            or prefix.startswith(
+                b"<html"
+            )
+            or prefix.startswith(
+                b"<?xml"
+            )
+            and b"<html" in prefix
+        ):
             raise DownloadError(
-                f"Resource {resource.resource_id} appears to contain HTML "
-                "instead of CSV."
+                f"Resource {resource.resource_id} "
+                "returned HTML instead of CSV."
             )
 
         try:
-            text = payload.decode("utf-8-sig")
+            decoded = payload.decode(
+                "utf-8-sig"
+            )
+
         except UnicodeDecodeError as exc:
             raise DownloadError(
-                f"Resource {resource.resource_id} is not valid UTF-8 CSV."
+                f"Resource {resource.resource_id} "
+                "could not be decoded as UTF-8 CSV."
             ) from exc
 
         try:
-            reader = csv.reader(io.StringIO(text))
-            header = next(reader)
-        except (csv.Error, StopIteration) as exc:
-            raise DownloadError(
-                f"Resource {resource.resource_id} has no readable CSV header."
-            ) from exc
-
-        stripped_header = {
-            column.strip()
-            for column in header
-            if column.strip()
-        }
-
-        missing = _REQUIRED_HEADER_COLUMNS - stripped_header
-
-        if missing:
-            missing_text = ", ".join(sorted(missing))
-
-            raise DownloadError(
-                f"Resource {resource.resource_id} is missing mandatory "
-                f"identity columns: {missing_text}"
+            reader = csv.reader(
+                io.StringIO(
+                    decoded
+                )
             )
 
-    def _target_path(
-        self,
-        *,
-        resource: ResourceRef,
-        sha256: str,
-    ) -> Path:
-        filename = _filename_from_url(resource.download_url)
+            header = next(
+                reader,
+                None,
+            )
 
-        directory = (
-            self._raw_data_dir
-            / resource.resource_kind
-            / resource.resource_id
-        )
-
-        versioned_filename = f"{sha256[:16]}_{filename}"
-
-        return directory / versioned_filename
-
-    def _write_if_new(
-        self,
-        *,
-        path: Path,
-        payload: bytes,
-    ) -> bool:
-        if path.exists():
-            return False
-
-        path.parent.mkdir(parents=True, exist_ok=True)
-
-        temporary_path = path.with_suffix(path.suffix + ".tmp")
-
-        try:
-            temporary_path.write_bytes(payload)
-            temporary_path.replace(path)
-        except OSError as exc:
-            temporary_path.unlink(missing_ok=True)
-
+        except csv.Error as exc:
             raise DownloadError(
-                f"Could not persist raw resource to {path}"
+                f"Resource {resource.resource_id} "
+                "could not be parsed as CSV."
             ) from exc
 
-        return True
+        if not header:
+            raise DownloadError(
+                f"Resource {resource.resource_id} "
+                "did not contain a CSV header."
+            )
 
+        normalised_header = {
+            column.strip()
+            for column in header
+            if column is not None
+            and column.strip()
+        }
 
-def _filename_from_url(url: str) -> str:
-    """Create a safe local filename from a download URL."""
-    parsed = urlsplit(url)
-    raw_name = unquote(Path(parsed.path).name)
+        missing_columns = (
+            REQUIRED_IDENTITY_COLUMNS
+            - normalised_header
+        )
 
-    if not raw_name:
-        raw_name = "resource.csv"
+        if missing_columns:
+            missing = ", ".join(
+                sorted(
+                    missing_columns
+                )
+            )
 
-    safe_name = re.sub(
-        r"[^A-Za-z0-9._-]+",
-        "_",
-        raw_name,
-    ).strip("._")
+            raise DownloadError(
+                f"Resource {resource.resource_id} "
+                "is missing mandatory identity "
+                f"columns: {missing}."
+            )
 
-    if not safe_name:
-        safe_name = "resource.csv"
+    @staticmethod
+    def _source_filename(
+        *,
+        resource: ResourceRef,
+    ) -> str:
+        """Derive a safe source filename from the resource URL."""
 
-    if not safe_name.casefold().endswith(".csv"):
-        safe_name = f"{safe_name}.csv"
+        parsed_url = urlparse(
+            resource.url
+        )
 
-    return safe_name
+        filename = Path(
+            unquote(
+                parsed_url.path
+            )
+        ).name
+
+        if not filename:
+            filename = (
+                f"{resource.resource_id}.csv"
+            )
+
+        filename = (
+            ResourceDownloader
+            ._sanitise_filename(
+                filename
+            )
+        )
+
+        if not filename.casefold().endswith(
+            ".csv"
+        ):
+            filename = (
+                f"{filename}.csv"
+            )
+
+        return filename
+
+    @staticmethod
+    def _sanitise_filename(
+        filename: str,
+    ) -> str:
+        """Remove unsafe characters from a source filename."""
+
+        safe_characters = []
+
+        for character in filename:
+            if (
+                character.isalnum()
+                or character
+                in {
+                    ".",
+                    "-",
+                    "_",
+                }
+            ):
+                safe_characters.append(
+                    character
+                )
+            else:
+                safe_characters.append(
+                    "_"
+                )
+
+        sanitised = "".join(
+            safe_characters
+        ).strip(
+            "._"
+        )
+
+        if not sanitised:
+            return "source.csv"
+
+        return sanitised

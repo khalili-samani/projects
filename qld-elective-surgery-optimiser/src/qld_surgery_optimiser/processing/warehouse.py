@@ -695,10 +695,9 @@ def _replace_table(
     table_name: str,
     dataframe: pd.DataFrame,
 ) -> None:
-    """Replace warehouse table contents with one dataframe."""
-    view_name = (
-        f"_load_{table_name}"
-    )
+    """Replace warehouse table contents using explicit column names."""
+
+    view_name = f"_load_{table_name}"
 
     connection.register(
         view_name,
@@ -707,16 +706,30 @@ def _replace_table(
 
     try:
         connection.execute(
-            f"DELETE FROM {table_name}"
+            f'DELETE FROM "{table_name}"'
         )
 
-        if not dataframe.empty:
-            connection.execute(
-                f"""
-                INSERT INTO {table_name}
-                SELECT * FROM {view_name}
-                """
+        if dataframe.empty:
+            return
+
+        columns = list(dataframe.columns)
+
+        quoted_columns = ", ".join(
+            f'"{column}"'
+            for column in columns
+        )
+
+        connection.execute(
+            f"""
+            INSERT INTO "{table_name}" (
+                {quoted_columns}
             )
+            SELECT
+                {quoted_columns}
+            FROM "{view_name}"
+            """
+        )
+
     finally:
         connection.unregister(
             view_name

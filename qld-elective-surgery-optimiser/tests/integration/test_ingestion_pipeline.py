@@ -16,6 +16,8 @@ from qld_surgery_optimiser.ingestion.manifest import RawManifest
 
 
 def _base_config() -> BaseConfig:
+    """Return a complete application configuration for ingestion tests."""
+
     return BaseConfig.model_validate(
         {
             "project": {
@@ -34,7 +36,9 @@ def _base_config() -> BaseConfig:
                         "https://example.test/api/3/action"
                     ),
                     "dataset_id": "elective-surgery",
-                    "allowed_formats": ["CSV"],
+                    "allowed_formats": [
+                        "CSV",
+                    ],
                     "category_patterns": [
                         "summary 1",
                         "by category",
@@ -65,6 +69,47 @@ def _base_config() -> BaseConfig:
                 "maximum_unresolved_entity_rate": 0.01,
                 "percentage_minimum": 0.0,
                 "percentage_maximum": 100.0,
+                "null_tokens": [
+                    "",
+                    "NA",
+                    "N/A",
+                    "NULL",
+                    "null",
+                    "-",
+                    "--",
+                ],
+                "required_common_columns": [
+                    "Facility_Code",
+                    "Facility_Name",
+                    "Report_Month",
+                    "Vol_Treated",
+                    "Vol_Waiting",
+                    "Vol_LongWaits",
+                ],
+                "category_identity_columns": [
+                    "Category",
+                ],
+                "specialty_identity_columns": [
+                    "Specialty_Code",
+                    "Specialty_Desc",
+                ],
+                "numeric_volume_columns": [
+                    "Vol_Treated",
+                    "Vol_Waiting",
+                    "Vol_LongWaits",
+                    "Vol_LongWaits_RFS",
+                    "Vol_LongWaits_NRFS",
+                ],
+                "percentage_columns": [
+                    "Percent_Treated_InTime",
+                    "Percent_Variation_Treated_Prior_Year",
+                    "Percent_Waiting_InTime_Total",
+                    "Percent_Waiting_InTime_RFS",
+                ],
+                "date_columns": [
+                    "Report_Month",
+                    "data_last_update",
+                ],
             },
             "warehouse": {
                 "database_schema": "main",

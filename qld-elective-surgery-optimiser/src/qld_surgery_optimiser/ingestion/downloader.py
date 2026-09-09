@@ -1,4 +1,4 @@
-"""Verified HTTP download and immutable raw-source persistence."""
+"""Download and persist immutable Queensland elective-surgery source files."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import csv
 import hashlib
 import io
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
@@ -28,13 +29,7 @@ REQUIRED_IDENTITY_COLUMNS = frozenset(
 
 
 class ResourceDownloader:
-    """Download and persist verified source resources.
-
-    The downloader is intentionally limited to transport-level and
-    lightweight source-identity validation.
-
-    Detailed analytical validation belongs to the validation package.
-    """
+    """Download, validate and persist source resources immutably."""
 
     def __init__(
         self,
@@ -46,27 +41,13 @@ class ResourceDownloader:
         user_agent: str,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
-        """Initialise the resource downloader."""
+        """Initialise the HTTP resource downloader."""
 
-        self.raw_data_dir = Path(
-            raw_data_dir
-        )
-
-        self.timeout_seconds = (
-            timeout_seconds
-        )
-
-        self.max_retries = (
-            max_retries
-        )
-
-        self.retry_backoff_seconds = (
-            retry_backoff_seconds
-        )
-
-        self.user_agent = (
-            user_agent
-        )
+        self.raw_data_dir = Path(raw_data_dir)
+        self.timeout_seconds = timeout_seconds
+        self.max_retries = max_retries
+        self.retry_backoff_seconds = retry_backoff_seconds
+        self.user_agent = user_agent
 
         self._client = httpx.Client(
             timeout=httpx.Timeout(
@@ -99,14 +80,14 @@ class ResourceDownloader:
         exc_value: object,
         traceback: object,
     ) -> None:
-        """Close the HTTP client when leaving the context."""
+        """Close the underlying HTTP client."""
 
         self.close()
 
     def close(
         self,
     ) -> None:
-        """Close the underlying HTTP client."""
+        """Close the HTTP client."""
 
         self._client.close()
 
@@ -114,7 +95,12 @@ class ResourceDownloader:
         self,
         resource: ResourceRef,
     ) -> DownloadResult:
-        """Download, validate and version one source resource."""
+        """Download and persist one source resource.
+
+        Raw files are content-versioned by SHA-256. If an identical
+        payload has already been persisted, the existing immutable file
+        is reused rather than rewritten.
+        """
 
         response = self._request(
             resource=resource
@@ -122,10 +108,8 @@ class ResourceDownloader:
 
         payload = response.content
 
-        content_type = (
-            response.headers.get(
-                "content-type"
-            )
+        content_type = response.headers.get(
+            "content-type"
         )
 
         self._validate_payload(
@@ -137,6 +121,10 @@ class ResourceDownloader:
         sha256 = hashlib.sha256(
             payload
         ).hexdigest()
+
+        retrieved_at = datetime.now(
+            UTC
+        )
 
         source_filename = (
             self._source_filename(
@@ -163,24 +151,23 @@ class ResourceDownloader:
             )
         )
 
-        already_exists = (
-            local_path.exists()
-        )
+        downloaded = False
 
-        if not already_exists:
+        if not local_path.exists():
             local_path.write_bytes(
                 payload
             )
+
+            downloaded = True
 
         return DownloadResult(
             resource=resource,
             local_path=local_path,
             sha256=sha256,
-            byte_count=len(
-                payload
-            ),
+            byte_count=len(payload),
+            retrieved_at=retrieved_at,
             content_type=content_type,
-            already_exists=already_exists,
+            downloaded=downloaded,
         )
 
     def _request(
@@ -188,25 +175,21 @@ class ResourceDownloader:
         *,
         resource: ResourceRef,
     ) -> httpx.Response:
-        """Retrieve one resource with bounded retry behaviour."""
+        """Retrieve one resource using bounded retry behaviour."""
 
         attempts = (
             self.max_retries
             + 1
         )
 
-        last_error: Exception | None = (
-            None
-        )
+        last_error: Exception | None = None
 
         for attempt in range(
             attempts
         ):
             try:
-                response = (
-                    self._client.get(
-                        resource.url
-                    )
+                response = self._client.get(
+                    resource.download_url
                 )
 
                 response.raise_for_status()
@@ -240,7 +223,7 @@ class ResourceDownloader:
         raise DownloadError(
             "Failed to download resource "
             f"{resource.resource_id} "
-            f"from {resource.url} "
+            f"from {resource.download_url} "
             f"after {attempts} attempt(s)."
         ) from last_error
 
@@ -251,7 +234,7 @@ class ResourceDownloader:
         content_type: str | None,
         resource: ResourceRef,
     ) -> None:
-        """Validate that a payload is plausibly the expected CSV."""
+        """Validate that a downloaded payload is plausibly a source CSV."""
 
         if not payload:
             raise DownloadError(
@@ -265,16 +248,14 @@ class ResourceDownloader:
             else ""
         )
 
-        if "text/html" in (
-            normalised_content_type
-        ):
+        if "text/html" in normalised_content_type:
             raise DownloadError(
                 f"Resource {resource.resource_id} "
                 "returned HTML instead of CSV."
             )
 
-        # `payload` is bytes. bytes objects support `.lower()`,
-        # but they do not support str.casefold().
+        # `payload` is bytes. bytes supports `.lower()`, not
+        # str.casefold().
         prefix = (
             payload[:512]
             .lstrip()
@@ -288,10 +269,6 @@ class ResourceDownloader:
             or prefix.startswith(
                 b"<html"
             )
-            or prefix.startswith(
-                b"<?xml"
-            )
-            and b"<html" in prefix
         ):
             raise DownloadError(
                 f"Resource {resource.resource_id} "
@@ -363,10 +340,10 @@ class ResourceDownloader:
         *,
         resource: ResourceRef,
     ) -> str:
-        """Derive a safe source filename from the resource URL."""
+        """Derive a safe filename from the source download URL."""
 
         parsed_url = urlparse(
-            resource.url
+            resource.download_url
         )
 
         filename = Path(
@@ -400,9 +377,9 @@ class ResourceDownloader:
     def _sanitise_filename(
         filename: str,
     ) -> str:
-        """Remove unsafe characters from a source filename."""
+        """Return a filesystem-safe source filename."""
 
-        safe_characters = []
+        safe_characters: list[str] = []
 
         for character in filename:
             if (

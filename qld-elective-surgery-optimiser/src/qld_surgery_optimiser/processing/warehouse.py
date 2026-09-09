@@ -11,13 +11,11 @@ It does not perform patient-level decision making.
 
 from __future__ import annotations
 
-import csv
 import hashlib
 import json
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 import duckdb
 import pandas as pd
@@ -91,21 +89,6 @@ CANONICAL_COLUMNS = [
 ]
 
 
-LONGITUDINAL_COLUMNS = [
-    *CANONICAL_COLUMNS,
-    "facility_key",
-    "specialty_key",
-    "urgency_category_key",
-    "source_resource_key",
-    "previous_vol_waiting",
-    "backlog_change",
-    "previous_vol_long_waits",
-    "long_wait_change",
-    "long_wait_share",
-    "treatment_to_waiting_ratio",
-]
-
-
 @dataclass(frozen=True)
 class WarehouseBuildSummary:
     """Summary returned after a warehouse build."""
@@ -120,10 +103,10 @@ class WarehouseBuildSummary:
     source_resource_count: int
     quality_event_count: int
     duplicate_canonical_keys_removed: int
-    duckdb_path: str
-    canonical_path: str
-    longitudinal_path: str
-    reconciliation_path: str
+    duckdb_path: Path
+    canonical_path: Path
+    longitudinal_path: Path
+    reconciliation_report_path: Path
 
 
 def _stable_key(
@@ -133,43 +116,35 @@ def _stable_key(
 
     serialised = "|".join(
         ""
-        if value is None
-        or pd.isna(value)
+        if value is None or pd.isna(value)
         else str(value).strip()
         for value in values
     )
 
     return hashlib.sha256(
-        serialised.encode(
-            "utf-8"
-        )
+        serialised.encode("utf-8")
     ).hexdigest()
 
 
 def _normalise_text(
     value: object,
 ) -> str | None:
-    """Normalise a nullable textual value."""
+    """Normalise a nullable text value."""
 
     if value is None or pd.isna(value):
         return None
 
     text = str(value).strip()
 
-    if not text:
-        return None
-
-    return text
+    return text or None
 
 
 def _normalise_code(
     value: object,
 ) -> str | None:
-    """Normalise a nullable business code."""
+    """Normalise a nullable code value."""
 
-    text = _normalise_text(
-        value
-    )
+    text = _normalise_text(value)
 
     if text is None:
         return None
@@ -183,32 +158,10 @@ def _normalise_code(
     return text
 
 
-def _normalise_number(
-    series: pd.Series,
-) -> pd.Series:
-    """Convert one analytical measure to nullable numeric values."""
-
-    return pd.to_numeric(
-        series,
-        errors="coerce",
-    )
-
-
-def _normalise_datetime(
-    series: pd.Series,
-) -> pd.Series:
-    """Convert one source date/time column to pandas datetime."""
-
-    return pd.to_datetime(
-        series,
-        errors="coerce",
-    )
-
-
 def _infer_resource_kind(
     path: Path,
 ) -> str:
-    """Infer resource family from the validated Parquet path."""
+    """Infer the resource family from its validated path."""
 
     parts = {
         part.casefold()
@@ -235,18 +188,13 @@ def _infer_resource_kind(
 def _raw_stem_from_validated_path(
     path: Path,
 ) -> str:
-    """Return the raw source stem represented by a validated file."""
+    """Return the raw file stem represented by a validated file."""
 
     suffix = "_validated"
-
     stem = path.stem
 
-    if stem.endswith(
-        suffix
-    ):
-        return stem[
-            : -len(suffix)
-        ]
+    if stem.endswith(suffix):
+        return stem[:-len(suffix)]
 
     return stem
 
@@ -254,7 +202,7 @@ def _raw_stem_from_validated_path(
 def _find_validated_files(
     interim_data_dir: Path,
 ) -> list[Path]:
-    """Return deterministic list of validated Parquet inputs."""
+    """Return validated Parquet files in deterministic order."""
 
     if not interim_data_dir.exists():
         return []
@@ -271,7 +219,7 @@ def _find_validated_files(
 def _read_manifest(
     raw_data_dir: Path,
 ) -> pd.DataFrame:
-    """Read the ingestion manifest when available."""
+    """Read the ingestion manifest."""
 
     manifest_path = (
         raw_data_dir
@@ -317,12 +265,7 @@ def _manifest_row_for_validated_file(
     validated_path: Path,
     manifest: pd.DataFrame,
 ) -> dict[str, object]:
-    """Resolve lineage metadata for one validated Parquet file.
-
-    Matching currently relies on the raw filename stem emitted by the
-    ingestion pipeline. This remains intentionally deterministic and
-    avoids fuzzy source matching.
-    """
+    """Resolve manifest lineage for a validated Parquet file."""
 
     if manifest.empty:
         return {}
@@ -341,23 +284,15 @@ def _manifest_row_for_validated_file(
         if pd.isna(value):
             continue
 
-        manifest_stem = Path(
-            str(value)
-        ).stem
-
-        if manifest_stem == raw_stem:
-            matches.append(
-                index
-            )
+        if Path(str(value)).stem == raw_stem:
+            matches.append(index)
 
     if not matches:
         return {}
 
-    row = manifest.loc[
+    return manifest.loc[
         matches[-1]
-    ]
-
-    return row.to_dict()
+    ].to_dict()
 
 
 def _canonicalise_frame(
@@ -367,7 +302,7 @@ def _canonicalise_frame(
     resource_kind: str,
     lineage: dict[str, object],
 ) -> pd.DataFrame:
-    """Convert one validated source frame to canonical column names."""
+    """Convert one validated source frame to canonical columns."""
 
     frame = source.rename(
         columns={
@@ -382,80 +317,51 @@ def _canonicalise_frame(
         if column not in frame.columns:
             frame[column] = pd.NA
 
-    frame["resource_kind"] = (
-        resource_kind
+    frame["resource_kind"] = resource_kind
+    frame["source_resource_id"] = lineage.get(
+        "resource_id"
     )
-
-    frame["source_resource_id"] = (
-        lineage.get(
-            "resource_id"
-        )
+    frame["source_sha256"] = lineage.get(
+        "sha256"
     )
-
-    frame["source_sha256"] = (
-        lineage.get(
-            "sha256"
-        )
+    frame["source_url"] = lineage.get(
+        "source_url"
     )
-
-    frame["source_url"] = (
-        lineage.get(
-            "source_url"
-        )
+    frame["source_retrieved_at"] = lineage.get(
+        "retrieved_at"
     )
-
-    frame["source_retrieved_at"] = (
-        lineage.get(
-            "retrieved_at"
-        )
-    )
-
     frame["source_file"] = str(
         validated_path
     )
 
     frame["facility_code"] = (
         frame["facility_code"]
-        .map(
-            _normalise_code
-        )
+        .map(_normalise_code)
     )
 
     frame["facility_name"] = (
         frame["facility_name"]
-        .map(
-            _normalise_text
-        )
+        .map(_normalise_text)
     )
 
     frame["service_code"] = (
         frame["service_code"]
-        .map(
-            _normalise_code
-        )
+        .map(_normalise_code)
     )
 
     frame["service_name"] = (
         frame["service_name"]
-        .map(
-            _normalise_text
-        )
+        .map(_normalise_text)
     )
 
-    frame["report_month"] = (
-        _normalise_datetime(
-            frame[
-                "report_month"
-            ]
-        )
+    frame["report_month"] = pd.to_datetime(
+        frame["report_month"],
+        errors="coerce",
     )
 
-    frame["data_last_update"] = (
-        _normalise_datetime(
-            frame[
-                "data_last_update"
-            ]
-        )
+    frame["data_last_update"] = pd.to_datetime(
+        frame["data_last_update"],
+        errors="coerce",
     )
 
     numeric_columns = [
@@ -471,10 +377,9 @@ def _canonicalise_frame(
     ]
 
     for column in numeric_columns:
-        frame[column] = (
-            _normalise_number(
-                frame[column]
-            )
+        frame[column] = pd.to_numeric(
+            frame[column],
+            errors="coerce",
         )
 
     frame["record_id"] = [
@@ -485,12 +390,10 @@ def _canonicalise_frame(
             report_month,
             service_code,
             service_name,
-            lineage.get(
-                "resource_id"
-            ),
-            index,
+            lineage.get("resource_id"),
+            row_index,
         )
-        for index, (
+        for row_index, (
             facility_code,
             facility_name,
             report_month,
@@ -498,21 +401,11 @@ def _canonicalise_frame(
             service_name,
         ) in enumerate(
             zip(
-                frame[
-                    "facility_code"
-                ],
-                frame[
-                    "facility_name"
-                ],
-                frame[
-                    "report_month"
-                ],
-                frame[
-                    "service_code"
-                ],
-                frame[
-                    "service_name"
-                ],
+                frame["facility_code"],
+                frame["facility_name"],
+                frame["report_month"],
+                frame["service_code"],
+                frame["service_name"],
                 strict=False,
             )
         )
@@ -523,12 +416,15 @@ def _canonicalise_frame(
     ].copy()
 
 
-def _canonical_business_key_columns(
+def _drop_duplicate_canonical_rows(
     frame: pd.DataFrame,
-) -> list[str]:
-    """Return the canonical row business key."""
+) -> tuple[pd.DataFrame, int]:
+    """Remove duplicate canonical business keys."""
 
-    return [
+    if frame.empty:
+        return frame.copy(), 0
+
+    key_columns = [
         "resource_kind",
         "facility_code",
         "facility_name",
@@ -537,49 +433,21 @@ def _canonical_business_key_columns(
         "service_name",
     ]
 
-
-def _drop_duplicate_canonical_rows(
-    frame: pd.DataFrame,
-) -> tuple[
-    pd.DataFrame,
-    int,
-]:
-    """Remove deterministic duplicate canonical business keys."""
-
-    if frame.empty:
-        return (
-            frame.copy(),
-            0,
-        )
-
-    key_columns = (
-        _canonical_business_key_columns(
-            frame
-        )
-    )
-
-    duplicate_mask = (
-        frame.duplicated(
-            subset=key_columns,
-            keep="last",
-        )
+    duplicate_mask = frame.duplicated(
+        subset=key_columns,
+        keep="last",
     )
 
     removed = int(
         duplicate_mask.sum()
     )
 
-    deduplicated = (
+    return (
         frame.loc[
             ~duplicate_mask
-        ]
-        .reset_index(
+        ].reset_index(
             drop=True
-        )
-    )
-
-    return (
-        deduplicated,
+        ),
         removed,
     )
 
@@ -587,10 +455,7 @@ def _drop_duplicate_canonical_rows(
 def _read_facility_aliases(
     path: Path,
 ) -> pd.DataFrame:
-    """Read exact facility aliases.
-
-    No fuzzy matching is performed.
-    """
+    """Read exact facility aliases without fuzzy matching."""
 
     columns = [
         "alias_name",
@@ -624,34 +489,22 @@ def _read_facility_aliases(
 
     aliases["alias_name"] = (
         aliases["alias_name"]
-        .map(
-            _normalise_text
-        )
+        .map(_normalise_text)
     )
 
     aliases["canonical_name"] = (
-        aliases[
-            "canonical_name"
-        ]
-        .map(
-            _normalise_text
-        )
+        aliases["canonical_name"]
+        .map(_normalise_text)
     )
 
     aliases["canonical_code"] = (
-        aliases[
-            "canonical_code"
-        ]
-        .map(
-            _normalise_code
-        )
+        aliases["canonical_code"]
+        .map(_normalise_code)
     )
 
     active = (
         aliases["active"]
-        .fillna(
-            "true"
-        )
+        .fillna("true")
         .astype(str)
         .str.strip()
         .str.casefold()
@@ -671,156 +524,117 @@ def _read_facility_aliases(
         drop=True
     )
 
-    aliases = aliases.drop_duplicates(
+    return aliases.drop_duplicates(
         subset=[
             "alias_name",
         ],
         keep="last",
     )
 
-    return aliases
-
 
 def _resolve_facilities(
     canonical: pd.DataFrame,
     aliases: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Resolve canonical facility identity using exact aliases."""
+    """Resolve facility identity using exact aliases."""
 
     frame = canonical.copy()
 
-    if aliases.empty:
-        frame[
-            "resolved_facility_code"
-        ] = frame[
-            "facility_code"
-        ]
-
-        frame[
-            "resolved_facility_name"
-        ] = frame[
-            "facility_name"
-        ]
-
-        frame["hhs"] = pd.NA
-        frame["region"] = pd.NA
-
-        frame[
-            "facility_resolution_status"
-        ] = "source"
-
-    else:
-        alias_lookup = aliases.set_index(
+    alias_lookup = (
+        {}
+        if aliases.empty
+        else aliases.set_index(
             "alias_name"
         ).to_dict(
             orient="index"
         )
+    )
 
-        resolved_codes: list[
-            str | None
-        ] = []
+    resolved_codes: list[
+        str | None
+    ] = []
 
-        resolved_names: list[
-            str | None
-        ] = []
+    resolved_names: list[
+        str | None
+    ] = []
 
-        hhs_values: list[
-            str | None
-        ] = []
+    hhs_values: list[
+        str | None
+    ] = []
 
-        region_values: list[
-            str | None
-        ] = []
+    region_values: list[
+        str | None
+    ] = []
 
-        statuses: list[str] = []
+    statuses: list[str] = []
 
-        for (
-            source_code,
-            source_name,
-        ) in zip(
-            frame[
-                "facility_code"
-            ],
-            frame[
-                "facility_name"
-            ],
-            strict=False,
-        ):
-            alias = alias_lookup.get(
+    for source_code, source_name in zip(
+        frame["facility_code"],
+        frame["facility_name"],
+        strict=False,
+    ):
+        alias = alias_lookup.get(
+            source_name
+        )
+
+        if alias is None:
+            resolved_codes.append(
+                source_code
+            )
+            resolved_names.append(
                 source_name
             )
+            hhs_values.append(None)
+            region_values.append(None)
+            statuses.append("source")
+            continue
 
-            if alias is None:
-                resolved_codes.append(
-                    source_code
-                )
-                resolved_names.append(
-                    source_name
-                )
-                hhs_values.append(
-                    None
-                )
-                region_values.append(
-                    None
-                )
-                statuses.append(
-                    "source"
-                )
-
-                continue
-
-            resolved_codes.append(
-                _normalise_code(
-                    alias.get(
-                        "canonical_code"
-                    )
-                )
-                or source_code
-            )
-
-            resolved_names.append(
-                _normalise_text(
-                    alias.get(
-                        "canonical_name"
-                    )
-                )
-                or source_name
-            )
-
-            hhs_values.append(
-                _normalise_text(
-                    alias.get(
-                        "hhs"
-                    )
+        resolved_codes.append(
+            _normalise_code(
+                alias.get(
+                    "canonical_code"
                 )
             )
+            or source_code
+        )
 
-            region_values.append(
-                _normalise_text(
-                    alias.get(
-                        "region"
-                    )
+        resolved_names.append(
+            _normalise_text(
+                alias.get(
+                    "canonical_name"
                 )
             )
+            or source_name
+        )
 
-            statuses.append(
-                "alias"
+        hhs_values.append(
+            _normalise_text(
+                alias.get("hhs")
             )
+        )
 
-        frame[
-            "resolved_facility_code"
-        ] = resolved_codes
+        region_values.append(
+            _normalise_text(
+                alias.get("region")
+            )
+        )
 
-        frame[
-            "resolved_facility_name"
-        ] = resolved_names
+        statuses.append("alias")
 
-        frame["hhs"] = hhs_values
-        frame["region"] = region_values
+    frame[
+        "resolved_facility_code"
+    ] = resolved_codes
 
-        frame[
-            "facility_resolution_status"
-        ] = statuses
+    frame[
+        "resolved_facility_name"
+    ] = resolved_names
+
+    frame["hhs"] = hhs_values
+    frame["region"] = region_values
+
+    frame[
+        "facility_resolution_status"
+    ] = statuses
 
     frame["facility_key"] = [
         _stable_key(
@@ -828,12 +642,8 @@ def _resolve_facilities(
             name,
         )
         for code, name in zip(
-            frame[
-                "resolved_facility_code"
-            ],
-            frame[
-                "resolved_facility_name"
-            ],
+            resolved_codes,
+            resolved_names,
             strict=False,
         )
     ]
@@ -844,7 +654,7 @@ def _resolve_facilities(
 def _add_service_keys(
     frame: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Add specialty and urgency-category surrogate keys."""
+    """Add specialty and urgency-category keys."""
 
     result = frame.copy()
 
@@ -861,15 +671,9 @@ def _add_service_keys(
         service_code,
         service_name,
     ) in zip(
-        result[
-            "resource_kind"
-        ],
-        result[
-            "service_code"
-        ],
-        result[
-            "service_name"
-        ],
+        result["resource_kind"],
+        result["service_code"],
+        result["service_name"],
         strict=False,
     ):
         if resource_kind == "specialty":
@@ -879,16 +683,10 @@ def _add_service_keys(
                     service_name,
                 )
             )
-
-            urgency_keys.append(
-                None
-            )
+            urgency_keys.append(None)
 
         elif resource_kind == "category":
-            specialty_keys.append(
-                None
-            )
-
+            specialty_keys.append(None)
             urgency_keys.append(
                 _stable_key(
                     service_name
@@ -896,13 +694,8 @@ def _add_service_keys(
             )
 
         else:
-            specialty_keys.append(
-                None
-            )
-
-            urgency_keys.append(
-                None
-            )
+            specialty_keys.append(None)
+            urgency_keys.append(None)
 
     result[
         "specialty_key"
@@ -918,7 +711,7 @@ def _add_service_keys(
 def _add_source_resource_key(
     frame: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Add deterministic source-resource surrogate keys."""
+    """Add deterministic source lineage keys."""
 
     result = frame.copy()
 
@@ -937,18 +730,10 @@ def _add_source_resource_key(
             source_url,
             source_file,
         ) in zip(
-            result[
-                "source_resource_id"
-            ],
-            result[
-                "source_sha256"
-            ],
-            result[
-                "source_url"
-            ],
-            result[
-                "source_file"
-            ],
+            result["source_resource_id"],
+            result["source_sha256"],
+            result["source_url"],
+            result["source_file"],
             strict=False,
         )
     ]
@@ -962,21 +747,7 @@ def _build_longitudinal(
     """Add descriptive longitudinal measures."""
 
     if canonical.empty:
-        result = canonical.copy()
-
-        for column in (
-            "previous_vol_waiting",
-            "backlog_change",
-            "previous_vol_long_waits",
-            "long_wait_change",
-            "long_wait_share",
-            "treatment_to_waiting_ratio",
-        ):
-            result[column] = pd.Series(
-                dtype="float64"
-            )
-
-        return result
+        return canonical.copy()
 
     frame = canonical.copy()
 
@@ -1007,9 +778,7 @@ def _build_longitudinal(
         "previous_vol_waiting"
     ] = grouped[
         "vol_waiting"
-    ].shift(
-        1
-    )
+    ].shift(1)
 
     frame[
         "backlog_change"
@@ -1024,25 +793,20 @@ def _build_longitudinal(
         "previous_vol_long_waits"
     ] = grouped[
         "vol_long_waits"
-    ].shift(
-        1
-    )
+    ].shift(1)
 
     frame[
         "long_wait_change"
     ] = (
-        frame[
-            "vol_long_waits"
-        ]
+        frame["vol_long_waits"]
         - frame[
             "previous_vol_long_waits"
         ]
     )
 
     waiting_denominator = (
-        frame[
-            "vol_waiting"
-        ].replace(
+        frame["vol_waiting"]
+        .replace(
             0,
             pd.NA,
         )
@@ -1051,18 +815,14 @@ def _build_longitudinal(
     frame[
         "long_wait_share"
     ] = (
-        frame[
-            "vol_long_waits"
-        ]
+        frame["vol_long_waits"]
         / waiting_denominator
     )
 
     frame[
         "treatment_to_waiting_ratio"
     ] = (
-        frame[
-            "vol_treated"
-        ]
+        frame["vol_treated"]
         / waiting_denominator
     )
 
@@ -1072,7 +832,7 @@ def _build_longitudinal(
 def _build_dim_facility(
     frame: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Build the facility dimension deterministically."""
+    """Build the facility dimension."""
 
     columns = [
         "facility_key",
@@ -1090,42 +850,23 @@ def _build_dim_facility(
 
     dimension = pd.DataFrame(
         {
-            "facility_key": (
-                frame[
-                    "facility_key"
-                ]
-            ),
-            "facility_code": (
-                frame[
-                    "resolved_facility_code"
-                ]
-            ),
-            "facility_name": (
-                frame[
-                    "resolved_facility_name"
-                ]
-            ),
-            "hhs": (
-                frame[
-                    "hhs"
-                ]
-            ),
-            "region": (
-                frame[
-                    "region"
-                ]
-            ),
-            "resolution_status": (
-                frame[
-                    "facility_resolution_status"
-                ]
-            ),
+            "facility_key": frame[
+                "facility_key"
+            ],
+            "facility_code": frame[
+                "resolved_facility_code"
+            ],
+            "facility_name": frame[
+                "resolved_facility_name"
+            ],
+            "hhs": frame["hhs"],
+            "region": frame["region"],
+            "resolution_status": frame[
+                "facility_resolution_status"
+            ],
         }
     )
 
-    # A facility surrogate key must map to one deterministic dimension
-    # row. Prefer populated metadata when duplicate representations
-    # occur.
     dimension[
         "_completeness"
     ] = (
@@ -1138,12 +879,10 @@ def _build_dim_facility(
             ]
         ]
         .notna()
-        .sum(
-            axis=1
-        )
+        .sum(axis=1)
     )
 
-    dimension = (
+    return (
         dimension
         .sort_values(
             [
@@ -1176,10 +915,6 @@ def _build_dim_facility(
         )
     )
 
-    return dimension[
-        columns
-    ]
-
 
 def _build_dim_specialty(
     frame: pd.DataFrame,
@@ -1199,9 +934,7 @@ def _build_dim_specialty(
 
     dimension = frame.loc[
         (
-            frame[
-                "resource_kind"
-            ]
+            frame["resource_kind"]
             == "specialty"
         )
         & frame[
@@ -1246,7 +979,7 @@ def _build_dim_specialty(
 def _build_dim_urgency_category(
     frame: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Build the urgency-category dimension."""
+    """Build the urgency category dimension."""
 
     columns = [
         "urgency_category_key",
@@ -1260,9 +993,7 @@ def _build_dim_urgency_category(
 
     dimension = frame.loc[
         (
-            frame[
-                "resource_kind"
-            ]
+            frame["resource_kind"]
             == "category"
         )
         & frame[
@@ -1303,7 +1034,7 @@ def _build_dim_urgency_category(
 def _build_dim_reporting_period(
     frame: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Build calendar attributes for available reporting periods."""
+    """Build the reporting-period dimension."""
 
     columns = [
         "reporting_period_key",
@@ -1319,9 +1050,7 @@ def _build_dim_reporting_period(
         )
 
     periods = (
-        frame[
-            "report_month"
-        ]
+        frame["report_month"]
         .dropna()
         .drop_duplicates()
         .sort_values()
@@ -1349,15 +1078,11 @@ def _build_dim_reporting_period(
     ] = (
         dimension[
             "calendar_year"
-        ].astype(
-            str
-        )
+        ].astype(str)
         + "-Q"
         + dimension[
             "calendar_quarter"
-        ].astype(
-            str
-        )
+        ].astype(str)
     )
 
     return dimension[
@@ -1370,7 +1095,7 @@ def _build_dim_reporting_period(
 def _build_dim_source_resource(
     frame: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Build source-resource lineage dimension."""
+    """Build the source-resource dimension."""
 
     columns = [
         "source_resource_key",
@@ -1388,45 +1113,31 @@ def _build_dim_source_resource(
 
     dimension = pd.DataFrame(
         {
-            "source_resource_key": (
-                frame[
-                    "source_resource_key"
-                ]
-            ),
-            "resource_id": (
-                frame[
-                    "source_resource_id"
-                ]
-            ),
-            "source_sha256": (
-                frame[
-                    "source_sha256"
-                ]
-            ),
-            "source_url": (
-                frame[
-                    "source_url"
-                ]
-            ),
-            "source_file": (
-                frame[
-                    "source_file"
-                ]
-            ),
-            "retrieved_at": (
-                frame[
-                    "source_retrieved_at"
-                ]
-            ),
+            "source_resource_key": frame[
+                "source_resource_key"
+            ],
+            "resource_id": frame[
+                "source_resource_id"
+            ],
+            "source_sha256": frame[
+                "source_sha256"
+            ],
+            "source_url": frame[
+                "source_url"
+            ],
+            "source_file": frame[
+                "source_file"
+            ],
+            "retrieved_at": frame[
+                "source_retrieved_at"
+            ],
         }
     )
 
     dimension[
         "retrieved_at"
     ] = pd.to_datetime(
-        dimension[
-            "retrieved_at"
-        ],
+        dimension["retrieved_at"],
         errors="coerce",
         utc=True,
     )
@@ -1452,7 +1163,7 @@ def _build_dim_source_resource(
 def _build_fact_performance(
     frame: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Build elective-surgery performance fact rows."""
+    """Build the elective-surgery performance fact."""
 
     columns = [
         "record_id",
@@ -1489,15 +1200,10 @@ def _build_fact_performance(
 
     fact[
         "reporting_period_key"
-    ] = (
-        pd.to_datetime(
-            fact[
-                "report_month"
-            ],
-            errors="coerce",
-        )
-        .dt.date
-    )
+    ] = pd.to_datetime(
+        fact["report_month"],
+        errors="coerce",
+    ).dt.date
 
     return fact[
         columns
@@ -1506,30 +1212,10 @@ def _build_fact_performance(
     )
 
 
-def _quality_summary_path(
-    reports_dir: Path,
-) -> Path:
-    """Return the preferred Phase 3 quality summary path."""
-
-    output_path = (
-        reports_dir
-        / "outputs"
-        / "data_quality_summary.json"
-    )
-
-    if output_path.exists():
-        return output_path
-
-    return (
-        reports_dir
-        / "data_quality_summary.json"
-    )
-
-
 def _load_quality_events(
     reports_dir: Path,
 ) -> pd.DataFrame:
-    """Load row-level quality events from the Phase 3 summary."""
+    """Load Phase 3 quality events when available."""
 
     columns = [
         "event_id",
@@ -1543,8 +1229,10 @@ def _load_quality_events(
         "message",
     ]
 
-    path = _quality_summary_path(
+    path = (
         reports_dir
+        / "outputs"
+        / "data_quality_summary.json"
     )
 
     if not path.exists():
@@ -1559,8 +1247,8 @@ def _load_quality_events(
             )
         )
     except (
-        json.JSONDecodeError,
         OSError,
+        json.JSONDecodeError,
     ):
         return pd.DataFrame(
             columns=columns
@@ -1575,10 +1263,7 @@ def _load_quality_events(
         []
     )
 
-    if not isinstance(
-        files,
-        list,
-    ):
+    if not isinstance(files, list):
         return pd.DataFrame(
             columns=columns
         )
@@ -1594,9 +1279,7 @@ def _load_quality_events(
             file_entry.get(
                 "source_path"
             )
-            or file_entry.get(
-                "path"
-            )
+            or file_entry.get("path")
         )
 
         resource_kind = (
@@ -1606,9 +1289,7 @@ def _load_quality_events(
         )
 
         file_events = (
-            file_entry.get(
-                "events"
-            )
+            file_entry.get("events")
             or file_entry.get(
                 "quality_events"
             )
@@ -1628,43 +1309,21 @@ def _load_quality_events(
             ):
                 continue
 
-            rule_id = event.get(
-                "rule_id"
-            )
-
-            severity = event.get(
-                "severity"
-            )
-
-            row_index = event.get(
-                "row_index"
-            )
-
-            column_name = event.get(
-                "column_name"
-            )
-
-            observed_value = event.get(
-                "observed_value"
-            )
-
-            message = event.get(
-                "message"
-            )
-
             event_id = (
-                event.get(
-                    "event_id"
-                )
+                event.get("event_id")
                 or _stable_key(
                     source_path,
                     resource_kind,
-                    rule_id,
-                    severity,
-                    row_index,
-                    column_name,
-                    observed_value,
-                    message,
+                    event.get("rule_id"),
+                    event.get("severity"),
+                    event.get("row_index"),
+                    event.get(
+                        "column_name"
+                    ),
+                    event.get(
+                        "observed_value"
+                    ),
+                    event.get("message"),
                 )
             )
 
@@ -1679,23 +1338,43 @@ def _load_quality_events(
                     "resource_kind": (
                         resource_kind
                     ),
-                    "rule_id": rule_id,
-                    "severity": severity,
+                    "rule_id": (
+                        event.get(
+                            "rule_id"
+                        )
+                    ),
+                    "severity": (
+                        event.get(
+                            "severity"
+                        )
+                    ),
                     "row_index": (
-                        row_index
+                        event.get(
+                            "row_index"
+                        )
                     ),
                     "column_name": (
-                        column_name
+                        event.get(
+                            "column_name"
+                        )
                     ),
                     "observed_value": (
                         None
-                        if observed_value
+                        if event.get(
+                            "observed_value"
+                        )
                         is None
                         else str(
-                            observed_value
+                            event.get(
+                                "observed_value"
+                            )
                         )
                     ),
-                    "message": message,
+                    "message": (
+                        event.get(
+                            "message"
+                        )
+                    ),
                 }
             )
 
@@ -1710,16 +1389,11 @@ def _load_quality_events(
     quality[
         "row_index"
     ] = pd.to_numeric(
-        quality[
-            "row_index"
-        ],
+        quality["row_index"],
         errors="coerce",
-    ).astype(
-        "Int64"
-    )
+    ).astype("Int64")
 
-    # Prevent duplicate event IDs from violating the fact contract.
-    quality = (
+    return (
         quality
         .drop_duplicates(
             subset=[
@@ -1732,8 +1406,6 @@ def _load_quality_events(
         )
     )
 
-    return quality
-
 
 def _replace_table(
     connection: duckdb.DuckDBPyConnection,
@@ -1741,12 +1413,7 @@ def _replace_table(
     table_name: str,
     dataframe: pd.DataFrame,
 ) -> None:
-    """Replace warehouse table contents using explicit column names.
-
-    Explicit column projection is critical because pandas DataFrame
-    column ordering is not guaranteed to match physical DuckDB table
-    ordering.
-    """
+    """Replace warehouse contents using explicit named columns."""
 
     if table_name not in WAREHOUSE_TABLES:
         raise ValueError(
@@ -1775,9 +1442,6 @@ def _replace_table(
             dataframe.columns
         )
 
-        if not columns:
-            return
-
         quoted_columns = ", ".join(
             f'"{column}"'
             for column in columns
@@ -1801,49 +1465,46 @@ def _replace_table(
 
 
 def _resolve_warehouse_ddl_path() -> Path:
-    """Resolve create_warehouse.sql without machine-specific paths."""
+    """Locate sql/create_warehouse.sql portably."""
 
     candidates = [
-        Path.cwd()
-        / "sql"
-        / "create_warehouse.sql",
-        Path(
-            __file__
-        ).resolve().parents[3]
-        / "sql"
-        / "create_warehouse.sql",
+        (
+            Path.cwd()
+            / "sql"
+            / "create_warehouse.sql"
+        ),
+        (
+            Path(__file__)
+            .resolve()
+            .parents[3]
+            / "sql"
+            / "create_warehouse.sql"
+        ),
     ]
 
     for candidate in candidates:
         if candidate.exists():
             return candidate
 
-    searched = ", ".join(
-        str(path)
-        for path in candidates
-    )
-
     raise FileNotFoundError(
-        "Could not locate sql/create_warehouse.sql. "
-        f"Searched: {searched}"
+        "Could not locate "
+        "sql/create_warehouse.sql."
     )
 
 
 def _execute_ddl(
     connection: duckdb.DuckDBPyConnection,
 ) -> None:
-    """Create warehouse tables using the repository DDL."""
+    """Create warehouse tables."""
 
     ddl_path = (
         _resolve_warehouse_ddl_path()
     )
 
-    ddl = ddl_path.read_text(
-        encoding="utf-8"
-    )
-
     connection.execute(
-        ddl
+        ddl_path.read_text(
+            encoding="utf-8"
+        )
     )
 
 
@@ -1860,73 +1521,48 @@ def _write_reconciliation(
     dim_source_resource: pd.DataFrame,
     fact_quality: pd.DataFrame,
     duplicate_canonical_keys_removed: int,
-) -> dict[str, object]:
-    """Write machine-readable warehouse reconciliation metadata."""
+) -> None:
+    """Write warehouse reconciliation metadata."""
 
-    payload: dict[
-        str,
-        object,
-    ] = {
+    payload = {
         "generated_at": (
             datetime.now(
                 UTC
             ).isoformat()
         ),
         "canonical_rows": int(
-            len(
-                canonical
-            )
+            len(canonical)
         ),
         "longitudinal_rows": int(
-            len(
-                longitudinal
-            )
+            len(longitudinal)
         ),
         "fact_rows": int(
-            len(
-                fact_performance
-            )
+            len(fact_performance)
         ),
         "facility_rows": int(
-            len(
-                dim_facility
-            )
+            len(dim_facility)
         ),
         "specialty_rows": int(
-            len(
-                dim_specialty
-            )
+            len(dim_specialty)
         ),
         "urgency_category_rows": int(
-            len(
-                dim_urgency_category
-            )
+            len(dim_urgency_category)
         ),
         "reporting_period_rows": int(
-            len(
-                dim_reporting_period
-            )
+            len(dim_reporting_period)
         ),
         "source_resource_rows": int(
-            len(
-                dim_source_resource
-            )
+            len(dim_source_resource)
         ),
         "quality_event_rows": int(
-            len(
-                fact_quality
-            )
+            len(fact_quality)
         ),
         "duplicate_canonical_keys_removed": (
             duplicate_canonical_keys_removed
         ),
         "fact_matches_longitudinal": (
-            len(
-                fact_performance
-            )
-            == len(
-                longitudinal
-            )
+            len(fact_performance)
+            == len(longitudinal)
         ),
     }
 
@@ -1944,15 +1580,13 @@ def _write_reconciliation(
         encoding="utf-8",
     )
 
-    return payload
-
 
 def _write_summary(
     *,
     summary: WarehouseBuildSummary,
     reports_dir: Path,
 ) -> Path:
-    """Persist a compact warehouse build summary."""
+    """Write warehouse build summary JSON."""
 
     output_path = (
         reports_dir
@@ -1965,11 +1599,26 @@ def _write_summary(
         exist_ok=True,
     )
 
+    payload = asdict(
+        summary
+    )
+
+    payload = {
+        key: (
+            str(value)
+            if isinstance(
+                value,
+                Path,
+            )
+            else value
+        )
+        for key, value
+        in payload.items()
+    }
+
     output_path.write_text(
         json.dumps(
-            asdict(
-                summary
-            ),
+            payload,
             indent=2,
             sort_keys=True,
         ),
@@ -1983,7 +1632,7 @@ def build_warehouse(
     *,
     settings: AppSettings,
 ) -> WarehouseBuildSummary:
-    """Build canonical files, longitudinal data and DuckDB warehouse."""
+    """Build canonical, longitudinal and DuckDB warehouse outputs."""
 
     processed_directory = Path(
         settings.processed_data_dir
@@ -2014,12 +1663,10 @@ def build_warehouse(
         exist_ok=True,
     )
 
-    reports_output_directory = (
+    (
         reports_directory
         / "outputs"
-    )
-
-    reports_output_directory.mkdir(
+    ).mkdir(
         parents=True,
         exist_ok=True,
     )
@@ -2082,7 +1729,6 @@ def build_warehouse(
             ignore_index=True,
             sort=False,
         )
-
     else:
         canonical = pd.DataFrame(
             columns=CANONICAL_COLUMNS
@@ -2108,16 +1754,12 @@ def build_warehouse(
         enriched
     )
 
-    enriched = (
-        _add_source_resource_key(
-            enriched
-        )
+    enriched = _add_source_resource_key(
+        enriched
     )
 
-    longitudinal = (
-        _build_longitudinal(
-            enriched
-        )
+    longitudinal = _build_longitudinal(
+        enriched
     )
 
     canonical_output = (
@@ -2182,13 +1824,8 @@ def build_warehouse(
         )
     )
 
-    # DDL creation is committed before the data replacement transaction.
-    # This avoids rolling back table creation unexpectedly on engines or
-    # environments with differing DDL transaction semantics.
     with duckdb.connect(
-        str(
-            duckdb_path
-        )
+        str(duckdb_path)
     ) as connection:
         _execute_ddl(
             connection
@@ -2277,16 +1914,18 @@ def build_warehouse(
             connection.execute(
                 "ROLLBACK"
             )
-
             raise
 
-    reconciliation_path = (
-        reports_output_directory
+    reconciliation_report_path = (
+        reports_directory
+        / "outputs"
         / "warehouse_reconciliation.json"
     )
 
     _write_reconciliation(
-        path=reconciliation_path,
+        path=(
+            reconciliation_report_path
+        ),
         canonical=canonical,
         longitudinal=longitudinal,
         fact_performance=(
@@ -2346,17 +1985,15 @@ def build_warehouse(
         duplicate_canonical_keys_removed=(
             duplicate_canonical_keys_removed
         ),
-        duckdb_path=str(
-            duckdb_path
-        ),
-        canonical_path=str(
+        duckdb_path=duckdb_path,
+        canonical_path=(
             canonical_output
         ),
-        longitudinal_path=str(
+        longitudinal_path=(
             longitudinal_output
         ),
-        reconciliation_path=str(
-            reconciliation_path
+        reconciliation_report_path=(
+            reconciliation_report_path
         ),
     )
 

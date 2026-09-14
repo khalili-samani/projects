@@ -106,11 +106,12 @@ class RawManifest:
 
             return False
 
-        rows = existing + [
-            {
-                key: str(value)
-                for key, value in asdict(record).items()
-            }
+        rows = [
+    *existing,
+    {
+        key: str(value)
+        for key, value in asdict(record).items()
+    },
         ]
 
         self._write_atomic(rows)

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Any, cast
 
 import pandas as pd
 
 from qld_surgery_optimiser.exceptions import EntityResolutionError
-
 
 ALIAS_COLUMNS = [
     "alias_name",
@@ -24,7 +24,9 @@ def normalise_facility_name(
     value: object,
 ) -> str:
     """Create deterministic facility-name matching key."""
-    if value is None or pd.isna(value):
+    if value is None or bool(
+        pd.isna(cast(Any, value))
+    ):
         return ""
 
     text = str(value).strip().casefold()
@@ -36,6 +38,20 @@ def normalise_facility_name(
     )
 
     return text
+
+
+def _optional_text(
+    value: object,
+) -> str | None:
+    """Convert a nullable scalar to stripped text."""
+    if value is None or bool(
+        pd.isna(cast(Any, value))
+    ):
+        return None
+
+    text = str(value).strip()
+
+    return text or None
 
 
 def load_facility_aliases(
@@ -142,11 +158,17 @@ def resolve_facilities(
 
         if match is None:
             canonical_codes.append(
-                row.facility_code
+                _optional_text(
+                    row.facility_code
+                )
             )
+
             canonical_names.append(
-                row.facility_name
+                _optional_text(
+                    row.facility_name
+                )
             )
+
             hhs_values.append(None)
             regions.append(None)
             statuses.append("source")

@@ -18,7 +18,6 @@ from qld_surgery_optimiser.ingestion.models import (
     ResourceRef,
 )
 
-
 REQUIRED_IDENTITY_COLUMNS = frozenset(
     {
         "Facility_Code",

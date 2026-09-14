@@ -22,7 +22,10 @@ def build_quarantine_frame(
     if not invalid_rows:
         return pd.DataFrame()
 
-    issue_map: dict[int, list[QualityIssue]] = {}
+    issue_map: dict[
+        int,
+        list[QualityIssue],
+    ] = {}
 
     for issue in issues:
         if issue.row_index is None:
@@ -31,41 +34,73 @@ def build_quarantine_frame(
         issue_map.setdefault(
             issue.row_index,
             [],
-        ).append(issue)
+        ).append(
+            issue
+        )
 
-    records: list[dict[str, object]] = []
+    records: list[
+        dict[str, object]
+    ] = []
 
-    for index in sorted(invalid_rows):
-        source_record = original.loc[index].to_dict()
+    for index in sorted(
+        invalid_rows
+    ):
+        source_record = {
+            str(key): value
+            for key, value
+            in original.loc[
+                index
+            ].to_dict().items()
+        }
 
         row_issues = issue_map.get(
             index,
             [],
         )
 
-        source_record["_source_row_index"] = index
-        source_record["_source_path"] = str(source_path)
-        source_record["_resource_kind"] = resource_kind
+        source_record[
+            "_source_row_index"
+        ] = index
 
-        source_record["_quality_rule_ids"] = json.dumps(
+        source_record[
+            "_source_path"
+        ] = str(
+            source_path
+        )
+
+        source_record[
+            "_resource_kind"
+        ] = resource_kind
+
+        source_record[
+            "_quality_rule_ids"
+        ] = json.dumps(
             sorted(
                 {
                     issue.rule_id
-                    for issue in row_issues
+                    for issue
+                    in row_issues
                 }
             )
         )
 
-        source_record["_quality_messages"] = json.dumps(
+        source_record[
+            "_quality_messages"
+        ] = json.dumps(
             [
                 issue.message
-                for issue in row_issues
+                for issue
+                in row_issues
             ]
         )
 
-        records.append(source_record)
+        records.append(
+            source_record
+        )
 
-    return pd.DataFrame(records)
+    return pd.DataFrame(
+        records
+    )
 
 
 def write_quarantine(
@@ -85,7 +120,10 @@ def write_quarantine(
 
     output_path = (
         quarantine_directory
-        / f"{source_path.stem}_quarantine.parquet"
+        / (
+            f"{source_path.stem}"
+            "_quarantine.parquet"
+        )
     )
 
     dataframe.to_parquet(

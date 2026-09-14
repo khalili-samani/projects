@@ -29,7 +29,6 @@ from qld_surgery_optimiser.logging_config import configure_logging
 from qld_surgery_optimiser.processing.warehouse import build_warehouse
 from qld_surgery_optimiser.validation.pipeline import run_validation
 
-
 app = typer.Typer(
     name="qld-surgery",
     help="Queensland elective surgery capacity optimisation tools.",
@@ -513,13 +512,8 @@ def warehouse() -> None:
     )
 
     typer.echo(
-        f"Facilities using source identity: "
-        f"{summary.unresolved_facilities}"
-    )
-
-    typer.echo(
         f"DuckDB: "
-        f"{summary.database_path}"
+        f"{summary.duckdb_path}"
     )
 
     typer.echo(

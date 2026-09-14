@@ -6,13 +6,13 @@ import json
 import logging
 import sys
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, ClassVar
 
 
 class JsonFormatter(logging.Formatter):
     """Format log records as single-line JSON objects."""
 
-    _reserved_attributes = {
+    _reserved_attributes: ClassVar[set[str]] = {
         "args",
         "asctime",
         "created",

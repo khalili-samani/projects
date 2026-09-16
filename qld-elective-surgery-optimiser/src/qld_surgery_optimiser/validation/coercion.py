@@ -7,6 +7,7 @@ converts known fields while retaining original values for quality review.
 from __future__ import annotations
 
 import re
+from typing import Any, cast
 
 import pandas as pd
 
@@ -25,7 +26,9 @@ def normalise_nulls(
     }
 
     def convert(value: object) -> object:
-        if value is None or pd.isna(value):
+        if value is None or bool(
+            pd.isna(cast(Any, value))
+        ):
             return pd.NA
 
         text = str(value).strip()

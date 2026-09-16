@@ -5,12 +5,11 @@ from __future__ import annotations
 import hashlib
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
 from qld_surgery_optimiser.exceptions import DataValidationError
-
 
 CANONICAL_COLUMNS = [
     "record_id",
@@ -104,9 +103,13 @@ NUMERIC_COLUMNS = [
 ]
 
 
-def _clean_text(value: object) -> str | None:
+def _clean_text(
+    value: object,
+) -> str | None:
     """Normalise whitespace while preserving meaningful text."""
-    if value is None or pd.isna(value):
+    if value is None or bool(
+        pd.isna(cast(Any, value))
+    ):
         return None
 
     text = re.sub(
@@ -118,14 +121,19 @@ def _clean_text(value: object) -> str | None:
     return text or None
 
 
-def _normalise_code(value: object) -> str | None:
+def _normalise_code(
+    value: object,
+) -> str | None:
     """Convert identifiers to stable strings without decimal suffixes."""
     text = _clean_text(value)
 
     if text is None:
         return None
 
-    if re.fullmatch(r"\d+\.0", text):
+    if re.fullmatch(
+        r"\d+\.0",
+        text,
+    ):
         return text[:-2]
 
     return text
@@ -133,13 +141,15 @@ def _normalise_code(value: object) -> str | None:
 
 def _normalise_report_month(
     value: object,
-) -> pd.Timestamp | pd.NaT:
+) -> object:
     """Normalise reporting periods to month-level timestamps."""
-    if value is None or pd.isna(value):
+    if value is None or bool(
+        pd.isna(cast(Any, value))
+    ):
         return pd.NaT
 
     timestamp = pd.to_datetime(
-        value,
+        cast(Any, value),
         errors="coerce",
     )
 
@@ -158,15 +168,47 @@ def _make_record_id(
 ) -> str:
     """Create deterministic canonical row identifier."""
     components = [
-        str(row.get("resource_kind", "")),
-        str(row.get("source_resource_id", "")),
-        str(row.get("facility_code", "")),
-        str(row.get("report_month", "")),
-        str(row.get("service_code", "")),
-        str(row.get("service_name", "")),
+        str(
+            row.get(
+                "resource_kind",
+                "",
+            )
+        ),
+        str(
+            row.get(
+                "source_resource_id",
+                "",
+            )
+        ),
+        str(
+            row.get(
+                "facility_code",
+                "",
+            )
+        ),
+        str(
+            row.get(
+                "report_month",
+                "",
+            )
+        ),
+        str(
+            row.get(
+                "service_code",
+                "",
+            )
+        ),
+        str(
+            row.get(
+                "service_name",
+                "",
+            )
+        ),
     ]
 
-    payload = "|".join(components)
+    payload = "|".join(
+        components
+    )
 
     return hashlib.sha256(
         payload.encode("utf-8")
@@ -229,13 +271,17 @@ def normalise_validated_frame(
         "service_name",
     }
 
-    missing = required - set(frame.columns)
+    missing = required - set(
+        frame.columns
+    )
 
     if missing:
         raise DataValidationError(
             "Validated input cannot be normalised because "
             "canonical fields are missing: "
-            + ", ".join(sorted(missing))
+            + ", ".join(
+                sorted(missing)
+            )
         )
 
     if "service_code" not in frame.columns:
@@ -264,12 +310,18 @@ def normalise_validated_frame(
     ].map(_normalise_report_month)
 
     if "data_last_update" in frame.columns:
-        frame["data_last_update"] = pd.to_datetime(
-            frame["data_last_update"],
+        frame[
+            "data_last_update"
+        ] = pd.to_datetime(
+            frame[
+                "data_last_update"
+            ],
             errors="coerce",
         )
     else:
-        frame["data_last_update"] = pd.NaT
+        frame[
+            "data_last_update"
+        ] = pd.NaT
 
     for column in NUMERIC_COLUMNS:
         if column not in frame.columns:
@@ -280,31 +332,46 @@ def normalise_validated_frame(
             errors="coerce",
         )
 
-    frame["source_resource_id"] = (
-        source_metadata.get("resource_id")
+    frame[
+        "source_resource_id"
+    ] = source_metadata.get(
+        "resource_id"
     )
 
-    frame["source_sha256"] = (
-        source_metadata.get("sha256")
+    frame[
+        "source_sha256"
+    ] = source_metadata.get(
+        "sha256"
     )
 
-    frame["source_url"] = (
-        source_metadata.get("source_url")
+    frame[
+        "source_url"
+    ] = source_metadata.get(
+        "source_url"
     )
 
-    frame["source_retrieved_at"] = (
-        pd.to_datetime(
-            source_metadata.get("retrieved_at"),
-            errors="coerce",
-            utc=True,
-        )
+    frame[
+        "source_retrieved_at"
+    ] = pd.to_datetime(
+        cast(
+            Any,
+            source_metadata.get(
+                "retrieved_at"
+            ),
+        ),
+        errors="coerce",
+        utc=True,
     )
 
-    frame["source_file"] = (
-        source_metadata.get("source_file")
+    frame[
+        "source_file"
+    ] = source_metadata.get(
+        "source_file"
     )
 
-    frame["record_id"] = frame.apply(
+    frame[
+        "record_id"
+    ] = frame.apply(
         _make_record_id,
         axis=1,
     )

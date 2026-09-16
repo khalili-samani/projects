@@ -13,15 +13,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Hashable
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
 
 import duckdb
 import pandas as pd
 
 from qld_surgery_optimiser.config import AppSettings
-
 
 WAREHOUSE_TABLES = frozenset(
     {
@@ -116,13 +117,20 @@ def _stable_key(
 
     serialised = "|".join(
         ""
-        if value is None or pd.isna(value)
+        if value is None
+        or bool(
+            pd.isna(
+                cast(Any, value)
+            )
+        )
         else str(value).strip()
         for value in values
     )
 
     return hashlib.sha256(
-        serialised.encode("utf-8")
+        serialised.encode(
+            "utf-8"
+        )
     ).hexdigest()
 
 
@@ -131,10 +139,19 @@ def _normalise_text(
 ) -> str | None:
     """Normalise a nullable text value."""
 
-    if value is None or pd.isna(value):
+    if value is None or bool(
+        pd.isna(
+            cast(
+                Any,
+                value,
+            )
+        )
+    ):
         return None
 
-    text = str(value).strip()
+    text = str(
+        value
+    ).strip()
 
     return text or None
 
@@ -144,12 +161,16 @@ def _normalise_code(
 ) -> str | None:
     """Normalise a nullable code value."""
 
-    text = _normalise_text(value)
+    text = _normalise_text(
+        value
+    )
 
     if text is None:
         return None
 
-    if text.endswith(".0"):
+    if text.endswith(
+        ".0"
+    ):
         numeric = text[:-2]
 
         if numeric.isdigit():
@@ -193,8 +214,12 @@ def _raw_stem_from_validated_path(
     suffix = "_validated"
     stem = path.stem
 
-    if stem.endswith(suffix):
-        return stem[:-len(suffix)]
+    if stem.endswith(
+        suffix
+    ):
+        return stem[
+            :-len(suffix)
+        ]
 
     return stem
 
@@ -246,14 +271,20 @@ def _read_manifest(
 
     for column in columns:
         if column not in manifest.columns:
-            manifest[column] = pd.NA
+            manifest[
+                column
+            ] = pd.NA
 
     manifest = manifest[
         columns
     ].copy()
 
-    manifest["retrieved_at"] = pd.to_datetime(
-        manifest["retrieved_at"],
+    manifest[
+        "retrieved_at"
+    ] = pd.to_datetime(
+        manifest[
+            "retrieved_at"
+        ],
         errors="coerce",
         utc=True,
     )
@@ -276,23 +307,42 @@ def _manifest_row_for_validated_file(
         )
     )
 
-    matches: list[int] = []
+    matches: list[
+        Hashable
+    ] = []
 
     for index, value in manifest[
         "local_path"
     ].items():
-        if pd.isna(value):
+        if pd.isna(
+            value
+        ):
             continue
 
-        if Path(str(value)).stem == raw_stem:
-            matches.append(index)
+        if (
+            Path(
+                str(value)
+            ).stem
+            == raw_stem
+        ):
+            matches.append(
+                index
+            )
 
     if not matches:
         return {}
 
-    return manifest.loc[
-        matches[-1]
-    ].to_dict()
+    row = manifest.loc[
+        [
+            matches[-1]
+        ]
+    ].iloc[-1]
+
+    return {
+        str(key): value
+        for key, value
+        in row.items()
+    }
 
 
 def _canonicalise_frame(
@@ -309,58 +359,111 @@ def _canonicalise_frame(
             source_name: canonical_name
             for source_name, canonical_name
             in COLUMN_ALIASES.items()
-            if source_name in source.columns
+            if source_name
+            in source.columns
         }
     ).copy()
 
     for column in CANONICAL_COLUMNS:
         if column not in frame.columns:
-            frame[column] = pd.NA
+            frame[
+                column
+            ] = pd.NA
 
-    frame["resource_kind"] = resource_kind
-    frame["source_resource_id"] = lineage.get(
-        "resource_id"
+    frame[
+        "resource_kind"
+    ] = resource_kind
+
+    frame[
+        "source_resource_id"
+    ] = _normalise_text(
+        lineage.get(
+            "resource_id"
+        )
     )
-    frame["source_sha256"] = lineage.get(
-        "sha256"
+
+    frame[
+        "source_sha256"
+    ] = _normalise_text(
+        lineage.get(
+            "sha256"
+        )
     )
-    frame["source_url"] = lineage.get(
+
+    frame[
         "source_url"
+    ] = _normalise_text(
+        lineage.get(
+            "source_url"
+        )
     )
-    frame["source_retrieved_at"] = lineage.get(
-        "retrieved_at"
+
+    frame[
+        "source_retrieved_at"
+    ] = pd.to_datetime(
+        cast(
+            Any,
+            lineage.get(
+                "retrieved_at"
+            ),
+        ),
+        errors="coerce",
+        utc=True,
     )
-    frame["source_file"] = str(
+
+    frame[
+        "source_file"
+    ] = str(
         validated_path
     )
 
-    frame["facility_code"] = (
-        frame["facility_code"]
-        .map(_normalise_code)
+    frame[
+        "facility_code"
+    ] = frame[
+        "facility_code"
+    ].map(
+        _normalise_code
     )
 
-    frame["facility_name"] = (
-        frame["facility_name"]
-        .map(_normalise_text)
+    frame[
+        "facility_name"
+    ] = frame[
+        "facility_name"
+    ].map(
+        _normalise_text
     )
 
-    frame["service_code"] = (
-        frame["service_code"]
-        .map(_normalise_code)
+    frame[
+        "service_code"
+    ] = frame[
+        "service_code"
+    ].map(
+        _normalise_code
     )
 
-    frame["service_name"] = (
-        frame["service_name"]
-        .map(_normalise_text)
+    frame[
+        "service_name"
+    ] = frame[
+        "service_name"
+    ].map(
+        _normalise_text
     )
 
-    frame["report_month"] = pd.to_datetime(
-        frame["report_month"],
+    frame[
+        "report_month"
+    ] = pd.to_datetime(
+        frame[
+            "report_month"
+        ],
         errors="coerce",
     )
 
-    frame["data_last_update"] = pd.to_datetime(
-        frame["data_last_update"],
+    frame[
+        "data_last_update"
+    ] = pd.to_datetime(
+        frame[
+            "data_last_update"
+        ],
         errors="coerce",
     )
 
@@ -377,12 +480,18 @@ def _canonicalise_frame(
     ]
 
     for column in numeric_columns:
-        frame[column] = pd.to_numeric(
-            frame[column],
+        frame[
+            column
+        ] = pd.to_numeric(
+            frame[
+                column
+            ],
             errors="coerce",
         )
 
-    frame["record_id"] = [
+    frame[
+        "record_id"
+    ] = [
         _stable_key(
             resource_kind,
             facility_code,
@@ -390,7 +499,9 @@ def _canonicalise_frame(
             report_month,
             service_code,
             service_name,
-            lineage.get("resource_id"),
+            lineage.get(
+                "resource_id"
+            ),
             row_index,
         )
         for row_index, (
@@ -401,11 +512,21 @@ def _canonicalise_frame(
             service_name,
         ) in enumerate(
             zip(
-                frame["facility_code"],
-                frame["facility_name"],
-                frame["report_month"],
-                frame["service_code"],
-                frame["service_name"],
+                frame[
+                    "facility_code"
+                ],
+                frame[
+                    "facility_name"
+                ],
+                frame[
+                    "report_month"
+                ],
+                frame[
+                    "service_code"
+                ],
+                frame[
+                    "service_name"
+                ],
                 strict=False,
             )
         )
@@ -418,11 +539,17 @@ def _canonicalise_frame(
 
 def _drop_duplicate_canonical_rows(
     frame: pd.DataFrame,
-) -> tuple[pd.DataFrame, int]:
+) -> tuple[
+    pd.DataFrame,
+    int,
+]:
     """Remove duplicate canonical business keys."""
 
     if frame.empty:
-        return frame.copy(), 0
+        return (
+            frame.copy(),
+            0,
+        )
 
     key_columns = [
         "resource_kind",
@@ -478,7 +605,9 @@ def _read_facility_aliases(
 
     for column in columns:
         if column not in aliases.columns:
-            aliases[column] = pd.NA
+            aliases[
+                column
+            ] = pd.NA
 
     aliases = aliases[
         columns
@@ -487,25 +616,40 @@ def _read_facility_aliases(
     if aliases.empty:
         return aliases
 
-    aliases["alias_name"] = (
-        aliases["alias_name"]
-        .map(_normalise_text)
+    aliases[
+        "alias_name"
+    ] = aliases[
+        "alias_name"
+    ].map(
+        _normalise_text
     )
 
-    aliases["canonical_name"] = (
-        aliases["canonical_name"]
-        .map(_normalise_text)
+    aliases[
+        "canonical_name"
+    ] = aliases[
+        "canonical_name"
+    ].map(
+        _normalise_text
     )
 
-    aliases["canonical_code"] = (
-        aliases["canonical_code"]
-        .map(_normalise_code)
+    aliases[
+        "canonical_code"
+    ] = aliases[
+        "canonical_code"
+    ].map(
+        _normalise_code
     )
 
     active = (
-        aliases["active"]
-        .fillna("true")
-        .astype(str)
+        aliases[
+            "active"
+        ]
+        .fillna(
+            "true"
+        )
+        .astype(
+            str
+        )
         .str.strip()
         .str.casefold()
         .isin(
@@ -566,11 +710,17 @@ def _resolve_facilities(
         str | None
     ] = []
 
-    statuses: list[str] = []
+    statuses: list[
+        str
+    ] = []
 
     for source_code, source_name in zip(
-        frame["facility_code"],
-        frame["facility_name"],
+        frame[
+            "facility_code"
+        ],
+        frame[
+            "facility_name"
+        ],
         strict=False,
     ):
         alias = alias_lookup.get(
@@ -581,12 +731,23 @@ def _resolve_facilities(
             resolved_codes.append(
                 source_code
             )
+
             resolved_names.append(
                 source_name
             )
-            hhs_values.append(None)
-            region_values.append(None)
-            statuses.append("source")
+
+            hhs_values.append(
+                None
+            )
+
+            region_values.append(
+                None
+            )
+
+            statuses.append(
+                "source"
+            )
+
             continue
 
         resolved_codes.append(
@@ -609,17 +770,23 @@ def _resolve_facilities(
 
         hhs_values.append(
             _normalise_text(
-                alias.get("hhs")
+                alias.get(
+                    "hhs"
+                )
             )
         )
 
         region_values.append(
             _normalise_text(
-                alias.get("region")
+                alias.get(
+                    "region"
+                )
             )
         )
 
-        statuses.append("alias")
+        statuses.append(
+            "alias"
+        )
 
     frame[
         "resolved_facility_code"
@@ -629,14 +796,21 @@ def _resolve_facilities(
         "resolved_facility_name"
     ] = resolved_names
 
-    frame["hhs"] = hhs_values
-    frame["region"] = region_values
+    frame[
+        "hhs"
+    ] = hhs_values
+
+    frame[
+        "region"
+    ] = region_values
 
     frame[
         "facility_resolution_status"
     ] = statuses
 
-    frame["facility_key"] = [
+    frame[
+        "facility_key"
+    ] = [
         _stable_key(
             code,
             name,
@@ -671,9 +845,15 @@ def _add_service_keys(
         service_code,
         service_name,
     ) in zip(
-        result["resource_kind"],
-        result["service_code"],
-        result["service_name"],
+        result[
+            "resource_kind"
+        ],
+        result[
+            "service_code"
+        ],
+        result[
+            "service_name"
+        ],
         strict=False,
     ):
         if resource_kind == "specialty":
@@ -683,10 +863,16 @@ def _add_service_keys(
                     service_name,
                 )
             )
-            urgency_keys.append(None)
+
+            urgency_keys.append(
+                None
+            )
 
         elif resource_kind == "category":
-            specialty_keys.append(None)
+            specialty_keys.append(
+                None
+            )
+
             urgency_keys.append(
                 _stable_key(
                     service_name
@@ -694,8 +880,13 @@ def _add_service_keys(
             )
 
         else:
-            specialty_keys.append(None)
-            urgency_keys.append(None)
+            specialty_keys.append(
+                None
+            )
+
+            urgency_keys.append(
+                None
+            )
 
     result[
         "specialty_key"
@@ -730,10 +921,18 @@ def _add_source_resource_key(
             source_url,
             source_file,
         ) in zip(
-            result["source_resource_id"],
-            result["source_sha256"],
-            result["source_url"],
-            result["source_file"],
+            result[
+                "source_resource_id"
+            ],
+            result[
+                "source_sha256"
+            ],
+            result[
+                "source_url"
+            ],
+            result[
+                "source_file"
+            ],
             strict=False,
         )
     ]
@@ -778,12 +977,16 @@ def _build_longitudinal(
         "previous_vol_waiting"
     ] = grouped[
         "vol_waiting"
-    ].shift(1)
+    ].shift(
+        1
+    )
 
     frame[
         "backlog_change"
     ] = (
-        frame["vol_waiting"]
+        frame[
+            "vol_waiting"
+        ]
         - frame[
             "previous_vol_waiting"
         ]
@@ -793,19 +996,25 @@ def _build_longitudinal(
         "previous_vol_long_waits"
     ] = grouped[
         "vol_long_waits"
-    ].shift(1)
+    ].shift(
+        1
+    )
 
     frame[
         "long_wait_change"
     ] = (
-        frame["vol_long_waits"]
+        frame[
+            "vol_long_waits"
+        ]
         - frame[
             "previous_vol_long_waits"
         ]
     )
 
     waiting_denominator = (
-        frame["vol_waiting"]
+        frame[
+            "vol_waiting"
+        ]
         .replace(
             0,
             pd.NA,
@@ -815,14 +1024,18 @@ def _build_longitudinal(
     frame[
         "long_wait_share"
     ] = (
-        frame["vol_long_waits"]
+        frame[
+            "vol_long_waits"
+        ]
         / waiting_denominator
     )
 
     frame[
         "treatment_to_waiting_ratio"
     ] = (
-        frame["vol_treated"]
+        frame[
+            "vol_treated"
+        ]
         / waiting_denominator
     )
 
@@ -859,8 +1072,12 @@ def _build_dim_facility(
             "facility_name": frame[
                 "resolved_facility_name"
             ],
-            "hhs": frame["hhs"],
-            "region": frame["region"],
+            "hhs": frame[
+                "hhs"
+            ],
+            "region": frame[
+                "region"
+            ],
             "resolution_status": frame[
                 "facility_resolution_status"
             ],
@@ -879,7 +1096,9 @@ def _build_dim_facility(
             ]
         ]
         .notna()
-        .sum(axis=1)
+        .sum(
+            axis=1
+        )
     )
 
     return (
@@ -934,7 +1153,9 @@ def _build_dim_specialty(
 
     dimension = frame.loc[
         (
-            frame["resource_kind"]
+            frame[
+                "resource_kind"
+            ]
             == "specialty"
         )
         & frame[
@@ -993,7 +1214,9 @@ def _build_dim_urgency_category(
 
     dimension = frame.loc[
         (
-            frame["resource_kind"]
+            frame[
+                "resource_kind"
+            ]
             == "category"
         )
         & frame[
@@ -1050,7 +1273,9 @@ def _build_dim_reporting_period(
         )
 
     periods = (
-        frame["report_month"]
+        frame[
+            "report_month"
+        ]
         .dropna()
         .drop_duplicates()
         .sort_values()
@@ -1078,11 +1303,15 @@ def _build_dim_reporting_period(
     ] = (
         dimension[
             "calendar_year"
-        ].astype(str)
+        ].astype(
+            str
+        )
         + "-Q"
         + dimension[
             "calendar_quarter"
-        ].astype(str)
+        ].astype(
+            str
+        )
     )
 
     return dimension[
@@ -1137,7 +1366,9 @@ def _build_dim_source_resource(
     dimension[
         "retrieved_at"
     ] = pd.to_datetime(
-        dimension["retrieved_at"],
+        dimension[
+            "retrieved_at"
+        ],
         errors="coerce",
         utc=True,
     )
@@ -1201,7 +1432,9 @@ def _build_fact_performance(
     fact[
         "reporting_period_key"
     ] = pd.to_datetime(
-        fact["report_month"],
+        fact[
+            "report_month"
+        ],
         errors="coerce",
     ).dt.date
 
@@ -1246,6 +1479,7 @@ def _load_quality_events(
                 encoding="utf-8"
             )
         )
+
     except (
         OSError,
         json.JSONDecodeError,
@@ -1263,7 +1497,10 @@ def _load_quality_events(
         []
     )
 
-    if not isinstance(files, list):
+    if not isinstance(
+        files,
+        list,
+    ):
         return pd.DataFrame(
             columns=columns
         )
@@ -1279,7 +1516,9 @@ def _load_quality_events(
             file_entry.get(
                 "source_path"
             )
-            or file_entry.get("path")
+            or file_entry.get(
+                "path"
+            )
         )
 
         resource_kind = (
@@ -1289,7 +1528,9 @@ def _load_quality_events(
         )
 
         file_events = (
-            file_entry.get("events")
+            file_entry.get(
+                "events"
+            )
             or file_entry.get(
                 "quality_events"
             )
@@ -1310,53 +1551,49 @@ def _load_quality_events(
                 continue
 
             event_id = (
-                event.get("event_id")
+                event.get(
+                    "event_id"
+                )
                 or _stable_key(
                     source_path,
                     resource_kind,
-                    event.get("rule_id"),
-                    event.get("severity"),
-                    event.get("row_index"),
+                    event.get(
+                        "rule_id"
+                    ),
+                    event.get(
+                        "severity"
+                    ),
+                    event.get(
+                        "row_index"
+                    ),
                     event.get(
                         "column_name"
                     ),
                     event.get(
                         "observed_value"
                     ),
-                    event.get("message"),
+                    event.get(
+                        "message"
+                    ),
                 )
             )
 
             events.append(
                 {
-                    "event_id": (
-                        event_id
+                    "event_id": event_id,
+                    "source_path": source_path,
+                    "resource_kind": resource_kind,
+                    "rule_id": event.get(
+                        "rule_id"
                     ),
-                    "source_path": (
-                        source_path
+                    "severity": event.get(
+                        "severity"
                     ),
-                    "resource_kind": (
-                        resource_kind
+                    "row_index": event.get(
+                        "row_index"
                     ),
-                    "rule_id": (
-                        event.get(
-                            "rule_id"
-                        )
-                    ),
-                    "severity": (
-                        event.get(
-                            "severity"
-                        )
-                    ),
-                    "row_index": (
-                        event.get(
-                            "row_index"
-                        )
-                    ),
-                    "column_name": (
-                        event.get(
-                            "column_name"
-                        )
+                    "column_name": event.get(
+                        "column_name"
                     ),
                     "observed_value": (
                         None
@@ -1370,10 +1607,8 @@ def _load_quality_events(
                             )
                         )
                     ),
-                    "message": (
-                        event.get(
-                            "message"
-                        )
+                    "message": event.get(
+                        "message"
                     ),
                 }
             )
@@ -1389,9 +1624,13 @@ def _load_quality_events(
     quality[
         "row_index"
     ] = pd.to_numeric(
-        quality["row_index"],
+        quality[
+            "row_index"
+        ],
         errors="coerce",
-    ).astype("Int64")
+    ).astype(
+        "Int64"
+    )
 
     return (
         quality
@@ -1530,39 +1769,43 @@ def _write_reconciliation(
                 UTC
             ).isoformat()
         ),
-        "canonical_rows": int(
-            len(canonical)
+        "canonical_rows": len(
+            canonical
         ),
-        "longitudinal_rows": int(
-            len(longitudinal)
+        "longitudinal_rows": len(
+            longitudinal
         ),
-        "fact_rows": int(
-            len(fact_performance)
+        "fact_rows": len(
+            fact_performance
         ),
-        "facility_rows": int(
-            len(dim_facility)
+        "facility_rows": len(
+            dim_facility
         ),
-        "specialty_rows": int(
-            len(dim_specialty)
+        "specialty_rows": len(
+            dim_specialty
         ),
-        "urgency_category_rows": int(
-            len(dim_urgency_category)
+        "urgency_category_rows": len(
+            dim_urgency_category
         ),
-        "reporting_period_rows": int(
-            len(dim_reporting_period)
+        "reporting_period_rows": len(
+            dim_reporting_period
         ),
-        "source_resource_rows": int(
-            len(dim_source_resource)
+        "source_resource_rows": len(
+            dim_source_resource
         ),
-        "quality_event_rows": int(
-            len(fact_quality)
+        "quality_event_rows": len(
+            fact_quality
         ),
         "duplicate_canonical_keys_removed": (
             duplicate_canonical_keys_removed
         ),
         "fact_matches_longitudinal": (
-            len(fact_performance)
-            == len(longitudinal)
+            len(
+                fact_performance
+            )
+            == len(
+                longitudinal
+            )
         ),
     }
 
@@ -1729,6 +1972,7 @@ def build_warehouse(
             ignore_index=True,
             sort=False,
         )
+
     else:
         canonical = pd.DataFrame(
             columns=CANONICAL_COLUMNS
@@ -1782,16 +2026,12 @@ def build_warehouse(
         index=False,
     )
 
-    dim_facility = (
-        _build_dim_facility(
-            longitudinal
-        )
+    dim_facility = _build_dim_facility(
+        longitudinal
     )
 
-    dim_specialty = (
-        _build_dim_specialty(
-            longitudinal
-        )
+    dim_specialty = _build_dim_specialty(
+        longitudinal
     )
 
     dim_urgency_category = (
@@ -1825,7 +2065,9 @@ def build_warehouse(
     )
 
     with duckdb.connect(
-        str(duckdb_path)
+        str(
+            duckdb_path
+        )
     ) as connection:
         _execute_ddl(
             connection
@@ -1914,6 +2156,7 @@ def build_warehouse(
             connection.execute(
                 "ROLLBACK"
             )
+
             raise
 
     reconciliation_report_path = (
@@ -1985,7 +2228,9 @@ def build_warehouse(
         duplicate_canonical_keys_removed=(
             duplicate_canonical_keys_removed
         ),
-        duckdb_path=duckdb_path,
+        duckdb_path=(
+            duckdb_path
+        ),
         canonical_path=(
             canonical_output
         ),

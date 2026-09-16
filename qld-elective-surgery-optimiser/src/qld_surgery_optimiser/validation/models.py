@@ -8,7 +8,6 @@ from typing import Literal
 
 import pandas as pd
 
-
 IssueSeverity = Literal["error", "warning"]
 
 

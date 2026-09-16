@@ -8,7 +8,6 @@ import pandas as pd
 
 from qld_surgery_optimiser.exceptions import DataValidationError
 
-
 BUSINESS_KEY = [
     "canonical_facility_code",
     "report_month",

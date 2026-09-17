@@ -105,30 +105,32 @@ def validate_file(
     issues: list[QualityIssue] = []
 
     for column in missing:
-        issues.append(
-            QualityIssue(
-                rule_id="MISSING_REQUIRED_COLUMN",
-                severity="error",
-                message=(
-                    f"Required source column missing: "
-                    f"{column}"
-                ),
-                column=column,
-            )
-        )
+        issues.extend(
+    QualityIssue(
+        rule_id="MISSING_REQUIRED_COLUMN",
+        severity="error",
+        message=(
+            "Required source column missing: "
+            f"{column}"
+        ),
+        column=column,
+    )
+    for column in missing
+    )
 
     for column in unexpected:
-        issues.append(
-            QualityIssue(
-                rule_id="UNEXPECTED_COLUMN",
-                severity="warning",
-                message=(
-                    f"Unexpected source column detected: "
-                    f"{column}"
-                ),
-                column=column,
-            )
-        )
+        issues.extend(
+    QualityIssue(
+        rule_id="UNEXPECTED_COLUMN",
+        severity="warning",
+        message=(
+            "Unexpected source column detected: "
+            f"{column}"
+        ),
+        column=column,
+    )
+    for column in unexpected
+    )
 
     if (
         missing

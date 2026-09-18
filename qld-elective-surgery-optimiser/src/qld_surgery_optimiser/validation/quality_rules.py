@@ -24,7 +24,10 @@ def detect_parse_failures(
         for index in failing_indices:
             invalid_rows.add(int(index))
 
-            value = original.at[index, column]
+            value = original.at[
+                index,
+                column,
+            ]
 
             issues.append(
                 QualityIssue(
@@ -56,16 +59,22 @@ def check_required_values(
         if column not in dataframe.columns:
             continue
 
-        mask = dataframe[column].isna()
+        mask = dataframe[
+            column
+        ].isna()
 
         for index in dataframe.index[mask]:
-            invalid_rows.add(int(index))
+            invalid_rows.add(
+                int(index)
+            )
 
             issues.append(
                 QualityIssue(
                     rule_id="MISSING_REQUIRED_VALUE",
                     severity="error",
-                    message=f"Required value missing in {column}.",
+                    message=(
+                        f"Required value missing in {column}."
+                    ),
                     row_index=int(index),
                     column=column,
                 )
@@ -87,12 +96,18 @@ def check_non_negative_volumes(
         if column not in dataframe.columns:
             continue
 
-        mask = dataframe[column].notna() & (
-            dataframe[column] < 0
+        mask = (
+            dataframe[column].notna()
+            & (
+                dataframe[column]
+                < 0
+            )
         )
 
         for index in dataframe.index[mask]:
-            invalid_rows.add(int(index))
+            invalid_rows.add(
+                int(index)
+            )
 
             issues.append(
                 QualityIssue(
@@ -104,7 +119,10 @@ def check_non_negative_volumes(
                     row_index=int(index),
                     column=column,
                     observed_value=str(
-                        dataframe.at[index, column]
+                        dataframe.at[
+                            index,
+                            column,
+                        ]
                     ),
                 )
             )
@@ -127,15 +145,22 @@ def check_percentage_ranges(
         if column not in dataframe.columns:
             continue
 
-        values = dataframe[column]
+        values = dataframe[
+            column
+        ]
 
-        mask = values.notna() & (
-            (values < minimum)
-            | (values > maximum)
+        mask = (
+            values.notna()
+            & (
+                (values < minimum)
+                | (values > maximum)
+            )
         )
 
         for index in dataframe.index[mask]:
-            invalid_rows.add(int(index))
+            invalid_rows.add(
+                int(index)
+            )
 
             issues.append(
                 QualityIssue(
@@ -148,7 +173,10 @@ def check_percentage_ranges(
                     row_index=int(index),
                     column=column,
                     observed_value=str(
-                        dataframe.at[index, column]
+                        dataframe.at[
+                            index,
+                            column,
+                        ]
                     ),
                 )
             )
@@ -165,41 +193,56 @@ def check_long_wait_consistency(
         "Vol_LongWaits",
     }
 
-    if not required.issubset(dataframe.columns):
+    if not required.issubset(
+        dataframe.columns
+    ):
         return [], set()
 
     mask = (
-        dataframe["Vol_Waiting"].notna()
-        & dataframe["Vol_LongWaits"].notna()
+        dataframe[
+            "Vol_Waiting"
+        ].notna()
+        & dataframe[
+            "Vol_LongWaits"
+        ].notna()
         & (
-            dataframe["Vol_LongWaits"]
-            > dataframe["Vol_Waiting"]
+            dataframe[
+                "Vol_LongWaits"
+            ]
+            > dataframe[
+                "Vol_Waiting"
+            ]
         )
     )
 
-    issues: list[QualityIssue] = []
-    invalid_rows: set[int] = set()
+    invalid_rows = {
+        int(index)
+        for index
+        in dataframe.index[mask]
+    }
 
-    for index in dataframe.index[mask]:
-        invalid_rows.add(int(index))
-
-        issues.append(
-            QualityIssue(
-                rule_id="LONG_WAITS_EXCEED_WAITING",
-                severity="error",
-                message=(
-                    "Vol_LongWaits exceeds Vol_Waiting."
-                ),
-                row_index=int(index),
-                column="Vol_LongWaits",
-                observed_value=str(
-                    dataframe.at[
-                        index,
-                        "Vol_LongWaits",
-                    ]
-                ),
-            )
+    issues = [
+        QualityIssue(
+            rule_id=(
+                "LONG_WAITS_EXCEED_WAITING"
+            ),
+            severity="error",
+            message=(
+                "Vol_LongWaits exceeds "
+                "Vol_Waiting."
+            ),
+            row_index=int(index),
+            column="Vol_LongWaits",
+            observed_value=str(
+                dataframe.at[
+                    index,
+                    "Vol_LongWaits",
+                ]
+            ),
         )
+        for index
+        in dataframe.index[mask]
+    ]
 
     return issues, invalid_rows
 
@@ -214,43 +257,60 @@ def check_long_wait_components(
         "Vol_LongWaits_NRFS",
     }
 
-    if not columns.issubset(dataframe.columns):
+    if not columns.issubset(
+        dataframe.columns
+    ):
         return [], set()
 
-    total = dataframe["Vol_LongWaits"]
+    total = dataframe[
+        "Vol_LongWaits"
+    ]
+
     components = (
-        dataframe["Vol_LongWaits_RFS"].fillna(0)
-        + dataframe["Vol_LongWaits_NRFS"].fillna(0)
+        dataframe[
+            "Vol_LongWaits_RFS"
+        ].fillna(0)
+        + dataframe[
+            "Vol_LongWaits_NRFS"
+        ].fillna(0)
     )
 
     mask = (
         total.notna()
-        & dataframe["Vol_LongWaits_RFS"].notna()
-        & dataframe["Vol_LongWaits_NRFS"].notna()
-        & (components != total)
+        & dataframe[
+            "Vol_LongWaits_RFS"
+        ].notna()
+        & dataframe[
+            "Vol_LongWaits_NRFS"
+        ].notna()
+        & (
+            components
+            != total
+        )
     )
 
-    issues: list[QualityIssue] = []
-
-    for index in dataframe.index[mask]:
-        issues.append(
-            QualityIssue(
-                rule_id="LONG_WAIT_COMPONENT_MISMATCH",
-                severity="warning",
-                message=(
-                    "RFS and NRFS long-wait components "
-                    "do not equal Vol_LongWaits."
-                ),
-                row_index=int(index),
-                column="Vol_LongWaits",
-                observed_value=str(
-                    dataframe.at[
-                        index,
-                        "Vol_LongWaits",
-                    ]
-                ),
-            )
+    issues = [
+        QualityIssue(
+            rule_id=(
+                "LONG_WAIT_COMPONENT_MISMATCH"
+            ),
+            severity="warning",
+            message=(
+                "RFS and NRFS long-wait components "
+                "do not equal Vol_LongWaits."
+            ),
+            row_index=int(index),
+            column="Vol_LongWaits",
+            observed_value=str(
+                dataframe.at[
+                    index,
+                    "Vol_LongWaits",
+                ]
+            ),
         )
+        for index
+        in dataframe.index[mask]
+    ]
 
     return issues, set()
 
@@ -267,12 +327,14 @@ def check_duplicates(
             "Report_Month",
             "Specialty_Code",
         ]
+
     elif resource_kind == "category":
         candidates = [
             "Facility_Code",
             "Report_Month",
             "Category",
         ]
+
     else:
         raise ValueError(
             f"Unsupported resource kind: {resource_kind}"
@@ -292,23 +354,27 @@ def check_duplicates(
         keep=False,
     )
 
-    issues: list[QualityIssue] = []
-    invalid_rows: set[int] = set()
+    invalid_rows = {
+        int(index)
+        for index
+        in dataframe.index[mask]
+    }
 
-    for index in dataframe.index[mask]:
-        invalid_rows.add(int(index))
-
-        issues.append(
-            QualityIssue(
-                rule_id="DUPLICATE_BUSINESS_KEY",
-                severity="error",
-                message=(
-                    "Duplicate row detected for business key: "
-                    + ", ".join(key)
-                ),
-                row_index=int(index),
-            )
+    issues = [
+        QualityIssue(
+            rule_id=(
+                "DUPLICATE_BUSINESS_KEY"
+            ),
+            severity="error",
+            message=(
+                "Duplicate row detected for business key: "
+                + ", ".join(key)
+            ),
+            row_index=int(index),
         )
+        for index
+        in dataframe.index[mask]
+    ]
 
     return issues, invalid_rows
 
@@ -322,8 +388,13 @@ def run_quality_rules(
     config: ValidationConfig,
 ) -> tuple[list[QualityIssue], set[int]]:
     """Execute all current row-level quality rules."""
-    all_issues: list[QualityIssue] = []
-    invalid_rows: set[int] = set()
+    all_issues: list[
+        QualityIssue
+    ] = []
+
+    invalid_rows: set[
+        int
+    ] = set()
 
     checks = [
         detect_parse_failures(
@@ -340,13 +411,21 @@ def run_quality_rules(
         ),
         check_non_negative_volumes(
             dataframe,
-            volume_columns=config.numeric_volume_columns,
+            volume_columns=(
+                config.numeric_volume_columns
+            ),
         ),
         check_percentage_ranges(
             dataframe,
-            percentage_columns=config.percentage_columns,
-            minimum=config.percentage_minimum,
-            maximum=config.percentage_maximum,
+            percentage_columns=(
+                config.percentage_columns
+            ),
+            minimum=(
+                config.percentage_minimum
+            ),
+            maximum=(
+                config.percentage_maximum
+            ),
         ),
         check_long_wait_consistency(
             dataframe,
@@ -361,7 +440,12 @@ def run_quality_rules(
     ]
 
     for issues, rows in checks:
-        all_issues.extend(issues)
-        invalid_rows.update(rows)
+        all_issues.extend(
+            issues
+        )
+
+        invalid_rows.update(
+            rows
+        )
 
     return all_issues, invalid_rows

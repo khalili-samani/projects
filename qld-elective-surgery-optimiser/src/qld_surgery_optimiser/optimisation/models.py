@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Literal
 
-
 ResourceKind = Literal[
     "specialty",
     "category",
@@ -19,7 +18,6 @@ SolverStatus = Literal[
     "model_invalid",
     "unknown",
 ]
-
 
 @dataclass(
     frozen=True,

@@ -59,8 +59,9 @@ def test_discovers_only_matching_csv_resources() -> None:
                             "id": "category-1",
                             "package_id": "dataset-id",
                             "name": (
-                                "June 2025 – Elective Surgery "
-                                "by Category – Summary 1"
+                                "June 2025 - Elective Surgery "
+                                "by Category - Summary 1"
+                                
                             ),
                             "format": "CSV",
                             "url": (
@@ -72,8 +73,8 @@ def test_discovers_only_matching_csv_resources() -> None:
                             "id": "specialty-1",
                             "package_id": "dataset-id",
                             "name": (
-                                "June 2025 – Elective Surgery "
-                                "by Speciality – Summary 2"
+                                "June 2025 - Elective Surgery "
+                                "by Speciality - Summary 2"
                             ),
                             "format": "CSV",
                             "url": (

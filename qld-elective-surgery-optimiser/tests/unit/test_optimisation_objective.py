@@ -602,8 +602,8 @@ def test_rejects_missing_and_unexpected_objective_variables() -> None:
     with pytest.raises(
         ValueError,
         match=(
-            "missing allocation variables.*"
-            "unexpected allocation variables"
+            r"missing allocation variables.*"
+            r"unexpected allocation variables"
         ),
     ):
         add_waitlist_recovery_objective(

@@ -1,0 +1,41 @@
+scenario:
+  name: baseline_capacity_recovery
+
+  description: >
+    Synthetic baseline scenario for testing elective surgery
+    capacity allocation across facility-service combinations.
+
+  resource_kind: specialty
+
+  synthetic_assumptions: true
+
+  notes: >
+    Capacity values in this scenario are modelling assumptions for
+    portfolio demonstration and testing. They are not observed
+    Queensland Health capacity values.
+
+
+capacity:
+  total_additional_cases: 100
+
+  default_max_additional_cases_per_service: 25
+
+
+objective:
+  waiting_weight: 1
+
+  long_wait_weight: 3
+
+
+constraints:
+  enforce_waiting_volume_ceiling: true
+
+  enforce_service_capacity_ceiling: true
+
+
+solver:
+  max_time_seconds: 30
+
+  num_search_workers: 1
+
+  random_seed: 0

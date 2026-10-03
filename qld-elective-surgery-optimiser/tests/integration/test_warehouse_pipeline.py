@@ -8,6 +8,7 @@ from pathlib import Path
 
 import duckdb
 import pandas as pd
+import pytest
 
 from qld_surgery_optimiser.config import (
     AppSettings,
@@ -19,7 +20,7 @@ from qld_surgery_optimiser.processing.warehouse import (
 
 def test_build_warehouse_from_validated_sources(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Validated source data should produce a reconciled DuckDB model."""
     monkeypatch.chdir(
@@ -33,10 +34,6 @@ def test_build_warehouse_from_validated_sources(
     sql_directory.mkdir(
         parents=True
     )
-
-    project_sql = Path(
-        __file__
-    ).parents[2] / "sql/create_warehouse.sql"
 
     # When running from the real repository this path exists.
     # For an isolated test, provide equivalent DDL directly.
@@ -302,19 +299,25 @@ def test_build_warehouse_from_validated_sources(
         str(settings.duckdb_path),
         read_only=True,
     ) as connection:
-        fact_count = connection.execute(
+        fact_row = connection.execute(
             """
             SELECT COUNT(*)
             FROM fact_elective_surgery_performance
             """
-        ).fetchone()[0]
+        ).fetchone()
 
-        facility_count = connection.execute(
+        assert fact_row is not None
+        fact_count = fact_row[0]
+
+        facility_row = connection.execute(
             """
             SELECT COUNT(*)
             FROM dim_facility
             """
-        ).fetchone()[0]
+        ).fetchone()
+
+        assert facility_row is not None
+        facility_count = facility_row[0]
 
     assert fact_count == 1
     assert facility_count == 1

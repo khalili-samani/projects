@@ -30,12 +30,12 @@ def _resource() -> ResourceRef:
 
 def _valid_csv() -> bytes:
     return (
-        "Facility_Code,Facility_Name,Report_Month,"
-        "Specialty_Code,Specialty_Desc,Vol_Treated,"
-        "Vol_Waiting,Vol_LongWaits\n"
-        "101,Example Hospital,2025-06,"
-        "01,General Surgery,50,100,10\n"
-    ).encode("utf-8")
+        b"Facility_Code,Facility_Name,Report_Month,"
+        b"Specialty_Code,Specialty_Desc,Vol_Treated,"
+        b"Vol_Waiting,Vol_LongWaits\n"
+        b"101,Example Hospital,2025-06,"
+        b"01,General Surgery,50,100,10\n"
+    )
 
 
 def test_downloads_and_versions_csv_by_checksum(
@@ -130,12 +130,11 @@ def test_rejects_html_error_page(
         retry_backoff_seconds=0,
         user_agent="test",
         transport=httpx.MockTransport(handler),
-    ) as downloader:
-        with pytest.raises(
-            DownloadError,
-            match="HTML",
-        ):
-            downloader.download(_resource())
+    ) as downloader, pytest.raises(
+        DownloadError,
+        match="HTML",
+    ):
+        downloader.download(_resource())
 
 
 def test_rejects_csv_missing_identity_columns(
@@ -159,9 +158,8 @@ def test_rejects_csv_missing_identity_columns(
         retry_backoff_seconds=0,
         user_agent="test",
         transport=httpx.MockTransport(handler),
-    ) as downloader:
-        with pytest.raises(
-            DownloadError,
-            match="mandatory identity columns",
-        ):
-            downloader.download(_resource())
+    ) as downloader, pytest.raises(
+        DownloadError,
+        match="mandatory identity columns",
+    ):
+        downloader.download(_resource())

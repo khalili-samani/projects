@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import TypeAlias
 
 from ortools.sat.python import cp_model
 
@@ -18,8 +17,7 @@ from qld_surgery_optimiser.optimisation.scenarios import (
     OptimisationScenario,
 )
 
-
-ObjectiveCoefficients: TypeAlias = Mapping[
+type ObjectiveCoefficients = Mapping[
     AllocationKey,
     int,
 ]

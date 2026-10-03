@@ -91,7 +91,9 @@ def solve_capacity_allocation(
     )
 
     status = _normalise_solver_status(
-        raw_status
+        int(
+            raw_status
+        )
     )
 
     if status not in {

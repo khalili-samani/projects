@@ -8,7 +8,6 @@ from typing import Any, Literal, cast
 
 import yaml
 
-
 ResourceKind = Literal[
     "specialty",
     "category",
@@ -421,7 +420,10 @@ def _required_non_negative_int(
             f"Scenario field {key!r} must not be negative."
         )
 
-    return value
+    return cast(
+        int,
+        value,
+    )
 
 
 def _required_positive_int(

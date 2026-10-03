@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import TypeAlias
 
 from ortools.sat.python import cp_model
 
@@ -14,10 +13,9 @@ from qld_surgery_optimiser.optimisation.scenarios import (
     OptimisationScenario,
 )
 
+type AllocationKey = tuple[str, str]
 
-AllocationKey: TypeAlias = tuple[str, str]
-
-AllocationVariables: TypeAlias = Mapping[
+type AllocationVariables = Mapping[
     AllocationKey,
     cp_model.IntVar,
 ]
@@ -30,7 +28,7 @@ def allocation_key(
 
     The current optimisation grain is:
 
-        facility_key × service_key
+        facility_key x service_key
 
     The contract layer is responsible for ensuring that this grain is
     unique before rows reach the solver.

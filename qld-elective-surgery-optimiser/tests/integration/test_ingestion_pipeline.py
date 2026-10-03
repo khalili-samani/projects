@@ -138,7 +138,7 @@ def _csv_payload(
         "Vol_LongWaits\n"
         "101,Example Hospital,2025-06,"
         f"{service_value},20,40,5\n"
-    ).encode("utf-8")
+    ).encode()
 
 
 def test_discovery_download_and_manifest(
@@ -169,8 +169,8 @@ def test_discovery_download_and_manifest(
                                 "id": "category-1",
                                 "package_id": "dataset-id",
                                 "name": (
-                                    "June 2025 – Elective Surgery "
-                                    "by Category – Summary 1"
+                                    "June 2025 - Elective Surgery "
+                                    "by Category - Summary 1"
                                 ),
                                 "format": "CSV",
                                 "url": (
@@ -182,8 +182,8 @@ def test_discovery_download_and_manifest(
                                 "id": "specialty-1",
                                 "package_id": "dataset-id",
                                 "name": (
-                                    "June 2025 – Elective Surgery "
-                                    "by Speciality – Summary 2"
+                                    "June 2025 - Elective Surgery "
+                                    "by Speciality - Summary 2"
                                 ),
                                 "format": "CSV",
                                 "url": (

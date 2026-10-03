@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from datetime import date
 from typing import Any, cast
 
@@ -12,7 +11,6 @@ from qld_surgery_optimiser.optimisation.models import (
     OptimisationInputRow,
     ResourceKind,
 )
-
 
 REQUIRED_COLUMNS = frozenset(
     {
@@ -111,50 +109,32 @@ def build_optimisation_inputs(
         index=False
     ):
         facility_key = _required_text(
-            getattr(
-                row,
-                "facility_key",
-            ),
+            row.facility_key,
             field_name="facility_key",
         )
 
         facility_name = _required_text(
-            getattr(
-                row,
-                "facility_name",
-            ),
+            row.facility_name,
             field_name="facility_name",
         )
 
         service_code = _required_text(
-            getattr(
-                row,
-                "service_code",
-            ),
+            row.service_code,
             field_name="service_code",
         )
 
         service_name = _required_text(
-            getattr(
-                row,
-                "service_name",
-            ),
+            row.service_name,
             field_name="service_name",
         )
 
         vol_waiting = _required_non_negative_integer(
-            getattr(
-                row,
-                "vol_waiting",
-            ),
+            row.vol_waiting,
             field_name="vol_waiting",
         )
 
         vol_long_waits = _required_non_negative_integer(
-            getattr(
-                row,
-                "vol_long_waits",
-            ),
+            row.vol_long_waits,
             field_name="vol_long_waits",
         )
 
@@ -443,10 +423,11 @@ def _required_non_negative_integer(
             f"{field_name} must be an integer."
         )
 
-    numeric = pd.to_numeric(
-        value,
+    numeric_series = pd.to_numeric(
+        pd.Series([value], dtype="object"),
         errors="coerce",
     )
+    numeric = numeric_series.iloc[0]
 
     if bool(
         pd.isna(

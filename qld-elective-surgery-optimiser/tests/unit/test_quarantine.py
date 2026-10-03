@@ -66,11 +66,18 @@ def test_quarantine_preserves_original_record() -> None:
         == "Example Hospital"
     )
 
+    quality_rule_ids_json = quarantine.loc[
+        0,
+        "_quality_rule_ids",
+    ]
+
+    assert isinstance(
+        quality_rule_ids_json,
+        str,
+    )
+
     rule_ids = json.loads(
-        quarantine.loc[
-            0,
-            "_quality_rule_ids",
-        ]
+        quality_rule_ids_json
     )
 
     assert rule_ids == [

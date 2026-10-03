@@ -9,7 +9,6 @@ from qld_surgery_optimiser.validation.coercion import (
     parse_percentage_series,
 )
 
-
 NULL_TOKENS = [
     "",
     "NA",

@@ -181,10 +181,10 @@ solver:
 def test_loads_repository_baseline_scenario() -> None:
     """The committed baseline scenario should remain valid."""
     scenario_path = (
-        Path(__file__).parents[2]
-        / "configs"
-        / "scenarios"
-        / "baseline.yml"
+    Path(__file__).parents[2]
+    / "configs"
+    / "scenarios"
+    / "optimisation_baseline.yml"
     )
 
     scenario = load_scenario(

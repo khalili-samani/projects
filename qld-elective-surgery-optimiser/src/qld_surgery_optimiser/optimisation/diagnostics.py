@@ -216,14 +216,15 @@ def _build_service_diagnostic(
     scenario: OptimisationScenario,
 ) -> ServiceAllocationDiagnostic:
     """Build diagnostics for one optimisation allocation."""
-    if allocation.additional_cases > row.vol_waiting:
-        if (
-            scenario.constraints.enforce_waiting_volume_ceiling
-        ):
-            raise ValueError(
-                "Allocation exceeds waiting volume while the "
-                "waiting-volume ceiling is enabled."
-            )
+    if (
+        allocation.additional_cases
+        > row.vol_waiting
+        and scenario.constraints.enforce_waiting_volume_ceiling
+    ):
+        raise ValueError(
+            "Allocation exceeds waiting volume while the "
+            "waiting-volume ceiling is enabled."
+        )
 
     long_wait_share = _safe_ratio(
         numerator=row.vol_long_waits,

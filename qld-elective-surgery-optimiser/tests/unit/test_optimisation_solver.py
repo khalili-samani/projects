@@ -6,9 +6,7 @@ from datetime import date
 
 import pytest
 
-from qld_surgery_optimiser.optimisation.models import (
-    OptimisationInputRow,
-)
+from qld_surgery_optimiser.optimisation.models import OptimisationInputRow, ResourceKind
 from qld_surgery_optimiser.optimisation.scenarios import (
     CapacityConfig,
     ConstraintConfig,
@@ -21,7 +19,6 @@ from qld_surgery_optimiser.optimisation.solver import (
     solve_capacity_allocation,
 )
 
-
 REPORTING_PERIOD = date(
     2025,
     6,
@@ -31,7 +28,7 @@ REPORTING_PERIOD = date(
 
 def _scenario(
     *,
-    resource_kind: str = "specialty",
+    resource_kind: ResourceKind = "specialty",
     total_additional_cases: int = 10,
     max_additional_cases_per_service: int = 10,
     waiting_weight: int = 1,
@@ -40,13 +37,6 @@ def _scenario(
     enforce_service_capacity_ceiling: bool = True,
 ) -> OptimisationScenario:
     """Build a deterministic optimisation scenario for solver tests."""
-    if resource_kind not in {
-        "specialty",
-        "category",
-    }:
-        raise ValueError(
-            "Unsupported resource_kind in test helper."
-        )
 
     return OptimisationScenario(
         scenario=ScenarioMetadata(
@@ -94,17 +84,10 @@ def _row(
     service_key: str,
     vol_waiting: int,
     vol_long_waits: int,
-    resource_kind: str = "specialty",
+    resource_kind: ResourceKind = "specialty",
     reporting_period: date = REPORTING_PERIOD,
 ) -> OptimisationInputRow:
     """Build one valid optimisation row for solver tests."""
-    if resource_kind not in {
-        "specialty",
-        "category",
-    }:
-        raise ValueError(
-            "Unsupported resource_kind in test helper."
-        )
 
     return OptimisationInputRow(
         facility_key=facility_key,

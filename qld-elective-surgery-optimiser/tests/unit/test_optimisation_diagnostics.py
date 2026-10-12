@@ -14,6 +14,7 @@ from qld_surgery_optimiser.optimisation.models import (
     OptimisationInputRow,
     OptimisationSummary,
     ResourceKind,
+    SolverStatus,
 )
 from qld_surgery_optimiser.optimisation.scenarios import (
     CapacityConfig,
@@ -23,7 +24,6 @@ from qld_surgery_optimiser.optimisation.scenarios import (
     ScenarioMetadata,
     SolverConfig,
 )
-
 
 REPORTING_PERIOD = date(
     2025,
@@ -126,7 +126,7 @@ def _summary(
     ],
     total_capacity: int,
     scenario_name: str = "diagnostic_test",
-    status: str = "optimal",
+    status: SolverStatus = "optimal",
 ) -> OptimisationSummary:
     """Build a reconciled optimisation summary."""
     total_additional_cases = sum(

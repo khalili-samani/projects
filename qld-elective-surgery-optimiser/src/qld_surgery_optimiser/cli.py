@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import date
 from pathlib import Path
 from typing import Annotated
 
@@ -26,6 +27,9 @@ from qld_surgery_optimiser.exceptions import (
 from qld_surgery_optimiser.ingestion.ckan_client import CkanClient
 from qld_surgery_optimiser.ingestion.pipeline import run_ingestion
 from qld_surgery_optimiser.logging_config import configure_logging
+from qld_surgery_optimiser.optimisation.pipeline import (
+    run_optimisation_pipeline,
+)
 from qld_surgery_optimiser.processing.warehouse import build_warehouse
 from qld_surgery_optimiser.validation.pipeline import run_validation
 
@@ -49,6 +53,23 @@ def _serialise_path(
         "Object is not JSON serialisable: "
         f"{type(value).__name__}"
     )
+
+
+def _parse_reporting_period(
+    value: str | None,
+) -> date | None:
+    """Parse an optional ISO reporting period for optimisation."""
+    if value is None:
+        return None
+
+    try:
+        return date.fromisoformat(
+            value
+        )
+    except ValueError as exc:
+        raise ValueError(
+            "Reporting period must use ISO date format YYYY-MM-DD."
+        ) from exc
 
 
 @app.callback()
@@ -519,6 +540,149 @@ def warehouse() -> None:
     typer.echo(
         f"Reconciliation report: "
         f"{summary.reconciliation_report_path}"
+    )
+
+
+@app.command("optimise")
+def optimise(
+    analytical_data_path: Annotated[
+        Path,
+        typer.Option(
+            "--analytical-data",
+            help=(
+                "Canonical or longitudinal analytical Parquet "
+                "dataset used to build optimisation inputs."
+            ),
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ],
+    scenario_path: Annotated[
+        Path,
+        typer.Option(
+            "--scenario",
+            help=(
+                "Dedicated Phase 5 optimisation scenario YAML file."
+            ),
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ],
+    output_directory: Annotated[
+        Path,
+        typer.Option(
+            "--output-dir",
+            help=(
+                "Directory where scenario-specific optimisation "
+                "outputs will be written."
+            ),
+            file_okay=False,
+            dir_okay=True,
+        ),
+    ] = Path(
+        "reports/outputs/optimisation"
+    ),
+    reporting_period: Annotated[
+        str | None,
+        typer.Option(
+            "--reporting-period",
+            help=(
+                "Optional reporting period in YYYY-MM-DD format. "
+                "When omitted, the latest available period for the "
+                "scenario resource family is used."
+            ),
+        ),
+    ] = None,
+) -> None:
+    """Run the Phase 5 elective-surgery capacity optimisation pipeline."""
+    settings = get_settings()
+
+    configure_logging(
+        settings.log_level,
+        json_output=True,
+    )
+
+    try:
+        selected_reporting_period = _parse_reporting_period(
+            reporting_period
+        )
+
+        result = run_optimisation_pipeline(
+            analytical_data_path=analytical_data_path,
+            scenario_path=scenario_path,
+            output_directory=output_directory,
+            reporting_period=selected_reporting_period,
+        )
+
+    except (
+        FileNotFoundError,
+        ValueError,
+    ) as exc:
+        logger.exception(
+            "Optimisation failed",
+            extra={"error": str(exc)},
+        )
+
+        typer.echo(
+            f"Optimisation failed: {exc}",
+            err=True,
+        )
+
+        raise typer.Exit(
+            code=1
+        ) from exc
+
+    typer.echo(
+        "Optimisation completed successfully."
+    )
+
+    typer.echo(
+        f"Scenario: "
+        f"{result.summary.scenario_name}"
+    )
+
+    typer.echo(
+        f"Solver status: "
+        f"{result.summary.status}"
+    )
+
+    typer.echo(
+        f"Capacity available: "
+        f"{result.summary.total_capacity_available}"
+    )
+
+    typer.echo(
+        f"Additional cases allocated: "
+        f"{result.summary.total_additional_cases}"
+    )
+
+    typer.echo(
+        f"Unused capacity: "
+        f"{result.summary.unused_capacity}"
+    )
+
+    typer.echo(
+        f"Capacity utilisation: "
+        f"{result.diagnostics.capacity_utilisation:.1%}"
+    )
+
+    typer.echo(
+        f"Allocations: "
+        f"{result.allocations_path}"
+    )
+
+    typer.echo(
+        f"Summary: "
+        f"{result.summary_path}"
+    )
+
+    typer.echo(
+        f"Diagnostics: "
+        f"{result.diagnostics_path}"
     )
 
 

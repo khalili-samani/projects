@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import csv
 import hashlib
-import io
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,6 +15,10 @@ from qld_surgery_optimiser.exceptions import DownloadError
 from qld_surgery_optimiser.ingestion.models import (
     DownloadResult,
     ResourceRef,
+)
+from qld_surgery_optimiser.ingestion.source_layout import (
+    first_csv_row,
+    is_headerless_category_row,
 )
 
 REQUIRED_IDENTITY_COLUMNS = frozenset(
@@ -286,16 +289,7 @@ class ResourceDownloader:
             ) from exc
 
         try:
-            reader = csv.reader(
-                io.StringIO(
-                    decoded
-                )
-            )
-
-            header = next(
-                reader,
-                None,
-            )
+            header = first_csv_row(decoded)
 
         except csv.Error as exc:
             raise DownloadError(
@@ -320,6 +314,12 @@ class ResourceDownloader:
             REQUIRED_IDENTITY_COLUMNS
             - normalised_header
         )
+
+        if missing_columns and is_headerless_category_row(
+            header,
+            resource_kind=resource.resource_kind,
+        ):
+            return
 
         if missing_columns:
             missing = ", ".join(

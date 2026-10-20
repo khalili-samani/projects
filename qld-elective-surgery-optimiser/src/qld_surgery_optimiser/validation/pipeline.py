@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import logging
 from pathlib import Path
 
@@ -12,6 +13,10 @@ from qld_surgery_optimiser.config import (
     BaseConfig,
 )
 from qld_surgery_optimiser.exceptions import DataValidationError
+from qld_surgery_optimiser.ingestion.source_layout import (
+    CATEGORY_HEADERLESS_COLUMNS,
+    is_headerless_category_row,
+)
 from qld_surgery_optimiser.validation.coercion import (
     coerce_known_columns,
 )
@@ -61,16 +66,49 @@ def _resource_kind_from_path(
 
 def _read_raw_csv(
     path: Path,
+    *,
+    resource_kind: str,
 ) -> pd.DataFrame:
-    """Read raw source conservatively as strings."""
+    """Read both headered CSV and documented headerless category layout."""
     try:
+        with path.open(
+            encoding="utf-8-sig",
+            newline="",
+        ) as source:
+            reader = csv.reader(source)
+            first_row = next(reader, None)
+
+        if not first_row:
+            raise DataValidationError(
+                f"Raw CSV is empty: {path}"
+            )
+
+        if is_headerless_category_row(
+            first_row,
+            resource_kind=resource_kind,
+        ):
+            return pd.read_csv(
+                path,
+                header=None,
+                names=list(CATEGORY_HEADERLESS_COLUMNS),
+                dtype=str,
+                keep_default_na=False,
+                encoding="utf-8-sig",
+            )
+
         return pd.read_csv(
             path,
             dtype=str,
             keep_default_na=False,
             encoding="utf-8-sig",
         )
-    except Exception as exc:
+
+    except (
+        OSError,
+        ValueError,
+        pd.errors.ParserError,
+        csv.Error,
+    ) as exc:
         raise DataValidationError(
             f"Could not read raw CSV: {path}"
         ) from exc
@@ -87,7 +125,10 @@ def validate_file(
         path
     )
 
-    original = _read_raw_csv(path)
+    original = _read_raw_csv(
+        path,
+        resource_kind=resource_kind,
+    )
 
     config = base_config.validation
 
@@ -105,32 +146,30 @@ def validate_file(
     issues: list[QualityIssue] = []
 
     for column in missing:
-        issues.extend(
-    QualityIssue(
-        rule_id="MISSING_REQUIRED_COLUMN",
-        severity="error",
-        message=(
-            "Required source column missing: "
-            f"{column}"
-        ),
-        column=column,
-    )
-    for column in missing
-    )
+        issues.append(
+            QualityIssue(
+                rule_id="MISSING_REQUIRED_COLUMN",
+                severity="error",
+                message=(
+                    "Required source column missing: "
+                    f"{column}"
+                ),
+                column=column,
+            )
+        )
 
     for column in unexpected:
-        issues.extend(
-    QualityIssue(
-        rule_id="UNEXPECTED_COLUMN",
-        severity="warning",
-        message=(
-            "Unexpected source column detected: "
-            f"{column}"
-        ),
-        column=column,
-    )
-    for column in unexpected
-    )
+        issues.append(
+            QualityIssue(
+                rule_id="UNEXPECTED_COLUMN",
+                severity="warning",
+                message=(
+                    "Unexpected source column detected: "
+                    f"{column}"
+                ),
+                column=column,
+            )
+        )
 
     if (
         missing

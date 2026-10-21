@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import httpx
@@ -64,7 +65,9 @@ def test_downloads_and_versions_csv_by_checksum(
     )
 
     with downloader:
-        result = downloader.download(_resource())
+        result = downloader.download(
+            _resource()
+        )
 
     assert result.downloaded is True
     assert result.local_path.exists()
@@ -100,8 +103,13 @@ def test_repeated_identical_content_is_not_rewritten(
         user_agent="test",
         transport=httpx.MockTransport(handler),
     ) as downloader:
-        first = downloader.download(_resource())
-        second = downloader.download(_resource())
+        first = downloader.download(
+            _resource()
+        )
+
+        second = downloader.download(
+            _resource()
+        )
 
     assert first.downloaded is True
     assert second.downloaded is False
@@ -120,7 +128,9 @@ def test_rejects_html_error_page(
         return httpx.Response(
             200,
             content=b"<html><body>Error</body></html>",
-            headers={"content-type": "text/html"},
+            headers={
+                "content-type": "text/html"
+            },
         )
 
     with ResourceDownloader(
@@ -134,7 +144,9 @@ def test_rejects_html_error_page(
         DownloadError,
         match="HTML",
     ):
-        downloader.download(_resource())
+        downloader.download(
+            _resource()
+        )
 
 
 def test_rejects_csv_missing_identity_columns(
@@ -148,7 +160,9 @@ def test_rejects_csv_missing_identity_columns(
         return httpx.Response(
             200,
             content=b"name,value\none,1\n",
-            headers={"content-type": "text/csv"},
+            headers={
+                "content-type": "text/csv"
+            },
         )
 
     with ResourceDownloader(
@@ -162,4 +176,83 @@ def test_rejects_csv_missing_identity_columns(
         DownloadError,
         match="mandatory identity columns",
     ):
-        downloader.download(_resource())
+        downloader.download(
+            _resource()
+        )
+
+
+def test_accepts_documented_headerless_category_csv(
+    tmp_path: Path,
+) -> None:
+    """Accept category source layout without altering immutable content."""
+    payload = (
+        b"211,Atherton Hospital,Dec-23,1,16,100,6.7,4,1,75, "
+        b"16-Jan-2024,1,0,66.7\n"
+    )
+
+    resource = replace(
+        _resource(),
+        resource_kind="category",
+    )
+
+    def handler(
+        request: httpx.Request,
+    ) -> httpx.Response:
+        return httpx.Response(
+            200,
+            content=payload,
+            headers={
+                "content-type": "text/csv"
+            },
+        )
+
+    with ResourceDownloader(
+        raw_data_dir=tmp_path,
+        timeout_seconds=30,
+        max_retries=0,
+        retry_backoff_seconds=0,
+        user_agent="test",
+        transport=httpx.MockTransport(handler),
+    ) as downloader:
+        result = downloader.download(
+            resource
+        )
+
+    assert result.downloaded
+    assert result.local_path.read_bytes() == payload
+
+
+def test_rejects_headerless_layout_for_specialty(
+    tmp_path: Path,
+) -> None:
+    """Do not infer an unverified specialty source layout."""
+    payload = (
+        b"211,Atherton Hospital,Dec-23,1,16,100,6.7,4,1,75, "
+        b"16-Jan-2024,1,0,66.7\n"
+    )
+
+    def handler(
+        request: httpx.Request,
+    ) -> httpx.Response:
+        return httpx.Response(
+            200,
+            content=payload,
+            headers={
+                "content-type": "text/csv"
+            },
+        )
+
+    with ResourceDownloader(
+        raw_data_dir=tmp_path,
+        timeout_seconds=30,
+        max_retries=0,
+        retry_backoff_seconds=0,
+        user_agent="test",
+        transport=httpx.MockTransport(handler),
+    ) as downloader, pytest.raises(
+        DownloadError,
+        match="mandatory identity columns",
+    ):
+        downloader.download(
+            _resource()
+        )

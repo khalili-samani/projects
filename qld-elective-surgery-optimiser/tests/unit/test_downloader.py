@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from pathlib import Path
 
 import httpx
 import pytest
 
 from qld_surgery_optimiser.exceptions import DownloadError
-from qld_surgery_optimiser.ingestion.downloader import (
-    ResourceDownloader,
-)
+from qld_surgery_optimiser.ingestion.downloader import ResourceDownloader
 from qld_surgery_optimiser.ingestion.models import ResourceRef
 
 
@@ -29,6 +26,20 @@ def _resource() -> ResourceRef:
     )
 
 
+def _category_resource() -> ResourceRef:
+    return ResourceRef(
+        resource_id="category-resource-123",
+        package_id="dataset-123",
+        name="December 2023 by Category Summary 1",
+        resource_kind="category",
+        format="CSV",
+        download_url=(
+            "https://example.test/"
+            "es_quarterly1dec23.csv"
+        ),
+    )
+
+
 def _valid_csv() -> bytes:
     return (
         b"Facility_Code,Facility_Name,Report_Month,"
@@ -36,6 +47,27 @@ def _valid_csv() -> bytes:
         b"Vol_Waiting,Vol_LongWaits\n"
         b"101,Example Hospital,2025-06,"
         b"01,General Surgery,50,100,10\n"
+    )
+
+
+def _headerless_category_csv() -> bytes:
+    return (
+        b"211,Atherton Hospital,Dec-23,1,16,100,6.7,4,1,75, "
+        b"16-Jan-2024,1,0,66.7\n"
+    )
+
+
+def _downloader(
+    tmp_path: Path,
+    handler: httpx.MockTransport,
+) -> ResourceDownloader:
+    return ResourceDownloader(
+        raw_data_dir=tmp_path,
+        timeout_seconds=30,
+        max_retries=0,
+        retry_backoff_seconds=0,
+        user_agent="test",
+        transport=handler,
     )
 
 
@@ -50,32 +82,19 @@ def test_downloads_and_versions_csv_by_checksum(
         return httpx.Response(
             200,
             content=_valid_csv(),
-            headers={
-                "content-type": "text/csv"
-            },
+            headers={"content-type": "text/csv"},
         )
 
-    downloader = ResourceDownloader(
-        raw_data_dir=tmp_path,
-        timeout_seconds=30,
-        max_retries=0,
-        retry_backoff_seconds=0,
-        user_agent="test",
-        transport=httpx.MockTransport(handler),
-    )
-
-    with downloader:
-        result = downloader.download(
-            _resource()
-        )
+    with _downloader(
+        tmp_path,
+        httpx.MockTransport(handler),
+    ) as downloader:
+        result = downloader.download(_resource())
 
     assert result.downloaded is True
     assert result.local_path.exists()
     assert result.local_path.parent.name == "resource-123"
-    assert (
-        result.local_path.parent.parent.name
-        == "specialty"
-    )
+    assert result.local_path.parent.parent.name == "specialty"
     assert result.sha256[:16] in result.local_path.name
 
 
@@ -90,26 +109,15 @@ def test_repeated_identical_content_is_not_rewritten(
         return httpx.Response(
             200,
             content=_valid_csv(),
-            headers={
-                "content-type": "application/csv"
-            },
+            headers={"content-type": "application/csv"},
         )
 
-    with ResourceDownloader(
-        raw_data_dir=tmp_path,
-        timeout_seconds=30,
-        max_retries=0,
-        retry_backoff_seconds=0,
-        user_agent="test",
-        transport=httpx.MockTransport(handler),
+    with _downloader(
+        tmp_path,
+        httpx.MockTransport(handler),
     ) as downloader:
-        first = downloader.download(
-            _resource()
-        )
-
-        second = downloader.download(
-            _resource()
-        )
+        first = downloader.download(_resource())
+        second = downloader.download(_resource())
 
     assert first.downloaded is True
     assert second.downloaded is False
@@ -128,25 +136,17 @@ def test_rejects_html_error_page(
         return httpx.Response(
             200,
             content=b"<html><body>Error</body></html>",
-            headers={
-                "content-type": "text/html"
-            },
+            headers={"content-type": "text/html"},
         )
 
-    with ResourceDownloader(
-        raw_data_dir=tmp_path,
-        timeout_seconds=30,
-        max_retries=0,
-        retry_backoff_seconds=0,
-        user_agent="test",
-        transport=httpx.MockTransport(handler),
+    with _downloader(
+        tmp_path,
+        httpx.MockTransport(handler),
     ) as downloader, pytest.raises(
         DownloadError,
         match="HTML",
     ):
-        downloader.download(
-            _resource()
-        )
+        downloader.download(_resource())
 
 
 def test_rejects_csv_missing_identity_columns(
@@ -160,40 +160,24 @@ def test_rejects_csv_missing_identity_columns(
         return httpx.Response(
             200,
             content=b"name,value\none,1\n",
-            headers={
-                "content-type": "text/csv"
-            },
+            headers={"content-type": "text/csv"},
         )
 
-    with ResourceDownloader(
-        raw_data_dir=tmp_path,
-        timeout_seconds=30,
-        max_retries=0,
-        retry_backoff_seconds=0,
-        user_agent="test",
-        transport=httpx.MockTransport(handler),
+    with _downloader(
+        tmp_path,
+        httpx.MockTransport(handler),
     ) as downloader, pytest.raises(
         DownloadError,
         match="mandatory identity columns",
     ):
-        downloader.download(
-            _resource()
-        )
+        downloader.download(_resource())
 
 
 def test_accepts_documented_headerless_category_csv(
     tmp_path: Path,
 ) -> None:
     """Accept category source layout without altering immutable content."""
-    payload = (
-        b"211,Atherton Hospital,Dec-23,1,16,100,6.7,4,1,75, "
-        b"16-Jan-2024,1,0,66.7\n"
-    )
-
-    resource = replace(
-        _resource(),
-        resource_kind="category",
-    )
+    payload = _headerless_category_csv()
 
     def handler(
         request: httpx.Request,
@@ -201,35 +185,26 @@ def test_accepts_documented_headerless_category_csv(
         return httpx.Response(
             200,
             content=payload,
-            headers={
-                "content-type": "text/csv"
-            },
+            headers={"content-type": "text/csv"},
         )
 
-    with ResourceDownloader(
-        raw_data_dir=tmp_path,
-        timeout_seconds=30,
-        max_retries=0,
-        retry_backoff_seconds=0,
-        user_agent="test",
-        transport=httpx.MockTransport(handler),
+    with _downloader(
+        tmp_path,
+        httpx.MockTransport(handler),
     ) as downloader:
-        result = downloader.download(
-            resource
-        )
+        result = downloader.download(_category_resource())
 
-    assert result.downloaded
+    assert result.downloaded is True
+    assert result.local_path.exists()
     assert result.local_path.read_bytes() == payload
+    assert result.local_path.parent.parent.name == "category"
 
 
 def test_rejects_headerless_layout_for_specialty(
     tmp_path: Path,
 ) -> None:
     """Do not infer an unverified specialty source layout."""
-    payload = (
-        b"211,Atherton Hospital,Dec-23,1,16,100,6.7,4,1,75, "
-        b"16-Jan-2024,1,0,66.7\n"
-    )
+    payload = _headerless_category_csv()
 
     def handler(
         request: httpx.Request,
@@ -237,22 +212,14 @@ def test_rejects_headerless_layout_for_specialty(
         return httpx.Response(
             200,
             content=payload,
-            headers={
-                "content-type": "text/csv"
-            },
+            headers={"content-type": "text/csv"},
         )
 
-    with ResourceDownloader(
-        raw_data_dir=tmp_path,
-        timeout_seconds=30,
-        max_retries=0,
-        retry_backoff_seconds=0,
-        user_agent="test",
-        transport=httpx.MockTransport(handler),
+    with _downloader(
+        tmp_path,
+        httpx.MockTransport(handler),
     ) as downloader, pytest.raises(
         DownloadError,
         match="mandatory identity columns",
     ):
-        downloader.download(
-            _resource()
-        )
+        downloader.download(_resource())

@@ -69,7 +69,7 @@ def _read_raw_csv(
     *,
     resource_kind: str,
 ) -> pd.DataFrame:
-    """Read both headered CSV and documented headerless category layout."""
+    """Read headered CSVs and the documented headerless category layout."""
     try:
         with path.open(
             encoding="utf-8-sig",
@@ -143,33 +143,31 @@ def validate_file(
         config=config,
     )
 
-    issues: list[QualityIssue] = []
-
-    for column in missing:
-        issues.append(
-            QualityIssue(
-                rule_id="MISSING_REQUIRED_COLUMN",
-                severity="error",
-                message=(
-                    "Required source column missing: "
-                    f"{column}"
-                ),
-                column=column,
-            )
+    issues: list[QualityIssue] = [
+        QualityIssue(
+            rule_id="MISSING_REQUIRED_COLUMN",
+            severity="error",
+            message=(
+                "Required source column missing: "
+                f"{column}"
+            ),
+            column=column,
         )
+        for column in missing
+    ]
 
-    for column in unexpected:
-        issues.append(
-            QualityIssue(
-                rule_id="UNEXPECTED_COLUMN",
-                severity="warning",
-                message=(
-                    "Unexpected source column detected: "
-                    f"{column}"
-                ),
-                column=column,
-            )
+    issues.extend(
+        QualityIssue(
+            rule_id="UNEXPECTED_COLUMN",
+            severity="warning",
+            message=(
+                "Unexpected source column detected: "
+                f"{column}"
+            ),
+            column=column,
         )
+        for column in unexpected
+    )
 
     if (
         missing

@@ -30,12 +30,12 @@ def _category_resource() -> ResourceRef:
     return ResourceRef(
         resource_id="category-resource-123",
         package_id="dataset-123",
-        name="December 2023 by Category Summary 1",
+        name="June 2022 by Category Summary 1",
         resource_kind="category",
         format="CSV",
         download_url=(
             "https://example.test/"
-            "es_quarterly1dec23.csv"
+            "es_quarterly1jun22.csv"
         ),
     )
 
@@ -57,9 +57,16 @@ def _headerless_category_csv() -> bytes:
     )
 
 
+def _padded_category_csv() -> bytes:
+    return (
+        b"211,Atherton Hospital,Jun-22,1,16,81.3,-27.3,6,0,100,"
+        b" 07-Jul-2022,0,0,100,,,\n"
+    )
+
+
 def _downloader(
     tmp_path: Path,
-    handler: httpx.MockTransport,
+    transport: httpx.MockTransport,
 ) -> ResourceDownloader:
     return ResourceDownloader(
         raw_data_dir=tmp_path,
@@ -67,7 +74,7 @@ def _downloader(
         max_retries=0,
         retry_backoff_seconds=0,
         user_agent="test",
-        transport=handler,
+        transport=transport,
     )
 
 
@@ -176,7 +183,7 @@ def test_rejects_csv_missing_identity_columns(
 def test_accepts_documented_headerless_category_csv(
     tmp_path: Path,
 ) -> None:
-    """Accept category source layout without altering immutable content."""
+    """Accept 14-column category data without changing raw content."""
     payload = _headerless_category_csv()
 
     def handler(
@@ -192,19 +199,80 @@ def test_accepts_documented_headerless_category_csv(
         tmp_path,
         httpx.MockTransport(handler),
     ) as downloader:
-        result = downloader.download(_category_resource())
+        result = downloader.download(
+            _category_resource()
+        )
 
     assert result.downloaded is True
-    assert result.local_path.exists()
     assert result.local_path.read_bytes() == payload
     assert result.local_path.parent.parent.name == "category"
+
+
+def test_accepts_17_column_category_with_empty_padding(
+    tmp_path: Path,
+) -> None:
+    """Accept verified legacy padding while preserving all source bytes."""
+    payload = _padded_category_csv() * 216
+
+    def handler(
+        request: httpx.Request,
+    ) -> httpx.Response:
+        return httpx.Response(
+            200,
+            content=payload,
+            headers={"content-type": "text/csv"},
+        )
+
+    with _downloader(
+        tmp_path,
+        httpx.MockTransport(handler),
+    ) as downloader:
+        result = downloader.download(
+            _category_resource()
+        )
+
+    assert result.downloaded is True
+    assert result.local_path.read_bytes() == payload
+
+
+def test_rejects_populated_legacy_padding(
+    tmp_path: Path,
+) -> None:
+    """Never discard non-empty extra fields from legacy category CSVs."""
+    payload = (
+        _padded_category_csv()
+        + (
+            b"211,Atherton Hospital,Jun-22,2,19,100,-42.4,15,0,100,"
+            b" 07-Jul-2022,0,0,100,important_value,,\n"
+        )
+    )
+
+    def handler(
+        request: httpx.Request,
+    ) -> httpx.Response:
+        return httpx.Response(
+            200,
+            content=payload,
+            headers={"content-type": "text/csv"},
+        )
+
+    with _downloader(
+        tmp_path,
+        httpx.MockTransport(handler),
+    ) as downloader, pytest.raises(
+        DownloadError,
+        match="non-empty trailing fields",
+    ):
+        downloader.download(
+            _category_resource()
+        )
 
 
 def test_rejects_headerless_layout_for_specialty(
     tmp_path: Path,
 ) -> None:
     """Do not infer an unverified specialty source layout."""
-    payload = _headerless_category_csv()
+    payload = _padded_category_csv()
 
     def handler(
         request: httpx.Request,
@@ -222,4 +290,6 @@ def test_rejects_headerless_layout_for_specialty(
         DownloadError,
         match="mandatory identity columns",
     ):
-        downloader.download(_resource())
+        downloader.download(
+            _resource()
+        )

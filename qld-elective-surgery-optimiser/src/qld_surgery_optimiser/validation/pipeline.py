@@ -14,8 +14,9 @@ from qld_surgery_optimiser.config import (
 )
 from qld_surgery_optimiser.exceptions import DataValidationError
 from qld_surgery_optimiser.ingestion.source_layout import (
+    CATEGORY_DATA_COLUMN_COUNT,
     CATEGORY_HEADERLESS_COLUMNS,
-    is_headerless_category_row,
+    detect_headerless_category_layout,
 )
 from qld_surgery_optimiser.validation.coercion import (
     coerce_known_columns,
@@ -69,32 +70,46 @@ def _read_raw_csv(
     *,
     resource_kind: str,
 ) -> pd.DataFrame:
-    """Read headered CSVs and the documented headerless category layout."""
+    """Read headered CSVs and supported headerless category layouts."""
     try:
-        with path.open(
-            encoding="utf-8-sig",
-            newline="",
-        ) as source:
-            reader = csv.reader(source)
-            first_row = next(reader, None)
+        decoded = path.read_text(
+            encoding="utf-8-sig"
+        )
 
-        if not first_row:
-            raise DataValidationError(
-                f"Raw CSV is empty: {path}"
+        layout_width = detect_headerless_category_layout(
+            decoded,
+            resource_kind=resource_kind,
+        )
+
+        if layout_width is not None:
+            column_names = list(
+                CATEGORY_HEADERLESS_COLUMNS
             )
 
-        if is_headerless_category_row(
-            first_row,
-            resource_kind=resource_kind,
-        ):
-            return pd.read_csv(
+            if layout_width > CATEGORY_DATA_COLUMN_COUNT:
+                padding_columns = [
+                    f"_legacy_padding_{index}"
+                    for index in range(
+                        layout_width - CATEGORY_DATA_COLUMN_COUNT
+                    )
+                ]
+                column_names.extend(padding_columns)
+
+            dataframe = pd.read_csv(
                 path,
                 header=None,
-                names=list(CATEGORY_HEADERLESS_COLUMNS),
+                names=column_names,
                 dtype=str,
                 keep_default_na=False,
                 encoding="utf-8-sig",
             )
+
+            if layout_width > CATEGORY_DATA_COLUMN_COUNT:
+                dataframe = dataframe.drop(
+                    columns=padding_columns
+                )
+
+            return dataframe
 
         return pd.read_csv(
             path,

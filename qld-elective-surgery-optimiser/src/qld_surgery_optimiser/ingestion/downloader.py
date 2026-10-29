@@ -17,8 +17,7 @@ from qld_surgery_optimiser.ingestion.models import (
     ResourceRef,
 )
 from qld_surgery_optimiser.ingestion.source_layout import (
-    detect_headerless_category_layout,
-    first_csv_row,
+    detect_source_layout,
 )
 
 REQUIRED_IDENTITY_COLUMNS = frozenset(
@@ -51,7 +50,9 @@ class ResourceDownloader:
         self.user_agent = user_agent
 
         self._client = httpx.Client(
-            timeout=httpx.Timeout(timeout_seconds),
+            timeout=httpx.Timeout(
+                timeout_seconds
+            ),
             follow_redirects=True,
             headers={
                 "User-Agent": user_agent,
@@ -66,9 +67,7 @@ class ResourceDownloader:
             transport=transport,
         )
 
-    def __enter__(
-        self,
-    ) -> ResourceDownloader:
+    def __enter__(self) -> ResourceDownloader:
         """Enter the downloader context manager."""
         return self
 
@@ -81,22 +80,15 @@ class ResourceDownloader:
         """Close the underlying HTTP client."""
         self.close()
 
-    def close(
-        self,
-    ) -> None:
-        """Close the HTTP client."""
+    def close(self) -> None:
+        """Close the underlying HTTP client."""
         self._client.close()
 
     def download(
         self,
         resource: ResourceRef,
     ) -> DownloadResult:
-        """Download and persist one source resource.
-
-        Raw files are content-versioned by SHA-256. If an identical
-        payload has already been persisted, the existing immutable file
-        is reused rather than rewritten.
-        """
+        """Retrieve and persist one immutable source resource."""
         response = self._request(
             resource=resource
         )
@@ -117,9 +109,7 @@ class ResourceDownloader:
             payload
         ).hexdigest()
 
-        retrieved_at = datetime.now(
-            UTC
-        )
+        retrieved_at = datetime.now(UTC)
 
         source_filename = self._source_filename(
             resource=resource
@@ -144,9 +134,7 @@ class ResourceDownloader:
         downloaded = False
 
         if not local_path.exists():
-            local_path.write_bytes(
-                payload
-            )
+            local_path.write_bytes(payload)
             downloaded = True
 
         return DownloadResult(
@@ -164,7 +152,7 @@ class ResourceDownloader:
         *,
         resource: ResourceRef,
     ) -> httpx.Response:
-        """Retrieve one resource using bounded retry behaviour."""
+        """Download one resource with bounded exponential retry."""
         attempts = self.max_retries + 1
         last_error: Exception | None = None
 
@@ -176,17 +164,10 @@ class ResourceDownloader:
                 response.raise_for_status()
                 return response
 
-            except (
-                httpx.HTTPError,
-                httpx.TimeoutException,
-            ) as exc:
+            except httpx.HTTPError as exc:
                 last_error = exc
 
-                final_attempt = (
-                    attempt >= attempts - 1
-                )
-
-                if final_attempt:
+                if attempt >= attempts - 1:
                     break
 
                 delay = (
@@ -211,7 +192,7 @@ class ResourceDownloader:
         content_type: str | None,
         resource: ResourceRef,
     ) -> None:
-        """Validate that a downloaded payload is plausibly a source CSV."""
+        """Reject non-CSV and unsupported source layouts."""
         if not payload:
             raise DownloadError(
                 f"Resource {resource.resource_id} "
@@ -257,32 +238,7 @@ class ResourceDownloader:
             ) from exc
 
         try:
-            header = first_csv_row(
-                decoded
-            )
-
-            if not header:
-                raise DownloadError(
-                    f"Resource {resource.resource_id} "
-                    "did not contain a CSV header or data row."
-                )
-
-            normalised_header = {
-                column.strip()
-                for column in header
-                if column is not None
-                and column.strip()
-            }
-
-            missing_columns = (
-                REQUIRED_IDENTITY_COLUMNS
-                - normalised_header
-            )
-
-            if not missing_columns:
-                return
-
-            layout_width = detect_headerless_category_layout(
+            layout = detect_source_layout(
                 decoded,
                 resource_kind=resource.resource_kind,
             )
@@ -296,28 +252,27 @@ class ResourceDownloader:
         except ValueError as exc:
             raise DownloadError(
                 f"Resource {resource.resource_id} "
-                f"has an invalid legacy CSV layout: {exc}"
+                f"has an invalid CSV layout: {exc}"
             ) from exc
 
-        if layout_width is not None:
-            return
+        if layout is None:
+            missing = ", ".join(
+                sorted(REQUIRED_IDENTITY_COLUMNS)
+            )
 
-        missing = ", ".join(
-            sorted(missing_columns)
-        )
-
-        raise DownloadError(
-            f"Resource {resource.resource_id} "
-            "is missing mandatory identity "
-            f"columns: {missing}."
-        )
+            raise DownloadError(
+                f"Resource {resource.resource_id} "
+                "is missing mandatory identity "
+                f"columns or has an unsupported source layout: "
+                f"{missing}."
+            )
 
     @staticmethod
     def _source_filename(
         *,
         resource: ResourceRef,
     ) -> str:
-        """Derive a safe filename from the source download URL."""
+        """Derive a safe filename from the download URL."""
         parsed_url = urlparse(
             resource.download_url
         )
@@ -327,9 +282,7 @@ class ResourceDownloader:
         ).name
 
         if not filename:
-            filename = (
-                f"{resource.resource_id}.csv"
-            )
+            filename = f"{resource.resource_id}.csv"
 
         filename = (
             ResourceDownloader._sanitise_filename(
@@ -337,9 +290,7 @@ class ResourceDownloader:
             )
         )
 
-        if not filename.casefold().endswith(
-            ".csv"
-        ):
+        if not filename.casefold().endswith(".csv"):
             filename = f"{filename}.csv"
 
         return filename

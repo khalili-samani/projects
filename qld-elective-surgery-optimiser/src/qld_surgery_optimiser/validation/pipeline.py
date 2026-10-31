@@ -14,9 +14,8 @@ from qld_surgery_optimiser.config import (
 )
 from qld_surgery_optimiser.exceptions import DataValidationError
 from qld_surgery_optimiser.ingestion.source_layout import (
-    CATEGORY_DATA_COLUMN_COUNT,
-    CATEGORY_HEADERLESS_COLUMNS,
-    detect_headerless_category_layout,
+    LEGACY_CATEGORY_RENAME,
+    detect_source_layout,
 )
 from qld_surgery_optimiser.validation.coercion import (
     coerce_known_columns,
@@ -48,7 +47,7 @@ logger = logging.getLogger(__name__)
 def _resource_kind_from_path(
     path: Path,
 ) -> str:
-    """Infer source family from the immutable raw directory layout."""
+    """Infer the source family from immutable raw storage."""
     parts = {
         part.casefold()
         for part in path.parts
@@ -70,53 +69,78 @@ def _read_raw_csv(
     *,
     resource_kind: str,
 ) -> pd.DataFrame:
-    """Read headered CSVs and supported headerless category layouts."""
+    """Read supported CSV layouts into canonical source columns."""
+    if resource_kind not in {"category", "specialty"}:
+        raise DataValidationError(
+            f"Unsupported resource kind: {resource_kind}"
+        )
+
     try:
         decoded = path.read_text(
             encoding="utf-8-sig"
         )
 
-        layout_width = detect_headerless_category_layout(
+        layout = detect_source_layout(
             decoded,
             resource_kind=resource_kind,
         )
 
-        if layout_width is not None:
-            column_names = list(
-                CATEGORY_HEADERLESS_COLUMNS
+        if layout is None:
+            raise DataValidationError(
+                f"Unsupported raw CSV source layout: {path}"
             )
 
-            if layout_width > CATEGORY_DATA_COLUMN_COUNT:
-                padding_columns = [
-                    f"_legacy_padding_{index}"
-                    for index in range(
-                        layout_width - CATEGORY_DATA_COLUMN_COUNT
-                    )
-                ]
-                column_names.extend(padding_columns)
-
-            dataframe = pd.read_csv(
+        if layout.mode == "headered":
+            return pd.read_csv(
                 path,
-                header=None,
-                names=column_names,
                 dtype=str,
                 keep_default_na=False,
                 encoding="utf-8-sig",
             )
 
-            if layout_width > CATEGORY_DATA_COLUMN_COUNT:
-                dataframe = dataframe.drop(
-                    columns=padding_columns
-                )
+        if layout.mode == "legacy_headered":
+            dataframe = pd.read_csv(
+                path,
+                dtype=str,
+                keep_default_na=False,
+                encoding="utf-8-sig",
+            )
 
-            return dataframe
+            dataframe.columns = [
+                column.strip()
+                for column in dataframe.columns
+            ]
 
-        return pd.read_csv(
+            return dataframe.rename(
+                columns=LEGACY_CATEGORY_RENAME
+            )
+
+        column_names = list(layout.columns)
+
+        padding_columns = [
+            f"_legacy_padding_{index}"
+            for index in range(layout.padding_count)
+        ]
+
+        column_names.extend(
+            padding_columns
+        )
+
+        dataframe = pd.read_csv(
             path,
+            header=None,
+            names=column_names,
             dtype=str,
             keep_default_na=False,
             encoding="utf-8-sig",
         )
+
+        if padding_columns:
+            dataframe = dataframe.drop(
+                columns=padding_columns
+            )
+
+        return dataframe
 
     except (
         OSError,
@@ -214,7 +238,9 @@ def validate_file(
         config=config,
     )
 
-    issues.extend(row_issues)
+    issues.extend(
+        row_issues
+    )
 
     valid = coerced.loc[
         ~coerced.index.isin(invalid_rows)
@@ -275,7 +301,7 @@ def validate_file(
 def _raw_csv_files(
     raw_data_dir: Path,
 ) -> list[Path]:
-    """Return immutable raw source CSVs, excluding the manifest."""
+    """Return immutable raw CSV files, excluding the manifest."""
     candidates = [
         path
         for path in raw_data_dir.rglob("*.csv")
@@ -290,7 +316,7 @@ def run_validation(
     settings: AppSettings,
     base_config: BaseConfig,
 ) -> ValidationRunSummary:
-    """Validate all currently retrieved raw elective-surgery files."""
+    """Validate all retrieved raw elective-surgery files."""
     files = _raw_csv_files(
         settings.raw_data_dir
     )

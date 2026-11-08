@@ -71,7 +71,7 @@ Results from synthetic data illustrate methods and workflows, not actual busines
 
 ## Contact
 
-I'm based in Melbourne and interested in opportunities across data analytics, data science and analytics engineering.
+I'm interested in opportunities across data analytics, data science and analytics engineering.
 
 - [LinkedIn](https://www.linkedin.com/in/ali-khalili-91093b297/)
 - [GitHub profile](https://github.com/khalili-samani)

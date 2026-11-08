@@ -161,7 +161,7 @@ def _has_data_identity(
 
     if not (
         facility_code.isdecimal()
-        and facility_name
+        and bool(facility_name)
         and _PERIOD.fullmatch(report_month) is not None
     ):
         return False
@@ -317,7 +317,7 @@ def detect_source_layout(
             CATEGORY_COLUMN_COUNT,
             LEGACY_PADDED_CATEGORY_COUNT,
         }
-        canonical_columns = CATEGORY_COLUMNS
+        canonical_columns: tuple[str, ...] = CATEGORY_COLUMNS
     else:
         allowed_widths = {
             SPECIALTY_COLUMN_COUNT,

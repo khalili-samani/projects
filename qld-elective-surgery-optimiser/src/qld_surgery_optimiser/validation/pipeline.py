@@ -15,6 +15,7 @@ from qld_surgery_optimiser.config import (
 from qld_surgery_optimiser.exceptions import DataValidationError
 from qld_surgery_optimiser.ingestion.source_layout import (
     LEGACY_CATEGORY_RENAME,
+    ResourceKind,
     detect_source_layout,
 )
 from qld_surgery_optimiser.validation.coercion import (
@@ -46,7 +47,7 @@ logger = logging.getLogger(__name__)
 
 def _resource_kind_from_path(
     path: Path,
-) -> str:
+) -> ResourceKind:
     """Infer the source family from immutable raw storage."""
     parts = {
         part.casefold()
@@ -67,14 +68,9 @@ def _resource_kind_from_path(
 def _read_raw_csv(
     path: Path,
     *,
-    resource_kind: str,
+    resource_kind: ResourceKind,
 ) -> pd.DataFrame:
     """Read supported CSV layouts into canonical source columns."""
-    if resource_kind not in {"category", "specialty"}:
-        raise DataValidationError(
-            f"Unsupported resource kind: {resource_kind}"
-        )
-
     try:
         decoded = path.read_text(
             encoding="utf-8-sig"

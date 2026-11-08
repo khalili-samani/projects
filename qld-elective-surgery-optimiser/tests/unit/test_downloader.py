@@ -14,12 +14,13 @@ from qld_surgery_optimiser.ingestion.source_layout import (
     CATEGORY_COLUMNS,
     LEGACY_CATEGORY_COLUMNS,
     SPECIALTY_COLUMNS,
+    ResourceKind,
 )
 
 
 def _resource(
     *,
-    resource_kind: str = "specialty",
+    resource_kind: ResourceKind = "specialty",
 ) -> ResourceRef:
     return ResourceRef(
         resource_id="resource-123",

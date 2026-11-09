@@ -17,7 +17,6 @@ from qld_surgery_optimiser.ingestion.source_layout import (
 )
 from qld_surgery_optimiser.validation.pipeline import _read_raw_csv
 
-
 CATEGORY_ROW = (
     "211,Atherton Hospital,Dec-23,1,16,100,6.7,4,1,75,"
     " 16-Jan-2024,1,0,66.7"

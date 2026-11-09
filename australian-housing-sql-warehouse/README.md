@@ -14,7 +14,7 @@ A property analytics team receives recurring extracts containing inconsistent ca
 
 ## Relationship to the original project
 
-- **Original project:** ['Australian Housing Data Quality Simulator'](https://github.com/khalili-samani/projects/tree/main/messy_data_generator_Aus_housing)
+- **Original project:** ['Australian Housing Data Quality Simulator'](https://github.com/khalili-samani/projects/tree/main/australian-housing-data-simulator)
 
 The original project is the upstream synthetic data producer. This repository does not duplicate its generation logic. It begins with the generated 37-column CSV and adds the downstream SQL engineering and analytical layer: ingestion control, cleaning, deduplication, conformed dimensions, a canonical sale fact, marts, tests and business analysis.
 

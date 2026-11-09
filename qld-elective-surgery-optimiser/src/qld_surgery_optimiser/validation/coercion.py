@@ -13,6 +13,21 @@ import pandas as pd
 
 from qld_surgery_optimiser.config import ValidationConfig
 
+DATE_FORMATS = (
+    "%Y-%m-%d",
+    "%d/%m/%Y",
+    "%d-%m-%Y",
+    "%d-%b-%Y",
+    "%d %b %Y",
+    "%d/%m/%y",
+    "%d-%m-%y",
+    "%b-%y",
+    "%b-%Y",
+    "%B-%Y",
+    "%b%Y",
+    "%Y-%m",
+)
+
 
 def normalise_nulls(
     series: pd.Series,
@@ -120,17 +135,38 @@ def parse_date_series(
     *,
     null_tokens: list[str],
 ) -> tuple[pd.Series, pd.Series]:
-    """Parse dates without silently accepting unparseable non-null values."""
+    """Parse explicitly supported date and reporting-period formats.
+
+    Australian day/month/year conventions are used for numeric dates.
+    Month-year reporting labels are represented by the first day
+    of their respective month.
+
+    Unrecognised non-null values remain parse failures.
+    """
     cleaned = normalise_nulls(
         series,
         null_tokens=null_tokens,
     )
 
-    parsed = pd.to_datetime(
-        cleaned,
-        errors="coerce",
-        dayfirst=False,
+    parsed = pd.Series(
+        pd.NaT,
+        index=cleaned.index,
+        dtype="datetime64[ns]",
     )
+
+    for date_format in DATE_FORMATS:
+        remaining = cleaned.notna() & parsed.isna()
+
+        if not remaining.any():
+            break
+
+        candidates = pd.to_datetime(
+            cleaned.loc[remaining],
+            format=date_format,
+            errors="coerce",
+        )
+
+        parsed.loc[remaining] = candidates
 
     invalid_mask = (
         cleaned.notna()

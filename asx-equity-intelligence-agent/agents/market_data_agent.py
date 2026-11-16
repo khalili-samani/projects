@@ -1,416 +1,1370 @@
-"""
-Market Data Agent
-=================
-Responsibility: Fetch, validate, and store ASX market data for the watchlist.
-This is the foundation layer — all other agents consume data from here.
+"""Market data ingestion, validation and DuckDB persistence."""
 
-Design decisions:
-- yfinance for OHLCV (free, reliable, ASX-compatible with .AX suffix)
-- DuckDB for local time series storage (fast, SQL-native, zero infra)
-- Pydantic for data validation before storage
-- Structured logging so the orchestrator can track agent health
-"""
-
+import argparse
 import logging
+import math
+from contextlib import contextmanager
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
+from typing import Iterator
+from zoneinfo import ZoneInfo
+
 import duckdb
-import yfinance as yf
+import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import Optional
-from pydantic import BaseModel, field_validator
-
-# ---------------------------------------------------------------------------
-# Logging — every agent uses structured logs so the orchestrator can monitor
-# ---------------------------------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+import yfinance as yf
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    field_validator,
+    model_validator,
 )
-logger = logging.getLogger("MarketDataAgent")
 
 
-# ---------------------------------------------------------------------------
-# Watchlist — 10 liquid ASX stocks across key sectors
-# Format: yfinance requires the .AX suffix for ASX-listed securities
-# ---------------------------------------------------------------------------
+logger = logging.getLogger(__name__)
+
+
+DEFAULT_DB_PATH = "asx_market_data.db"
+DEFAULT_LOOKBACK_DAYS = 365
+MAX_DATA_AGE_DAYS = 4
+RETURN_BUFFER_DAYS = 14
+MAX_ABSOLUTE_EQUITY_RETURN = 0.50
+
+ASX_TIMEZONE = "Australia/Sydney"
+BENCHMARK_TICKER = "^AXJO"
+
+
 DEFAULT_WATCHLIST = {
-    "BHP.AX":  "BHP Group (Materials)",
-    "CBA.AX":  "Commonwealth Bank (Financials)",
-    "CSL.AX":  "CSL Limited (Healthcare)",
-    "WDS.AX":  "Woodside Energy (Energy)",
-    "WES.AX":  "Wesfarmers (Consumer Discretionary)",
-    "ANZ.AX":  "ANZ Banking Group (Financials)",
-    "RIO.AX":  "Rio Tinto (Materials)",
-    "WBC.AX":  "Westpac Banking (Financials)",
-    "MQG.AX":  "Macquarie Group (Financials)",
-    "TLS.AX":  "Telstra (Telecommunications)",
+    "BHP.AX": "BHP Group (Materials)",
+    "CBA.AX": "Commonwealth Bank (Financials)",
+    "CSL.AX": "CSL Limited (Healthcare)",
+    "WDS.AX": "Woodside Energy (Energy)",
+    "WES.AX": "Wesfarmers (Consumer Discretionary)",
+    "ANZ.AX": "ANZ Banking Group (Financials)",
+    "RIO.AX": "Rio Tinto (Materials)",
+    "WBC.AX": "Westpac Banking (Financials)",
+    "MQG.AX": "Macquarie Group (Financials)",
+    "TLS.AX": "Telstra (Telecommunications)",
 }
 
-# Macro context tickers — these give the risk agent broader market signals
+
 MACRO_TICKERS = {
-    "^AXJO":   "ASX 200 Index",
+    "^AXJO": "ASX 200 Index",
     "AUDUSD=X": "AUD/USD Exchange Rate",
-    "GC=F":    "Gold Futures (USD)",
-    "CL=F":    "Crude Oil Futures (WTI)",
+    "GC=F": "Gold Futures (USD)",
+    "CL=F": "Crude Oil Futures (WTI)",
 }
 
 
-# ---------------------------------------------------------------------------
-# Data Models — Pydantic validates incoming data before we trust it
-# ---------------------------------------------------------------------------
+MACRO_TIMEZONES = {
+    "^AXJO": ASX_TIMEZONE,
+    "AUDUSD=X": "Europe/London",
+    "GC=F": "America/New_York",
+    "CL=F": "America/New_York",
+}
+
+
 class OHLCVRecord(BaseModel):
+    """Validated daily equity market observation."""
+
+    model_config = ConfigDict(allow_inf_nan=False)
+
     ticker: str
-    date: str           # ISO format: YYYY-MM-DD
+    date: str
     open: float
     high: float
     low: float
     close: float
     volume: float
-    daily_return: float  # (close - prev_close) / prev_close
+    daily_return: float
 
-    @field_validator("close", "open", "high", "low")
+    @field_validator("ticker")
     @classmethod
-    def price_must_be_positive(cls, v):
-        if v <= 0:
-            raise ValueError(f"Price must be positive, got {v}")
-        return round(v, 4)
+    def validate_ticker(cls, value: str) -> str:
+        value = value.strip().upper()
+
+        if not value:
+            raise ValueError("Ticker cannot be empty.")
+
+        return value
+
+    @field_validator("date")
+    @classmethod
+    def validate_date(cls, value: str) -> str:
+        return date.fromisoformat(value).isoformat()
+
+    @field_validator("open", "high", "low", "close")
+    @classmethod
+    def validate_price(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("Prices must be positive.")
+
+        return value
+
+    @field_validator("volume")
+    @classmethod
+    def validate_volume(cls, value: float) -> float:
+        if value < 0:
+            raise ValueError("Volume cannot be negative.")
+
+        return value
 
     @field_validator("daily_return")
     @classmethod
-    def return_must_be_sane(cls, v):
-        # Flag if daily return is outside ±50% — likely a data error
-        if abs(v) > 0.5:
-            raise ValueError(f"Suspicious daily return: {v:.2%}")
-        return round(v, 6)
+    def validate_return(cls, value: float) -> float:
+        if abs(value) > MAX_ABSOLUTE_EQUITY_RETURN:
+            raise ValueError(
+                f"Suspicious daily equity return: {value:.2%}"
+            )
+
+        return value
+
+    @model_validator(mode="after")
+    def validate_price_relationships(self):
+        tolerance = max(self.high, self.close) * 1e-6
+
+        if self.low > self.high + tolerance:
+            raise ValueError("Low price exceeds high price.")
+
+        if self.open > self.high + tolerance:
+            raise ValueError("Open price exceeds high price.")
+
+        if self.close > self.high + tolerance:
+            raise ValueError("Close price exceeds high price.")
+
+        if self.open < self.low - tolerance:
+            raise ValueError("Open price is below low price.")
+
+        if self.close < self.low - tolerance:
+            raise ValueError("Close price is below low price.")
+
+        return self
 
 
 class FundamentalSnapshot(BaseModel):
+    """Timestamped company fundamentals and sector metadata."""
+
+    model_config = ConfigDict(allow_inf_nan=False)
+
     ticker: str
     fetched_at: str
-    market_cap: Optional[float] = None
-    pe_ratio: Optional[float] = None
-    forward_pe: Optional[float] = None
-    dividend_yield: Optional[float] = None
-    fifty_two_week_high: Optional[float] = None
-    fifty_two_week_low: Optional[float] = None
-    beta: Optional[float] = None
-    sector: Optional[str] = None
-    industry: Optional[str] = None
+    market_cap: float | None = None
+    pe_ratio: float | None = None
+    forward_pe: float | None = None
+    dividend_yield: float | None = None
+    fifty_two_week_high: float | None = None
+    fifty_two_week_low: float | None = None
+    beta: float | None = None
+    sector: str | None = None
+    industry: str | None = None
 
 
-# ---------------------------------------------------------------------------
-# Database Layer — DuckDB stores everything locally as a .db file
-# We use two tables: ohlcv for price history, fundamentals for snapshots
-# ---------------------------------------------------------------------------
+def optional_float(value) -> float | None:
+    """Convert optional metadata into a finite numerical value."""
+
+    if value is None:
+        return None
+
+    try:
+        result = float(value)
+
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+    return result if math.isfinite(result) else None
+
+
+def optional_text(value) -> str | None:
+    """Normalise optional textual metadata."""
+
+    if not isinstance(value, str):
+        return None
+
+    value = value.strip()
+
+    return value or None
+
+
+def normalise_history(
+    history: pd.DataFrame,
+    required_columns: tuple[str, ...],
+) -> pd.DataFrame:
+    """Normalise and validate single-instrument market history."""
+
+    if history is None or history.empty:
+        raise ValueError("No market history returned.")
+
+    df = history.copy()
+
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+
+    if df.columns.duplicated().any():
+        raise ValueError("Duplicate market data columns.")
+
+    missing = set(required_columns) - set(df.columns)
+
+    if missing:
+        raise ValueError(
+            f"Missing columns: {sorted(missing)}"
+        )
+
+    df = df.loc[:, list(required_columns)].copy()
+
+    index = pd.DatetimeIndex(
+        pd.to_datetime(df.index, errors="raise")
+    )
+
+    if index.hasnans:
+        raise ValueError("Invalid observation dates.")
+
+    if index.tz is not None:
+        index = index.tz_localize(None)
+
+    df.index = index.normalize()
+    df.index.name = "date"
+
+    df = df.sort_index()
+
+    df = df.loc[
+        ~df.index.duplicated(keep="last")
+    ].copy()
+
+    for column in required_columns:
+        df[column] = pd.to_numeric(
+            df[column],
+            errors="coerce",
+        )
+
+    if not np.isfinite(
+        df.to_numpy(dtype=float)
+    ).all():
+        raise ValueError(
+            "Market history contains missing or non-finite values."
+        )
+
+    if (df["Close"] <= 0).any():
+        raise ValueError(
+            "Market history contains non-positive closing prices."
+        )
+
+    return df
+
+
+def calculate_daily_returns(
+    history: pd.DataFrame,
+    start_date: date,
+    end_date: date,
+) -> pd.DataFrame:
+    """Calculate consecutive-observation returns before date filtering."""
+
+    df = history.copy()
+
+    df["daily_return"] = df["Close"].pct_change(
+        fill_method=None
+    )
+
+    df = df.dropna(subset=["daily_return"])
+
+    df = df.loc[
+        (df.index >= pd.Timestamp(start_date))
+        & (df.index < pd.Timestamp(end_date))
+    ].copy()
+
+    if df.empty:
+        raise ValueError(
+            "No observations with calculable returns."
+        )
+
+    if not np.isfinite(
+        df["daily_return"].to_numpy(dtype=float)
+    ).all():
+        raise ValueError(
+            "Calculated returns contain non-finite values."
+        )
+
+    return df
+
+
+def assess_forecast_readiness(
+    equity_dates: list[str],
+    benchmark_dates: list[str],
+) -> tuple[bool, str]:
+    """Assess whether equity and benchmark histories are aligned."""
+
+    equity = sorted(
+        set(equity_dates)
+    )
+
+    benchmark = sorted(
+        set(benchmark_dates)
+    )
+
+    if not equity:
+        return False, "Equity history is unavailable."
+
+    if not benchmark:
+        return False, "Benchmark history is unavailable."
+
+    if equity[-1] != benchmark[-1]:
+        return (
+            False,
+            f"Latest equity observation {equity[-1]} "
+            f"does not match benchmark observation "
+            f"{benchmark[-1]}.",
+        )
+
+    overlap_start = max(
+        equity[0],
+        benchmark[0],
+    )
+
+    overlap_end = min(
+        equity[-1],
+        benchmark[-1],
+    )
+
+    equity_overlap = {
+        observation
+        for observation in equity
+        if overlap_start <= observation <= overlap_end
+    }
+
+    benchmark_overlap = {
+        observation
+        for observation in benchmark
+        if overlap_start <= observation <= overlap_end
+    }
+
+    if not equity_overlap or not benchmark_overlap:
+        return False, "No overlapping market observations."
+
+    missing_benchmark = sorted(
+        equity_overlap - benchmark_overlap
+    )
+
+    missing_equity = sorted(
+        benchmark_overlap - equity_overlap
+    )
+
+    if missing_benchmark or missing_equity:
+        reasons = []
+
+        if missing_benchmark:
+            reasons.append(
+                "Missing benchmark dates: "
+                + ", ".join(missing_benchmark)
+            )
+
+        if missing_equity:
+            reasons.append(
+                "Missing equity dates: "
+                + ", ".join(missing_equity)
+            )
+
+        return False, "; ".join(reasons)
+
+    return True, "Equity and benchmark dates are aligned."
+
+
 class MarketDatabase:
-    def __init__(self, db_path: str = "asx_market_data.db"):
-        self.db_path = db_path
-        self.conn = duckdb.connect(db_path)
-        self._initialise_tables()
-
-    def _initialise_tables(self):
-        """Create tables if they don't already exist."""
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS ohlcv (
-                ticker        VARCHAR,
-                date          DATE,
-                open          DOUBLE,
-                high          DOUBLE,
-                low           DOUBLE,
-                close         DOUBLE,
-                volume        DOUBLE,
-                daily_return  DOUBLE,
-                PRIMARY KEY (ticker, date)
-            )
-        """)
-
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS fundamentals (
-                ticker              VARCHAR,
-                fetched_at          TIMESTAMP,
-                market_cap          DOUBLE,
-                pe_ratio            DOUBLE,
-                forward_pe          DOUBLE,
-                dividend_yield      DOUBLE,
-                fifty_two_week_high DOUBLE,
-                fifty_two_week_low  DOUBLE,
-                beta                DOUBLE,
-                sector              VARCHAR,
-                industry            VARCHAR,
-                PRIMARY KEY (ticker, fetched_at)
-            )
-        """)
-
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS macro (
-                ticker        VARCHAR,
-                date          DATE,
-                close         DOUBLE,
-                daily_return  DOUBLE,
-                PRIMARY KEY (ticker, date)
-            )
-        """)
-        logger.info(f"Database initialised at {self.db_path}")
-
-    def upsert_ohlcv(self, records: list[OHLCVRecord]):
-        """Insert or replace OHLCV records (handles re-runs cleanly)."""
-        if not records:
-            return
-        data = [(r.ticker, r.date, r.open, r.high, r.low,
-                  r.close, r.volume, r.daily_return) for r in records]
-        self.conn.executemany("""
-            INSERT OR REPLACE INTO ohlcv
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, data)
-        logger.info(f"Upserted {len(records)} OHLCV records")
-
-    def upsert_fundamentals(self, snap: FundamentalSnapshot):
-        self.conn.execute("""
-            INSERT OR REPLACE INTO fundamentals VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-            )
-        """, (
-            snap.ticker, snap.fetched_at, snap.market_cap, snap.pe_ratio,
-            snap.forward_pe, snap.dividend_yield, snap.fifty_two_week_high,
-            snap.fifty_two_week_low, snap.beta, snap.sector, snap.industry
-        ))
-
-    def upsert_macro(self, ticker: str, df: pd.DataFrame):
-        """Store macro ticker history (ASX200, AUD/USD, etc.)"""
-        for date, row in df.iterrows():
-            self.conn.execute("""
-                INSERT OR REPLACE INTO macro VALUES (?, ?, ?, ?)
-            """, (ticker, str(date.date()), float(row["Close"]),
-                  float(row.get("daily_return", 0.0))))
-
-    def get_ohlcv(self, ticker: str, days: int = 60) -> pd.DataFrame:
-        """Retrieve recent OHLCV history for a ticker."""
-        return self.conn.execute("""
-            SELECT * FROM ohlcv
-            WHERE ticker = ?
-            ORDER BY date DESC
-            LIMIT ?
-        """, (ticker, days)).df()
-
-    def get_latest_fundamentals(self, ticker: str) -> dict:
-        result = self.conn.execute("""
-            SELECT * FROM fundamentals
-            WHERE ticker = ?
-            ORDER BY fetched_at DESC
-            LIMIT 1
-        """, (ticker,)).df()
-        return result.to_dict("records")[0] if not result.empty else {}
-
-    def close(self):
-        self.conn.close()
-
-
-# ---------------------------------------------------------------------------
-# Market Data Agent — the agent itself
-# ---------------------------------------------------------------------------
-class MarketDataAgent:
-    """
-    Fetches and stores market data for the ASX watchlist.
-
-    In the multi-agent system, this agent runs first and its outputs
-    are consumed by the Forecasting Agent and Risk Agent.
-    """
+    """Manage local market data persistence using DuckDB."""
 
     def __init__(
         self,
-        watchlist: dict = DEFAULT_WATCHLIST,
-        macro_tickers: dict = MACRO_TICKERS,
-        db_path: str = "asx_market_data.db",
-        lookback_days: int = 365,
+        db_path: str = DEFAULT_DB_PATH,
     ):
-        self.watchlist = watchlist
-        self.macro_tickers = macro_tickers
-        self.db = MarketDatabase(db_path)
-        self.lookback_days = lookback_days
-        self.start_date = (
-            datetime.today() - timedelta(days=lookback_days)
-        ).strftime("%Y-%m-%d")
-        self.end_date = datetime.today().strftime("%Y-%m-%d")
+        self.db_path = db_path
+        self.closed = False
 
-    def _fetch_ohlcv(self, ticker: str) -> list[OHLCVRecord]:
-        """
-        Download price history from Yahoo Finance and convert to validated records.
-        The .AX suffix tells yfinance this is an ASX-listed security.
-        """
-        logger.info(f"Fetching OHLCV for {ticker}...")
+        if db_path != ":memory:":
+            Path(db_path).parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+
+        self.conn = duckdb.connect(db_path)
+
         try:
-            df = yf.download(
+            self._initialise_tables()
+
+        except Exception:
+            self.close()
+            raise
+
+    def _initialise_tables(self) -> None:
+        """Create the existing database schema when necessary."""
+
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ohlcv (
+                ticker VARCHAR,
+                date DATE,
+                open DOUBLE,
+                high DOUBLE,
+                low DOUBLE,
+                close DOUBLE,
+                volume DOUBLE,
+                daily_return DOUBLE,
+                PRIMARY KEY (ticker, date)
+            )
+            """
+        )
+
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS fundamentals (
+                ticker VARCHAR,
+                fetched_at TIMESTAMP,
+                market_cap DOUBLE,
+                pe_ratio DOUBLE,
+                forward_pe DOUBLE,
+                dividend_yield DOUBLE,
+                fifty_two_week_high DOUBLE,
+                fifty_two_week_low DOUBLE,
+                beta DOUBLE,
+                sector VARCHAR,
+                industry VARCHAR,
+                PRIMARY KEY (ticker, fetched_at)
+            )
+            """
+        )
+
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS macro (
+                ticker VARCHAR,
+                date DATE,
+                close DOUBLE,
+                daily_return DOUBLE,
+                PRIMARY KEY (ticker, date)
+            )
+            """
+        )
+
+        logger.info(
+            "Database initialised at %s",
+            self.db_path,
+        )
+
+    @contextmanager
+    def transaction(self) -> Iterator[None]:
+        """Commit a complete batch or roll it back."""
+
+        self.conn.execute("BEGIN TRANSACTION")
+
+        try:
+            yield
+
+        except BaseException:
+            self.conn.execute("ROLLBACK")
+            raise
+
+        else:
+            self.conn.execute("COMMIT")
+
+    def upsert_ohlcv(
+        self,
+        records: list[OHLCVRecord],
+    ) -> None:
+        """Insert or replace validated equity observations."""
+
+        if not records:
+            return
+
+        data = [
+            (
+                record.ticker,
+                record.date,
+                record.open,
+                record.high,
+                record.low,
+                record.close,
+                record.volume,
+                record.daily_return,
+            )
+            for record in records
+        ]
+
+        with self.transaction():
+            self.conn.executemany(
+                """
+                INSERT OR REPLACE INTO ohlcv (
+                    ticker,
+                    date,
+                    open,
+                    high,
+                    low,
+                    close,
+                    volume,
+                    daily_return
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                data,
+            )
+
+        logger.info(
+            "Upserted %d OHLCV records",
+            len(records),
+        )
+
+    def upsert_fundamentals(
+        self,
+        snapshot: FundamentalSnapshot,
+    ) -> None:
+        """Store a timestamped fundamental snapshot."""
+
+        self.conn.execute(
+            """
+            INSERT OR REPLACE INTO fundamentals (
                 ticker,
-                start=self.start_date,
-                end=self.end_date,
-                progress=False,
-                auto_adjust=True,   # adjusts for splits and dividends
+                fetched_at,
+                market_cap,
+                pe_ratio,
+                forward_pe,
+                dividend_yield,
+                fifty_two_week_high,
+                fifty_two_week_low,
+                beta,
+                sector,
+                industry
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                snapshot.ticker,
+                snapshot.fetched_at,
+                snapshot.market_cap,
+                snapshot.pe_ratio,
+                snapshot.forward_pe,
+                snapshot.dividend_yield,
+                snapshot.fifty_two_week_high,
+                snapshot.fifty_two_week_low,
+                snapshot.beta,
+                snapshot.sector,
+                snapshot.industry,
+            ),
+        )
+
+    def upsert_macro(
+        self,
+        ticker: str,
+        history: pd.DataFrame,
+    ) -> None:
+        """Store validated macroeconomic observations."""
+
+        if history.empty:
+            return
+
+        data = [
+            (
+                ticker,
+                timestamp.date().isoformat(),
+                float(row["Close"]),
+                float(row["daily_return"]),
+            )
+            for timestamp, row in history.iterrows()
+        ]
+
+        with self.transaction():
+            self.conn.executemany(
+                """
+                INSERT OR REPLACE INTO macro (
+                    ticker,
+                    date,
+                    close,
+                    daily_return
+                )
+                VALUES (?, ?, ?, ?)
+                """,
+                data,
             )
 
-            if df.empty:
-                logger.warning(f"No data returned for {ticker}")
-                return []
+    def get_ohlcv(
+        self,
+        ticker: str,
+        days: int = 60,
+    ) -> pd.DataFrame:
+        """Retrieve recent stored equity observations."""
 
-            # Flatten MultiIndex columns if yfinance returns them
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
+        return self.conn.execute(
+            """
+            SELECT *
+            FROM ohlcv
+            WHERE ticker = ?
+            ORDER BY date DESC
+            LIMIT ?
+            """,
+            (ticker, days),
+        ).df()
 
-            # Calculate daily returns — needed by forecasting and risk agents
-            df["daily_return"] = df["Close"].pct_change().fillna(0)
+    def get_latest_fundamentals(
+        self,
+        ticker: str,
+    ) -> dict:
+        """Retrieve the latest stored fundamental snapshot."""
 
-            records = []
-            for date, row in df.iterrows():
-                try:
-                    record = OHLCVRecord(
-                        ticker=ticker,
-                        date=str(date.date()),
-                        open=float(row["Open"]),
-                        high=float(row["High"]),
-                        low=float(row["Low"]),
-                        close=float(row["Close"]),
-                        volume=float(row["Volume"]),
-                        daily_return=float(row["daily_return"]),
-                    )
-                    records.append(record)
-                except Exception as e:
-                    # Skip bad rows but keep going — don't let one bad day
-                    # break the whole fetch
-                    logger.warning(f"Skipping row {date} for {ticker}: {e}")
+        result = self.conn.execute(
+            """
+            SELECT *
+            FROM fundamentals
+            WHERE ticker = ?
+            ORDER BY fetched_at DESC
+            LIMIT 1
+            """,
+            (ticker,),
+        ).df()
 
-            logger.info(f"  ✓ {ticker}: {len(records)} records")
-            return records
+        if result.empty:
+            return {}
 
-        except Exception as e:
-            logger.error(f"Failed to fetch {ticker}: {e}")
-            return []
+        return result.to_dict("records")[0]
 
-    def _fetch_fundamentals(self, ticker: str) -> Optional[FundamentalSnapshot]:
-        """
-        Fetch fundamental data from yfinance .info dict.
-        This is a snapshot — we store it with a timestamp so we can
-        track how fundamentals change over time.
-        """
-        try:
-            info = yf.Ticker(ticker).info
-            snap = FundamentalSnapshot(
+    def close(self) -> None:
+        """Close the database connection."""
+
+        if not self.closed:
+            self.conn.close()
+            self.closed = True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(
+        self,
+        exc_type,
+        exc_value,
+        traceback,
+    ):
+        self.close()
+
+
+class MarketDataAgent:
+    """Retrieve, validate and persist market observations."""
+
+    def __init__(
+        self,
+        watchlist: dict[str, str] | None = None,
+        macro_tickers: dict[str, str] | None = None,
+        db_path: str = DEFAULT_DB_PATH,
+        lookback_days: int = DEFAULT_LOOKBACK_DAYS,
+    ):
+        if lookback_days < 1:
+            raise ValueError(
+                "Lookback period must be positive."
+            )
+
+        self.watchlist = dict(
+            DEFAULT_WATCHLIST
+            if watchlist is None
+            else watchlist
+        )
+
+        self.macro_tickers = dict(
+            MACRO_TICKERS
+            if macro_tickers is None
+            else macro_tickers
+        )
+
+        if BENCHMARK_TICKER not in self.macro_tickers:
+            raise ValueError(
+                "The ASX 200 benchmark must be configured."
+            )
+
+        self.lookback_days = lookback_days
+        self.timezone = ZoneInfo(ASX_TIMEZONE)
+
+        self.db = MarketDatabase(db_path)
+
+        self.start_date = ""
+        self.end_date = ""
+
+        self._refresh_date_window()
+
+    def _refresh_date_window(self) -> None:
+        """Recalculate the ingestion window for the current run."""
+
+        today = datetime.now(
+            self.timezone
+        ).date()
+
+        start = today - timedelta(
+            days=self.lookback_days
+        )
+
+        self.start_date = start.isoformat()
+        self.end_date = today.isoformat()
+
+    @staticmethod
+    def _validate_freshness(
+        ticker: str,
+        latest_date: date,
+        reference_date: date,
+    ) -> None:
+        """Reject stale, current-day or future observations."""
+
+        age = (
+            reference_date - latest_date
+        ).days
+
+        if age <= 0:
+            raise ValueError(
+                f"{ticker}: current-day or future observation."
+            )
+
+        if age > MAX_DATA_AGE_DAYS:
+            raise ValueError(
+                f"{ticker}: stale market data. "
+                f"Latest observation: {latest_date}; "
+                f"age: {age} calendar days."
+            )
+
+    def _download_history(
+        self,
+        ticker: str,
+        required_columns: tuple[str, ...],
+        timezone_name: str = ASX_TIMEZONE,
+    ) -> pd.DataFrame:
+        """Retrieve completed daily observations."""
+
+        local_today = datetime.now(
+            ZoneInfo(timezone_name)
+        ).date()
+
+        start = date.fromisoformat(
+            self.start_date
+        )
+
+        end = min(
+            date.fromisoformat(self.end_date),
+            local_today,
+        )
+
+        download_start = start - timedelta(
+            days=RETURN_BUFFER_DAYS
+        )
+
+        logger.info(
+            "Downloading %s | %s to %s (exclusive)",
+            ticker,
+            download_start,
+            end,
+        )
+
+        history = yf.download(
+            ticker,
+            start=download_start.isoformat(),
+            end=end.isoformat(),
+            interval="1d",
+            auto_adjust=True,
+            progress=False,
+            threads=False,
+            timeout=30,
+        )
+
+        history = normalise_history(
+            history,
+            required_columns,
+        )
+
+        # Exclude current-day observations even if the provider
+        # returns data beyond the requested exclusive end date.
+        history = history.loc[
+            history.index < pd.Timestamp(end)
+        ].copy()
+
+        history = calculate_daily_returns(
+            history,
+            start,
+            end,
+        )
+
+        self._validate_freshness(
+            ticker,
+            history.index[-1].date(),
+            local_today,
+        )
+
+        return history
+
+    def _fetch_ohlcv(
+        self,
+        ticker: str,
+    ) -> list[OHLCVRecord]:
+        """Retrieve and validate adjusted equity observations."""
+
+        history = self._download_history(
+            ticker,
+            required_columns=(
+                "Open",
+                "High",
+                "Low",
+                "Close",
+                "Volume",
+            ),
+        )
+
+        records = [
+            OHLCVRecord(
                 ticker=ticker,
-                fetched_at=datetime.now().isoformat(),
-                market_cap=info.get("marketCap"),
-                pe_ratio=info.get("trailingPE"),
-                forward_pe=info.get("forwardPE"),
-                dividend_yield=info.get("dividendYield"),
-                fifty_two_week_high=info.get("fiftyTwoWeekHigh"),
-                fifty_two_week_low=info.get("fiftyTwoWeekLow"),
-                beta=info.get("beta"),
-                sector=info.get("sector"),
-                industry=info.get("industry"),
+                date=timestamp.date().isoformat(),
+                open=float(row["Open"]),
+                high=float(row["High"]),
+                low=float(row["Low"]),
+                close=float(row["Close"]),
+                volume=float(row["Volume"]),
+                daily_return=float(row["daily_return"]),
             )
-            logger.info(f"  ✓ Fundamentals fetched for {ticker}")
-            return snap
-        except Exception as e:
-            logger.warning(f"Could not fetch fundamentals for {ticker}: {e}")
-            return None
+            for timestamp, row in history.iterrows()
+        ]
 
-    def _fetch_macro(self):
-        """
-        Fetch macro context: ASX 200 index, AUD/USD, Gold, Oil.
-        The risk agent uses these to assess broader market conditions.
-        """
-        logger.info("Fetching macro context...")
+        logger.info(
+            "%s: %d validated observations",
+            ticker,
+            len(records),
+        )
+
+        return records
+
+    def _fetch_fundamentals(
+        self,
+        ticker: str,
+    ) -> FundamentalSnapshot:
+        """Retrieve current company fundamentals and metadata."""
+
+        info = yf.Ticker(ticker).info
+
+        if not info:
+            raise ValueError(
+                "No fundamental metadata returned."
+            )
+
+        fetched_at = datetime.now(
+            timezone.utc
+        ).replace(tzinfo=None)
+
+        return FundamentalSnapshot(
+            ticker=ticker,
+            fetched_at=fetched_at.isoformat(),
+            market_cap=optional_float(
+                info.get("marketCap")
+            ),
+            pe_ratio=optional_float(
+                info.get("trailingPE")
+            ),
+            forward_pe=optional_float(
+                info.get("forwardPE")
+            ),
+            dividend_yield=optional_float(
+                info.get("dividendYield")
+            ),
+            fifty_two_week_high=optional_float(
+                info.get("fiftyTwoWeekHigh")
+            ),
+            fifty_two_week_low=optional_float(
+                info.get("fiftyTwoWeekLow")
+            ),
+            beta=optional_float(
+                info.get("beta")
+            ),
+            sector=optional_text(
+                info.get("sector")
+            ),
+            industry=optional_text(
+                info.get("industry")
+            ),
+        )
+
+    def _fetch_macro(self) -> dict:
+        """Retrieve benchmark and supplementary macroeconomic data."""
+
+        results = {
+            "success": [],
+            "failed": [],
+            "latest_dates": {},
+            "observation_dates": {},
+            "errors": [],
+        }
+
         for ticker, name in self.macro_tickers.items():
             try:
-                df = yf.download(
+                history = self._download_history(
                     ticker,
-                    start=self.start_date,
-                    end=self.end_date,
-                    progress=False,
-                    auto_adjust=True,
+                    required_columns=("Close",),
+                    timezone_name=MACRO_TIMEZONES.get(
+                        ticker,
+                        ASX_TIMEZONE,
+                    ),
                 )
-                if df.empty:
-                    logger.warning(f"No macro data for {ticker}")
-                    continue
 
-                if isinstance(df.columns, pd.MultiIndex):
-                    df.columns = df.columns.get_level_values(0)
+                self.db.upsert_macro(
+                    ticker,
+                    history,
+                )
 
-                df["daily_return"] = df["Close"].pct_change().fillna(0)
-                self.db.upsert_macro(ticker, df)
-                logger.info(f"  ✓ Macro: {name} ({ticker})")
-            except Exception as e:
-                logger.error(f"Macro fetch failed for {ticker}: {e}")
+                observation_dates = [
+                    timestamp.date().isoformat()
+                    for timestamp in history.index
+                ]
 
-    def run(self) -> dict:
-        """
-        Main entry point for the agent.
-        Called by the orchestrator at the start of each daily run.
-        Returns a status summary the orchestrator can log.
-        """
-        logger.info("=" * 60)
-        logger.info("Market Data Agent — starting run")
-        logger.info(f"Watchlist: {len(self.watchlist)} tickers")
-        logger.info(f"Period: {self.start_date} to {self.end_date}")
-        logger.info("=" * 60)
+                latest_date = observation_dates[-1]
 
-        results = {"success": [], "failed": [], "total_records": 0}
+                results["success"].append(
+                    ticker
+                )
 
-        # --- Step 1: Fetch OHLCV for each watchlist ticker ---
-        for ticker in self.watchlist:
-            records = self._fetch_ohlcv(ticker)
-            if records:
-                self.db.upsert_ohlcv(records)
-                results["success"].append(ticker)
-                results["total_records"] += len(records)
-            else:
-                results["failed"].append(ticker)
+                results["latest_dates"][ticker] = (
+                    latest_date
+                )
 
-            # Fetch fundamentals alongside price data
-            snap = self._fetch_fundamentals(ticker)
-            if snap:
-                self.db.upsert_fundamentals(snap)
+                results["observation_dates"][ticker] = (
+                    observation_dates
+                )
 
-        # --- Step 2: Fetch macro context ---
-        self._fetch_macro()
+                logger.info(
+                    "%s (%s): %d observations | latest %s",
+                    name,
+                    ticker,
+                    len(history),
+                    latest_date,
+                )
 
-        # --- Step 3: Summary ---
-        logger.info("=" * 60)
-        logger.info(f"Run complete.")
-        logger.info(f"  Successful tickers : {len(results['success'])}")
-        logger.info(f"  Failed tickers     : {len(results['failed'])}")
-        logger.info(f"  Total OHLCV records: {results['total_records']}")
-        if results["failed"]:
-            logger.warning(f"  Failed: {results['failed']}")
-        logger.info("=" * 60)
+            except Exception as exc:
+                message = (
+                    f"Macro ingestion failed for "
+                    f"{ticker}: {exc}"
+                )
+
+                results["failed"].append(
+                    ticker
+                )
+
+                results["errors"].append(
+                    message
+                )
+
+                logger.warning(
+                    "%s",
+                    message,
+                )
 
         return results
 
-    def get_watchlist_summary(self) -> pd.DataFrame:
-        """
-        Returns a quick summary DataFrame of the latest close prices
-        and returns for all watchlist tickers. Used by the orchestrator
-        to confirm data is fresh before triggering downstream agents.
-        """
-        rows = []
-        for ticker, name in self.watchlist.items():
-            df = self.db.get_ohlcv(ticker, days=2)
-            if df.empty:
+    def run(self) -> dict:
+        """Ingest data and assess downstream analytical readiness."""
+
+        self._refresh_date_window()
+
+        logger.info(
+            "Market data ingestion started | %s to %s",
+            self.start_date,
+            self.end_date,
+        )
+
+        results = {
+            "success": [],
+            "failed": [],
+            "total_records": 0,
+            "latest_dates": {},
+            "macro_success": [],
+            "macro_failed": [],
+            "macro_latest_dates": {},
+            "fundamentals_success": [],
+            "fundamentals_failed": [],
+            "benchmark_ready": False,
+            "forecast_ready": [],
+            "forecast_blocked": [],
+            "readiness_reasons": {},
+            "warnings": [],
+            "errors": [],
+        }
+
+        macro_results = self._fetch_macro()
+
+        results["macro_success"] = (
+            macro_results["success"]
+        )
+
+        results["macro_failed"] = (
+            macro_results["failed"]
+        )
+
+        results["macro_latest_dates"] = (
+            macro_results["latest_dates"]
+        )
+
+        results["errors"].extend(
+            macro_results["errors"]
+        )
+
+        benchmark_dates = (
+            macro_results["observation_dates"]
+            .get(BENCHMARK_TICKER, [])
+        )
+
+        # Benchmark availability alone does not establish
+        # that any individual security is forecast-ready.
+        results["benchmark_ready"] = bool(
+            benchmark_dates
+        )
+
+        if not benchmark_dates:
+            message = (
+                "ASX 200 benchmark unavailable. "
+                "Equity ingestion will continue, but "
+                "forecasting readiness cannot be established."
+            )
+
+            results["warnings"].append(
+                message
+            )
+
+            logger.warning(
+                "%s",
+                message,
+            )
+
+        for ticker in self.watchlist:
+            try:
+                records = self._fetch_ohlcv(
+                    ticker
+                )
+
+                if not records:
+                    raise ValueError(
+                        "No validated equity observations."
+                    )
+
+                # Persist valid equity data independently
+                # of benchmark availability.
+                self.db.upsert_ohlcv(
+                    records
+                )
+
+                results["success"].append(
+                    ticker
+                )
+
+                results["latest_dates"][ticker] = (
+                    records[-1].date
+                )
+
+                results["total_records"] += len(
+                    records
+                )
+
+            except Exception as exc:
+                message = (
+                    f"Equity ingestion failed for "
+                    f"{ticker}: {exc}"
+                )
+
+                results["failed"].append(
+                    ticker
+                )
+
+                results["errors"].append(
+                    message
+                )
+
+                logger.warning(
+                    "%s",
+                    message,
+                )
+
                 continue
-            latest = df.iloc[0]
-            rows.append({
-                "ticker": ticker,
-                "name": name,
-                "date": latest["date"],
-                "close": latest["close"],
-                "daily_return": f"{latest['daily_return']:.2%}",
-            })
+
+            # Assess readiness without deleting or fabricating
+            # otherwise valid market observations.
+            ready, reason = assess_forecast_readiness(
+                equity_dates=[
+                    record.date
+                    for record in records
+                ],
+                benchmark_dates=benchmark_dates,
+            )
+
+            results["readiness_reasons"][ticker] = (
+                reason
+            )
+
+            if ready:
+                results["forecast_ready"].append(
+                    ticker
+                )
+
+                logger.info(
+                    "%s: forecast data aligned",
+                    ticker,
+                )
+
+            else:
+                results["forecast_blocked"].append(
+                    ticker
+                )
+
+                message = (
+                    f"{ticker}: forecast readiness "
+                    f"blocked. {reason}"
+                )
+
+                results["warnings"].append(
+                    message
+                )
+
+                logger.warning(
+                    "%s",
+                    message,
+                )
+
+            # Fundamentals remain independent of
+            # forecast-readiness status.
+            try:
+                snapshot = self._fetch_fundamentals(
+                    ticker
+                )
+
+                if snapshot.sector is None:
+                    raise ValueError(
+                        "Sector metadata is unavailable."
+                    )
+
+                self.db.upsert_fundamentals(
+                    snapshot
+                )
+
+                results["fundamentals_success"].append(
+                    ticker
+                )
+
+            except Exception as exc:
+                message = (
+                    f"Fundamentals ingestion failed for "
+                    f"{ticker}: {exc}"
+                )
+
+                results["fundamentals_failed"].append(
+                    ticker
+                )
+
+                results["errors"].append(
+                    message
+                )
+
+                logger.warning(
+                    "%s",
+                    message,
+                )
+
+        logger.info(
+            "Equity ingestion: %d/%d successful",
+            len(results["success"]),
+            len(self.watchlist),
+        )
+
+        logger.info(
+            "Macro ingestion: %d/%d successful",
+            len(results["macro_success"]),
+            len(self.macro_tickers),
+        )
+
+        logger.info(
+            "Fundamentals ingestion: %d/%d successful",
+            len(results["fundamentals_success"]),
+            len(results["success"]),
+        )
+
+        logger.info(
+            "Forecast-ready securities: %d/%d",
+            len(results["forecast_ready"]),
+            len(self.watchlist),
+        )
+
+        logger.info(
+            "Total equity records processed: %d",
+            results["total_records"],
+        )
+
+        return results
+
+    def get_watchlist_summary(
+        self,
+        tickers: list[str] | None = None,
+    ) -> pd.DataFrame:
+        """Return the latest stored observation for each security."""
+
+        selected = (
+            list(self.watchlist)
+            if tickers is None
+            else sorted(set(tickers))
+        )
+
+        rows = []
+
+        for ticker in selected:
+            history = self.db.get_ohlcv(
+                ticker,
+                days=1,
+            )
+
+            if history.empty:
+                continue
+
+            latest = history.iloc[0]
+
+            rows.append(
+                {
+                    "ticker": ticker,
+                    "name": self.watchlist.get(
+                        ticker,
+                        ticker,
+                    ),
+                    "date": latest["date"],
+                    "close": float(latest["close"]),
+                    "daily_return": (
+                        f"{latest['daily_return']:+.2%}"
+                    ),
+                }
+            )
+
         return pd.DataFrame(rows)
 
+    def close(self) -> None:
+        """Release database resources."""
 
-# ---------------------------------------------------------------------------
-# Run directly for testing
-# ---------------------------------------------------------------------------
+        self.db.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(
+        self,
+        exc_type,
+        exc_value,
+        traceback,
+    ):
+        self.close()
+
+
+def main() -> int:
+    """Execute standalone ingestion and readiness assessment."""
+
+    parser = argparse.ArgumentParser(
+        description=(
+            "Retrieve and validate ASX market data."
+        )
+    )
+
+    parser.add_argument(
+        "--db",
+        default=DEFAULT_DB_PATH,
+        help="Path to the DuckDB database.",
+    )
+
+    parser.add_argument(
+        "--lookback-days",
+        type=int,
+        default=DEFAULT_LOOKBACK_DAYS,
+        help="Historical ingestion window in calendar days.",
+    )
+
+    args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format=(
+            "%(asctime)s | %(name)s | "
+            "%(levelname)s | %(message)s"
+        ),
+    )
+
+    with MarketDataAgent(
+        db_path=args.db,
+        lookback_days=args.lookback_days,
+    ) as agent:
+
+        results = agent.run()
+
+        print("\nMarket Data Ingestion Summary")
+
+        print(
+            f"Successful equity tickers: "
+            f"{len(results['success'])}"
+        )
+
+        print(
+            f"Failed equity tickers: "
+            f"{len(results['failed'])}"
+        )
+
+        print(
+            f"Successful macro series: "
+            f"{len(results['macro_success'])}"
+        )
+
+        print(
+            f"Successful fundamental snapshots: "
+            f"{len(results['fundamentals_success'])}"
+        )
+
+        print(
+            f"Equity observations processed: "
+            f"{results['total_records']}"
+        )
+
+        print("\nForecast Readiness Summary")
+
+        print(
+            f"Benchmark available: "
+            f"{results['benchmark_ready']}"
+        )
+
+        print(
+            f"Forecast-ready securities: "
+            f"{len(results['forecast_ready'])}"
+        )
+
+        print(
+            f"Forecast-blocked securities: "
+            f"{len(results['forecast_blocked'])}"
+        )
+
+        if results["success"]:
+            print("\nWatchlist Summary")
+
+            print(
+                agent.get_watchlist_summary(
+                    results["success"]
+                ).to_string(index=False)
+            )
+
+        if results["warnings"]:
+            print("\nData Quality Warnings")
+
+            for warning in results["warnings"]:
+                print(f"- {warning}")
+
+        if results["errors"]:
+            print("\nIngestion Errors")
+
+            for error in results["errors"]:
+                print(f"- {error}")
+
+        if not results["success"]:
+            return 1
+
+        if (
+            results["failed"]
+            or results["macro_failed"]
+            or results["fundamentals_failed"]
+            or results["forecast_blocked"]
+            or not results["benchmark_ready"]
+        ):
+            return 2
+
+        return 0
+
+
 if __name__ == "__main__":
-    agent = MarketDataAgent()
-    results = agent.run()
-
-    print("\n📊 Watchlist Summary:")
-    print(agent.get_watchlist_summary().to_string(index=False))
+    raise SystemExit(main())

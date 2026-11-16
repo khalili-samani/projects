@@ -1,369 +1,651 @@
-"""
-Risk Agent
-==========
-Responsibility: Assess the risk profile of each stock forecast and the
-overall watchlist portfolio. Outputs risk-adjusted metrics that the
-Trading Strategy Agent uses to size and filter recommendations.
-
-Design decisions:
-- Historical VaR (non-parametric) — uses actual return distribution
-  rather than assuming normality. Stock returns have fat tails, so
-  the normal distribution underestimates real-world risk.
-- Beta calculated against ASX 200 (^AXJO) — the standard Australian
-  market benchmark.
-- Sector concentration measured from fundamentals table — flags
-  portfolios that are overweight a single sector.
-- Risk-adjusted score combines forecast confidence, predicted return,
-  and volatility — gives the Strategy Agent a single number to rank
-  opportunities.
-"""
+"""Quantitative risk assessment for individual securities and watchlists."""
 
 import logging
+from dataclasses import dataclass
+
+import duckdb
 import numpy as np
 import pandas as pd
-import duckdb
-from dataclasses import dataclass, field
-from typing import Optional
 
-from forecasting_agent import StockForecast
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(name)s | %(levelname)s | %(message)s"
-)
-logger = logging.getLogger("RiskAgent")
+from agents.forecasting_agent import StockForecast
 
 
-# ---------------------------------------------------------------------------
-# Output models
-# ---------------------------------------------------------------------------
+logger = logging.getLogger(__name__)
+
+
+TRADING_SESSIONS = 252
+MIN_RISK_OBSERVATIONS = 30
+
+LOW_RISK_THRESHOLD = 0.20
+HIGH_RISK_THRESHOLD = 0.35
+
+
 @dataclass
 class StockRisk:
+    """Historical risk metrics and forecast risk controls."""
+
     ticker: str
-    volatility_annual: float        # annualised volatility (%)
-    var_95: float                   # 1-day VaR at 95% confidence (% of position)
-    var_99: float                   # 1-day VaR at 99% confidence (% of position)
-    max_drawdown: float             # worst peak-to-trough decline in history (%)
-    beta: float                     # sensitivity to ASX 200
-    sharpe_score: float             # predicted return / volatility (risk-adjusted)
-    risk_level: str                 # LOW / MEDIUM / HIGH — derived from volatility
-    recommendation_modifier: str    # CONFIRM / DOWNGRADE / BLOCK
+    volatility_annual: float
+    var_95: float
+    var_99: float
+    max_drawdown: float
+    beta: float | None
+    sharpe_score: float
+    risk_level: str
+    recommendation_modifier: str
+
+    @property
+    def risk_adjusted_forecast_score(self) -> float:
+        """Return the custom forecast-to-volatility ranking score."""
+        return self.sharpe_score
 
 
 @dataclass
 class PortfolioRisk:
+    """Aggregate watchlist statistics, not capital-weighted portfolio risk."""
+
     total_stocks: int
-    sector_weights: dict            # sector → % of watchlist
+    sector_weights: dict[str, float]
     most_concentrated_sector: str
-    concentration_risk: str         # LOW / MEDIUM / HIGH
-    average_beta: float
+    concentration_risk: str
+    average_beta: float | None
     average_volatility: float
-    watchlist_var_95: float         # simple average VaR across watchlist
-    risk_summary: str               # plain English summary for Report Writer
+    watchlist_var_95: float
+    risk_summary: str
 
 
-# ---------------------------------------------------------------------------
-# Risk Agent
-# ---------------------------------------------------------------------------
 class RiskAgent:
-    """
-    Calculates risk metrics for each stock and the overall portfolio.
+    """Calculate historical risk metrics for forecasted securities."""
 
-    Takes StockForecast objects from the Forecasting Agent as input,
-    enriches them with risk context, and returns StockRisk objects
-    that the Strategy Agent uses to filter and size recommendations.
-    """
-
-    def __init__(self, db_path: str = "asx_market_data.db"):
+    def __init__(
+        self,
+        db_path: str = "asx_market_data.db",
+    ):
         self.db_path = db_path
         self.conn = duckdb.connect(db_path)
 
-    def _load_returns(self, ticker: str, days: int = 252) -> pd.Series:
-        """Load recent daily returns for a ticker."""
-        df = self.conn.execute("""
+    def _load_returns(
+        self,
+        ticker: str,
+        days: int = TRADING_SESSIONS,
+        as_of_date: str | None = None,
+    ) -> pd.Series:
+        """Load recent equity returns indexed by observation date."""
+
+        df = self.conn.execute(
+            """
             SELECT date, daily_return
             FROM ohlcv
             WHERE ticker = ?
+              AND date <= COALESCE(
+                  CAST(? AS DATE),
+                  CURRENT_DATE
+              )
             ORDER BY date DESC
             LIMIT ?
-        """, (ticker, days)).df()
-        return df["daily_return"].dropna()
+            """,
+            (ticker, as_of_date, days),
+        ).df()
 
-    def _load_market_returns(self, days: int = 252) -> pd.Series:
-        """Load ASX 200 returns as the market benchmark."""
-        df = self.conn.execute("""
+        return self._prepare_series(
+            df,
+            "daily_return",
+        )
+
+    def _load_market_returns(
+        self,
+        days: int = TRADING_SESSIONS,
+        as_of_date: str | None = None,
+    ) -> pd.Series:
+        """Load benchmark returns indexed by observation date."""
+
+        df = self.conn.execute(
+            """
             SELECT date, daily_return
             FROM macro
             WHERE ticker = '^AXJO'
+              AND date <= COALESCE(
+                  CAST(? AS DATE),
+                  CURRENT_DATE
+              )
             ORDER BY date DESC
             LIMIT ?
-        """, (days,)).df()
-        return df["daily_return"].dropna()
+            """,
+            (as_of_date, days),
+        ).df()
 
-    def _load_closes(self, ticker: str, days: int = 252) -> pd.Series:
-        """Load closing prices for drawdown calculation."""
-        df = self.conn.execute("""
+        return self._prepare_series(
+            df,
+            "daily_return",
+        )
+
+    def _load_closes(
+        self,
+        ticker: str,
+        days: int = TRADING_SESSIONS,
+        as_of_date: str | None = None,
+    ) -> pd.Series:
+        """Load recent closing prices in chronological order."""
+
+        df = self.conn.execute(
+            """
             SELECT date, close
             FROM ohlcv
             WHERE ticker = ?
-            ORDER BY date ASC
-        """, (ticker,)).df()
-        return df["close"].dropna()
+              AND date <= COALESCE(
+                  CAST(? AS DATE),
+                  CURRENT_DATE
+              )
+            ORDER BY date DESC
+            LIMIT ?
+            """,
+            (ticker, as_of_date, days),
+        ).df()
+
+        return self._prepare_series(
+            df,
+            "close",
+        )
 
     def _load_fundamentals(self) -> pd.DataFrame:
-        """Load latest fundamentals for sector concentration analysis."""
-        return self.conn.execute("""
-            SELECT DISTINCT ON (ticker) ticker, sector, beta
+        """Retrieve the most recent sector metadata per security."""
+
+        return self.conn.execute(
+            """
+            SELECT DISTINCT ON (ticker)
+                ticker,
+                sector
             FROM fundamentals
             ORDER BY ticker, fetched_at DESC
-        """).df()
+            """
+        ).df()
 
-    # -----------------------------------------------------------------------
-    # Individual metric calculations
-    # -----------------------------------------------------------------------
-    def _calculate_volatility(self, returns: pd.Series) -> float:
-        """
-        Annualised volatility = daily std × √252
-        252 is the standard number of ASX trading days per year.
-        """
-        return float(returns.std() * np.sqrt(252))
+    @staticmethod
+    def _prepare_series(
+        df: pd.DataFrame,
+        column: str,
+    ) -> pd.Series:
+        """Prepare finite numerical observations indexed by date."""
 
-    def _calculate_var(self, returns: pd.Series, confidence: float) -> float:
-        """
-        Historical (non-parametric) Value at Risk.
+        if df.empty:
+            return pd.Series(dtype=float)
 
-        We sort the actual historical returns and take the percentile
-        at the tail. No distribution assumptions — we let the data speak.
+        df = df.copy()
 
-        A 95% VaR of -0.018 means: on 95% of days, the loss won't
-        exceed 1.8% of the position value.
-        """
-        return float(np.percentile(returns, (1 - confidence) * 100))
+        df["date"] = pd.to_datetime(df["date"])
 
-    def _calculate_max_drawdown(self, closes: pd.Series) -> float:
-        """
-        Maximum drawdown = worst peak-to-trough decline over the period.
+        df[column] = pd.to_numeric(
+            df[column],
+            errors="coerce",
+        )
 
-        We calculate the running maximum (the "peak") at each point,
-        then measure how far below that peak the price fell.
-        """
-        rolling_max = closes.cummax()
-        drawdown = (closes - rolling_max) / rolling_max
-        return float(drawdown.min())  # most negative value = worst drawdown
+        series = (
+            df.drop_duplicates("date", keep="last")
+            .set_index("date")[column]
+            .sort_index()
+        )
 
-    def _calculate_beta(
-        self, stock_returns: pd.Series, market_returns: pd.Series
+        return (
+            series.replace([np.inf, -np.inf], np.nan)
+            .dropna()
+            .astype(float)
+        )
+
+    @staticmethod
+    def _calculate_volatility(
+        returns: pd.Series,
     ) -> float:
-        """
-        Beta = covariance(stock, market) / variance(market)
+        """Annualise the sample standard deviation of daily returns."""
 
-        Measures how much the stock moves relative to the ASX 200.
-        Beta > 1: amplifies market moves (more volatile)
-        Beta < 1: dampens market moves (more defensive)
-        Beta < 0: moves against the market (rare — WDS sometimes shows this)
+        if len(returns) < 2:
+            raise ValueError(
+                "At least two returns are required."
+            )
 
-        We align dates before calculating — not every stock trades
-        on every day the index moves.
-        """
-        combined = pd.DataFrame({
-            "stock": stock_returns.values,
-            "market": market_returns.values
-        }).dropna()
+        return float(
+            returns.std(ddof=1)
+            * np.sqrt(TRADING_SESSIONS)
+        )
 
-        if len(combined) < 30:
-            return 1.0  # default to market beta if insufficient data
+    @staticmethod
+    def _calculate_var(
+        returns: pd.Series,
+        confidence: float,
+    ) -> float:
+        """Calculate a signed historical downside return quantile."""
 
-        cov_matrix = np.cov(combined["stock"], combined["market"])
-        beta = cov_matrix[0, 1] / cov_matrix[1, 1]
-        return round(float(beta), 3)
+        if returns.empty:
+            raise ValueError("Return history is empty.")
 
+        if not 0 < confidence < 1:
+            raise ValueError(
+                "Confidence must be between zero and one."
+            )
+
+        return float(
+            np.quantile(
+                returns.to_numpy(),
+                1 - confidence,
+            )
+        )
+
+    @staticmethod
+    def _calculate_max_drawdown(
+        closes: pd.Series,
+    ) -> float:
+        """Calculate the worst historical peak-to-trough decline."""
+
+        if closes.empty or (closes <= 0).any():
+            raise ValueError(
+                "Drawdown requires positive closing prices."
+            )
+
+        closes = closes.sort_index()
+
+        running_peak = closes.cummax()
+
+        drawdown = closes / running_peak - 1
+
+        return float(drawdown.min())
+
+    @staticmethod
+    def _calculate_beta(
+        stock_returns: pd.Series,
+        market_returns: pd.Series,
+    ) -> float | None:
+        """Estimate beta using date-aligned stock and market returns."""
+
+        aligned = pd.concat(
+            [
+                stock_returns.rename("stock"),
+                market_returns.rename("market"),
+            ],
+            axis=1,
+            join="inner",
+        ).dropna()
+
+        if len(aligned) < MIN_RISK_OBSERVATIONS:
+            return None
+
+        market_variance = aligned["market"].var(ddof=1)
+
+        if (
+            not np.isfinite(market_variance)
+            or market_variance <= 0
+        ):
+            return None
+
+        covariance = aligned["stock"].cov(
+            aligned["market"]
+        )
+
+        beta = covariance / market_variance
+
+        if not np.isfinite(beta):
+            return None
+
+        return float(beta)
+
+    @staticmethod
     def _calculate_sharpe_score(
-        self,
         predicted_return: float,
         volatility_annual: float,
         confidence: float,
     ) -> float:
-        """
-        Risk-adjusted score for ranking opportunities.
+        """Calculate the custom confidence-weighted forecast score.
 
-        Combines three things:
-        1. Predicted return — higher is better
-        2. Volatility — lower is better (we divide by it)
-        3. Forecast confidence — scales the score down for uncertain predictions
-
-        This isn't a formal Sharpe ratio (which uses a risk-free rate),
-        but a practical ranking metric for the Strategy Agent.
+        The method name is retained for compatibility. The result is
+        not a conventional Sharpe ratio.
         """
-        if volatility_annual == 0:
+
+        if (
+            not np.isfinite(volatility_annual)
+            or volatility_annual <= 0
+        ):
             return 0.0
-        # Convert annual volatility to daily for apples-to-apples comparison
-        daily_vol = volatility_annual / np.sqrt(252)
-        raw_score = predicted_return / daily_vol
-        # Scale by confidence so low-confidence predictions rank lower
-        return round(float(raw_score * confidence), 4)
 
-    def _derive_risk_level(self, volatility_annual: float) -> str:
-        """
-        Classify risk level from annualised volatility.
-        Thresholds based on typical ASX equity volatility ranges.
-        """
-        if volatility_annual < 0.20:      # < 20% annualised
+        daily_volatility = (
+            volatility_annual / np.sqrt(TRADING_SESSIONS)
+        )
+
+        return float(
+            predicted_return
+            / daily_volatility
+            * confidence
+        )
+
+    @staticmethod
+    def _derive_risk_level(
+        volatility_annual: float,
+    ) -> str:
+        """Classify risk using annualised volatility thresholds."""
+
+        if (
+            not np.isfinite(volatility_annual)
+            or volatility_annual < 0
+        ):
+            raise ValueError("Invalid annualised volatility.")
+
+        if volatility_annual < LOW_RISK_THRESHOLD:
             return "LOW"
-        elif volatility_annual < 0.35:    # 20–35%
-            return "MEDIUM"
-        else:                             # > 35%
-            return "HIGH"
 
+        if volatility_annual < HIGH_RISK_THRESHOLD:
+            return "MEDIUM"
+
+        return "HIGH"
+
+    @staticmethod
     def _derive_recommendation_modifier(
-        self,
         risk_level: str,
         forecast_confidence: float,
         var_95: float,
     ) -> str:
-        """
-        Tells the Strategy Agent whether to act on, downgrade, or block
-        a forecast based on risk context.
+        """Apply the existing deterministic risk policy."""
 
-        CONFIRM  — risk is acceptable, proceed with the signal
-        DOWNGRADE — reduce position size or move signal toward HOLD
-        BLOCK    — risk too high, override the forecast signal entirely
-        """
-        # Block if VaR implies a potential 5%+ loss in a single day
         if var_95 < -0.05:
             return "BLOCK"
-        # Downgrade if high risk AND low confidence
-        if risk_level == "HIGH" and forecast_confidence < 0.40:
+
+        if (
+            risk_level == "HIGH"
+            and forecast_confidence < 0.40
+        ):
             return "DOWNGRADE"
-        # Downgrade if medium risk AND very low confidence
-        if risk_level == "MEDIUM" and forecast_confidence < 0.25:
+
+        if (
+            risk_level == "MEDIUM"
+            and forecast_confidence < 0.25
+        ):
             return "DOWNGRADE"
+
         return "CONFIRM"
 
-    # -----------------------------------------------------------------------
-    # Per-stock risk assessment
-    # -----------------------------------------------------------------------
-    def assess_stock(self, forecast: StockForecast) -> Optional[StockRisk]:
-        """Calculate full risk profile for a single stock."""
-        logger.info(f"Assessing risk for {forecast.ticker}...")
+    def assess_stock(
+        self,
+        forecast: StockForecast,
+    ) -> StockRisk | None:
+        """Calculate risk using data available at the forecast origin."""
 
-        returns = self._load_returns(forecast.ticker)
-        market_returns = self._load_market_returns()
-        closes = self._load_closes(forecast.ticker)
+        ticker = forecast.ticker
+        as_of_date = forecast.as_of_date
 
-        if returns.empty or len(returns) < 30:
-            logger.warning(f"  Insufficient return history for {forecast.ticker}")
+        logger.info("Assessing risk for %s", ticker)
+
+        returns = self._load_returns(
+            ticker,
+            as_of_date=as_of_date,
+        )
+
+        if len(returns) < MIN_RISK_OBSERVATIONS:
+            logger.warning(
+                "Insufficient return history for %s",
+                ticker,
+            )
             return None
 
-        volatility   = self._calculate_volatility(returns)
-        var_95       = self._calculate_var(returns, 0.95)
-        var_99       = self._calculate_var(returns, 0.99)
-        max_drawdown = self._calculate_max_drawdown(closes)
-        beta         = self._calculate_beta(returns, market_returns)
-        risk_level   = self._derive_risk_level(volatility)
-        sharpe_score = self._calculate_sharpe_score(
-            forecast.predicted_return, volatility, forecast.confidence
+        market_returns = self._load_market_returns(
+            as_of_date=as_of_date,
         )
+
+        closes = self._load_closes(
+            ticker,
+            as_of_date=as_of_date,
+        )
+
+        if closes.empty:
+            logger.warning(
+                "Closing-price history unavailable for %s",
+                ticker,
+            )
+            return None
+
+        volatility = self._calculate_volatility(returns)
+
+        var_95 = self._calculate_var(
+            returns,
+            0.95,
+        )
+
+        var_99 = self._calculate_var(
+            returns,
+            0.99,
+        )
+
+        max_drawdown = self._calculate_max_drawdown(
+            closes
+        )
+
+        beta = self._calculate_beta(
+            returns,
+            market_returns,
+        )
+
+        risk_level = self._derive_risk_level(
+            volatility
+        )
+
+        score = self._calculate_sharpe_score(
+            forecast.predicted_return,
+            volatility,
+            forecast.confidence,
+        )
+
         modifier = self._derive_recommendation_modifier(
-            risk_level, forecast.confidence, var_95
+            risk_level,
+            forecast.confidence,
+            var_95,
         )
 
         risk = StockRisk(
-            ticker=forecast.ticker,
-            volatility_annual=round(volatility, 4),
-            var_95=round(var_95, 4),
-            var_99=round(var_99, 4),
-            max_drawdown=round(max_drawdown, 4),
+            ticker=ticker,
+            volatility_annual=volatility,
+            var_95=var_95,
+            var_99=var_99,
+            max_drawdown=max_drawdown,
             beta=beta,
-            sharpe_score=sharpe_score,
+            sharpe_score=score,
             risk_level=risk_level,
             recommendation_modifier=modifier,
         )
 
-        logger.info(
-            f"  ✓ {forecast.ticker}: vol={volatility:.1%} | "
-            f"VaR95={var_95:.2%} | beta={beta:.2f} | "
-            f"risk={risk_level} | modifier={modifier}"
+        beta_text = (
+            f"{beta:.2f}"
+            if beta is not None
+            else "N/A"
         )
+
+        logger.info(
+            "%s | volatility %.1f%% | VaR95 %.2f%% | "
+            "beta %s | risk %s | modifier %s",
+            ticker,
+            volatility * 100,
+            var_95 * 100,
+            beta_text,
+            risk_level,
+            modifier,
+        )
+
         return risk
 
-    # -----------------------------------------------------------------------
-    # Portfolio-level risk
-    # -----------------------------------------------------------------------
-    def assess_portfolio(self, stock_risks: list[StockRisk]) -> PortfolioRisk:
-        """Assess risk at the portfolio (watchlist) level."""
-        logger.info("Assessing portfolio-level risk...")
+    def assess_portfolio(
+        self,
+        stock_risks: list[StockRisk],
+    ) -> PortfolioRisk:
+        """Summarise risk across the assessed watchlist."""
+
+        if not stock_risks:
+            raise ValueError(
+                "Cannot assess an empty watchlist."
+            )
+
+        tickers = sorted(
+            {risk.ticker for risk in stock_risks}
+        )
 
         fundamentals = self._load_fundamentals()
 
-        # Sector concentration
-        sector_counts = fundamentals["sector"].value_counts()
-        total = len(fundamentals)
-        sector_weights = {
-            sector: round(count / total, 2)
-            for sector, count in sector_counts.items()
-        }
-        most_concentrated = sector_counts.index[0]
-        top_weight = sector_weights[most_concentrated]
-
-        if top_weight > 0.40:
-            concentration_risk = "HIGH"
-        elif top_weight > 0.25:
-            concentration_risk = "MEDIUM"
-        else:
-            concentration_risk = "LOW"
-
-        # Aggregate metrics
-        avg_beta = round(float(np.mean([r.beta for r in stock_risks])), 3)
-        avg_vol  = round(float(np.mean([r.volatility_annual for r in stock_risks])), 4)
-        avg_var  = round(float(np.mean([r.var_95 for r in stock_risks])), 4)
-
-        # Plain English summary for the Report Writer Agent
-        risk_summary = (
-            f"Watchlist average beta: {avg_beta:.2f} vs ASX 200. "
-            f"Average annualised volatility: {avg_vol:.1%}. "
-            f"Average 1-day VaR (95%): {avg_var:.2%}. "
-            f"Sector concentration: {most_concentrated} at {top_weight:.0%} "
-            f"of watchlist ({concentration_risk} concentration risk)."
+        sector_map = dict(
+            zip(
+                fundamentals["ticker"],
+                fundamentals["sector"],
+            )
         )
 
-        portfolio = PortfolioRisk(
-            total_stocks=len(stock_risks),
+        sectors = pd.Series(
+            [sector_map.get(ticker) for ticker in tickers],
+            dtype="object",
+        )
+
+        sectors = (
+            sectors.fillna("Unknown")
+            .astype(str)
+            .str.strip()
+            .replace("", "Unknown")
+        )
+
+        sector_counts = sectors.value_counts()
+
+        total = len(tickers)
+
+        sector_weights = {
+            sector: float(count / total)
+            for sector, count in sector_counts.items()
+        }
+
+        known_weights = {
+            sector: weight
+            for sector, weight in sector_weights.items()
+            if sector != "Unknown"
+        }
+
+        if not known_weights:
+            most_concentrated = "Unknown"
+            top_weight = 0.0
+            concentration_risk = "UNAVAILABLE"
+
+        else:
+            most_concentrated = sorted(
+                known_weights,
+                key=lambda sector: (
+                    -known_weights[sector],
+                    sector,
+                ),
+            )[0]
+
+            top_weight = known_weights[
+                most_concentrated
+            ]
+
+            if top_weight > 0.40:
+                concentration_risk = "HIGH"
+
+            elif sector_weights.get("Unknown", 0) > 0:
+                concentration_risk = "INCOMPLETE"
+
+            elif top_weight > 0.25:
+                concentration_risk = "MEDIUM"
+
+            else:
+                concentration_risk = "LOW"
+
+        valid_betas = [
+            risk.beta
+            for risk in stock_risks
+            if risk.beta is not None
+            and np.isfinite(risk.beta)
+        ]
+
+        average_beta = (
+            float(np.mean(valid_betas))
+            if valid_betas
+            else None
+        )
+
+        average_volatility = float(
+            np.mean(
+                [
+                    risk.volatility_annual
+                    for risk in stock_risks
+                ]
+            )
+        )
+
+        average_var = float(
+            np.mean(
+                [risk.var_95 for risk in stock_risks]
+            )
+        )
+
+        beta_text = (
+            f"{average_beta:.2f}"
+            if average_beta is not None
+            else "Unavailable"
+        )
+
+        if known_weights:
+            concentration_text = (
+                f"Largest identified sector: "
+                f"{most_concentrated} at {top_weight:.0%}. "
+                f"Concentration: {concentration_risk}."
+            )
+
+        else:
+            concentration_text = (
+                "Sector concentration is unavailable."
+            )
+
+        risk_summary = (
+            f"Mean individual-security beta: {beta_text} "
+            f"({len(valid_betas)}/{total} securities). "
+            f"Mean annualised volatility: "
+            f"{average_volatility:.1%}. "
+            f"Mean individual-security 95% historical VaR: "
+            f"{average_var:.2%}. "
+            f"{concentration_text} "
+            f"Unknown sector coverage: "
+            f"{sector_weights.get('Unknown', 0):.0%}."
+        )
+
+        return PortfolioRisk(
+            total_stocks=total,
             sector_weights=sector_weights,
             most_concentrated_sector=most_concentrated,
             concentration_risk=concentration_risk,
-            average_beta=avg_beta,
-            average_volatility=avg_vol,
-            watchlist_var_95=avg_var,
+            average_beta=average_beta,
+            average_volatility=average_volatility,
+            watchlist_var_95=average_var,
             risk_summary=risk_summary,
         )
 
-        logger.info(f"  ✓ Portfolio risk assessed. Concentration: {concentration_risk}")
-        return portfolio
+    def run(
+        self,
+        forecasts: list[StockForecast],
+    ) -> tuple[list[StockRisk], PortfolioRisk]:
+        """Assess securities and aggregate their risk statistics."""
 
-    # -----------------------------------------------------------------------
-    # Main entry point
-    # -----------------------------------------------------------------------
-    def run(self, forecasts: list[StockForecast]) -> tuple[list[StockRisk], PortfolioRisk]:
-        """
-        Main entry point. Takes forecasts from Agent 2 and returns
-        per-stock risk profiles plus a portfolio-level risk summary.
-        """
-        logger.info("=" * 60)
-        logger.info("Risk Agent — starting run")
-        logger.info(f"Assessing {len(forecasts)} forecasts")
-        logger.info("=" * 60)
+        stock_risks: list[StockRisk] = []
 
-        stock_risks = []
         for forecast in forecasts:
-            risk = self.assess_stock(forecast)
-            if risk:
-                stock_risks.append(risk)
+            try:
+                risk = self.assess_stock(forecast)
 
-        portfolio_risk = self.assess_portfolio(stock_risks)
+                if risk is not None:
+                    stock_risks.append(risk)
 
-        logger.info("=" * 60)
-        logger.info(f"Risk assessment complete. {len(stock_risks)}/{len(forecasts)} stocks assessed.")
-        logger.info("=" * 60)
+            except Exception:
+                logger.exception(
+                    "Risk assessment failed for %s",
+                    forecast.ticker,
+                )
+
+        portfolio_risk = self.assess_portfolio(
+            stock_risks
+        )
+
+        logger.info(
+            "Risk assessment complete: %d/%d successful",
+            len(stock_risks),
+            len(forecasts),
+        )
 
         return stock_risks, portfolio_risk
 
@@ -372,58 +654,106 @@ class RiskAgent:
         stock_risks: list[StockRisk],
         forecasts: list[StockForecast],
     ) -> pd.DataFrame:
-        """
-        Merges forecast and risk data into a single summary DataFrame.
-        Passed downstream to the Strategy Agent.
-        """
-        forecast_map = {f.ticker: f for f in forecasts}
-        rows = []
-        for r in stock_risks:
-            f = forecast_map.get(r.ticker)
-            rows.append({
-                "ticker":         r.ticker,
-                "signal":         f.signal if f else "—",
-                "predicted_ret":  f"{f.predicted_return*100:+.2f}%" if f else "—",
-                "confidence":     f"{f.confidence:.0%}" if f else "—",
-                "volatility":     f"{r.volatility_annual:.1%}",
-                "var_95":         f"{r.var_95:.2%}",
-                "max_drawdown":   f"{r.max_drawdown:.2%}",
-                "beta":           f"{r.beta:.2f}",
-                "risk_level":     r.risk_level,
-                "modifier":       r.recommendation_modifier,
-                "sharpe_score":   f"{r.sharpe_score:.3f}",
-            })
-        return pd.DataFrame(rows).sort_values("sharpe_score", ascending=False)
+        """Return formatted security-level risk diagnostics."""
 
-    def close(self):
+        forecast_map = {
+            forecast.ticker: forecast
+            for forecast in forecasts
+        }
+
+        rows = []
+
+        sorted_risks = sorted(
+            stock_risks,
+            key=lambda risk: (
+                -risk.risk_adjusted_forecast_score,
+                risk.ticker,
+            ),
+        )
+
+        for risk in sorted_risks:
+            forecast = forecast_map.get(risk.ticker)
+
+            rows.append(
+                {
+                    "ticker": risk.ticker,
+                    "signal": (
+                        forecast.signal
+                        if forecast
+                        else "N/A"
+                    ),
+                    "predicted_return": (
+                        f"{forecast.predicted_return:+.2%}"
+                        if forecast
+                        else "N/A"
+                    ),
+                    "volatility": (
+                        f"{risk.volatility_annual:.1%}"
+                    ),
+                    "var_95": f"{risk.var_95:.2%}",
+                    "var_99": f"{risk.var_99:.2%}",
+                    "max_drawdown": (
+                        f"{risk.max_drawdown:.2%}"
+                    ),
+                    "beta": (
+                        f"{risk.beta:.2f}"
+                        if risk.beta is not None
+                        else "N/A"
+                    ),
+                    "risk_level": risk.risk_level,
+                    "modifier": (
+                        risk.recommendation_modifier
+                    ),
+                    "risk_adjusted_score": (
+                        f"{risk.risk_adjusted_forecast_score:.3f}"
+                    ),
+                }
+            )
+
+        return pd.DataFrame(rows)
+
+    def close(self) -> None:
+        """Close the database connection."""
+
         self.conn.close()
 
 
-# ---------------------------------------------------------------------------
-# Run directly for testing
-# ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    import sys
-    import os
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    from agents.forecasting_agent import ForecastingAgent
 
-    from forecasting_agent import ForecastingAgent
+    logging.basicConfig(
+        level=logging.INFO,
+        format=(
+            "%(asctime)s | %(name)s | "
+            "%(levelname)s | %(message)s"
+        ),
+    )
 
-    # Run Agent 2 first to get forecasts
     forecasting_agent = ForecastingAgent()
-    forecasts = forecasting_agent.run()
-    forecasting_agent.close()
 
-    # Run Agent 3
+    try:
+        forecasts = forecasting_agent.run()
+
+    finally:
+        forecasting_agent.close()
+
     risk_agent = RiskAgent()
-    stock_risks, portfolio_risk = risk_agent.run(forecasts)
 
-    print("\n📊 Risk Summary:")
-    print(risk_agent.get_risk_summary(stock_risks, forecasts).to_string(index=False))
+    try:
+        stock_risks, watchlist_risk = risk_agent.run(
+            forecasts
+        )
 
-    print(f"\n🏦 Portfolio Risk:")
-    print(f"  {portfolio_risk.risk_summary}")
-    print(f"  Sector weights: {portfolio_risk.sector_weights}")
-    print(f"  Concentration risk: {portfolio_risk.concentration_risk}")
+        print("\nRisk Summary")
+        print(
+            risk_agent.get_risk_summary(
+                stock_risks,
+                forecasts,
+            ).to_string(index=False)
+        )
 
-    risk_agent.close()
+        print("\nWatchlist Risk")
+        print(watchlist_risk.risk_summary)
+
+    finally:
+        risk_agent.close()

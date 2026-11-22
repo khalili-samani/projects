@@ -5,6 +5,6 @@ numpy>=1.26.0
 pydantic>=2.6.0
 scikit-learn>=1.4.0
 langgraph>=0.1.0
-schedule>=1.2.0
 python-dotenv>=1.0.0
 google-genai>=0.3.0
+tzdata>=2025.1

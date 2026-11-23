@@ -1,159 +1,169 @@
 # ASX Equity Intelligence Agent
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)
-![LangGraph](https://img.shields.io/badge/Orchestration-LangGraph-orange.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue)
+![LangGraph](https://img.shields.io/badge/Workflow-LangGraph-orange)
+![DuckDB](https://img.shields.io/badge/Database-DuckDB-yellow)
+![Tests](https://img.shields.io/badge/Tests-70%20passing-brightgreen)
+![Coverage](https://img.shields.io/badge/Statement%20Coverage-71%25-brightgreen)
+![Licence](https://img.shields.io/badge/Licence-MIT-green)
 
-A Python workflow that collects Australian equity market data, forecasts next-session returns, calculates risk measures, applies deterministic recommendation rules, and generates a daily Markdown briefing.
+**A five-agent, Python-based equity research workflow for the Australian Securities Exchange (ASX).**
 
-The project is designed as a decision-support and engineering demonstration. It does not execute trades, optimise a live portfolio, or establish that the forecasts are profitable.
+The application collects and validates market data, engineers predictive features, forecasts next-session equity returns, evaluates financial risk, applies deterministic recommendation rules and produces a structured Markdown research brief.
 
-## Project summary
+It combines quantitative analysis, LangGraph orchestration, local DuckDB storage and optional Google Gemini commentary.
 
-An equity research workflow often requires several separate tasks:
+**Project status:** End-to-end workflow validated locally. The automated regression suite contains 70 passing tests with 71% statement coverage, measured on Python 3.12.
 
-1. collecting and validating market data;
-2. engineering predictive features;
-3. evaluating forecast uncertainty and downside risk;
-4. translating model output into consistent decisions; and
-5. preparing a readable briefing.
+> **Research and engineering demonstration only.** This project does not execute trades, manage a live investment portfolio or establish that its forecasts generate profitable investment strategies.
 
-This project separates those responsibilities into five LangGraph nodes with a shared typed state. Each analytical stage produces structured output for the next stage. Gemini is used only after forecasts, risk metrics and recommendations have already been calculated.
+## Overview
 
-### What the project demonstrates
+The ASX Equity Intelligence Agent addresses a common research-engineering challenge: turning raw financial time-series data into a reproducible, structured decision-support report.
 
-* ingestion and validation of financial time-series data;
-* local analytical storage with DuckDB;
-* time-ordered model training and validation;
-* feature engineering for tabular market data;
-* historical volatility, VaR, beta and drawdown calculations;
-* deterministic decision rules and position-sizing logic;
-* LangGraph state management and conditional failure routing;
-* constrained LLM-based report generation.
+Rather than using a language model to make trading decisions, the application separates responsibilities into five specialised agents.
 
-## Workflow
+| Agent | Responsibility | Implementation |
+|---|---|---|
+| Market Data | Download, validate and persist equity, macroeconomic and company data | `agents/market_data_agent.py` |
+| Forecasting | Engineer features, validate and train Random Forest models, and estimate next-session returns | `agents/forecasting_agent.py` |
+| Risk | Calculate historical volatility, Value at Risk, beta, drawdown and watchlist concentration | `agents/risk_agent.py` |
+| Strategy | Apply deterministic signal resolution, confidence filtering and position-adjustment rules | `agents/strategy_agent.py` |
+| Report Writer | Generate an auditable Markdown briefing with optional constrained AI commentary | `agents/report_writer_agent.py` |
 
-```text
-                         ┌──────────────────┐
-                         │ Market Data Node │
-                         └────────┬─────────┘
-                                  │ data available
-                                  ▼
-                         ┌──────────────────┐
-                         │ Forecasting Node │
-                         └────────┬─────────┘
-                                  │ forecasts available
-                                  ▼
-                         ┌──────────────────┐
-                         │    Risk Node     │
-                         └────────┬─────────┘
-                                  │ risk output available
-                                  ▼
-                         ┌──────────────────┐
-                         │  Strategy Node   │
-                         └────────┬─────────┘
-                                  │ recommendations available
-                                  ▼
-                         ┌──────────────────┐
-                         │Report Writer Node│
-                         └────────┬─────────┘
-                                  ▼
-                         Markdown morning brief
+`orchestrator.py` coordinates the agents through LangGraph using shared typed state and conditional error routing.
 
-Any critical stage failure ───────────────► Error node ─► End
+The system is a structured multi-stage workflow, not an autonomous trading platform.
+
+### Key engineering features
+
+- Five-stage LangGraph workflow with explicit failure handling.
+- Yahoo Finance ingestion with adjusted equity prices.
+- Pydantic validation and transactional DuckDB persistence.
+- Completed-session data handling and freshness checks.
+- Equity-to-ASX 200 benchmark-date alignment.
+- Eleven engineered forecasting features.
+- Time-ordered validation with a one-observation target-boundary purge.
+- One Random Forest model per equity.
+- Forecast evaluation against a zero-return baseline.
+- Date-aligned beta and historical downside-risk calculations.
+- Deterministic `BUY`, `HOLD` and `REDUCE` recommendations.
+- Optional Gemini commentary that does not determine quantitative outputs.
+- Offline unit and integration testing using synthetic market data.
+- Automated tests configured for GitHub Actions.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    A["Yahoo Finance"] --> B["Market Data Agent"]
+    B <--> DB[("DuckDB")]
+    B --> Q{"Forecast data ready?"}
+
+    Q -->|Yes| C["Forecasting Agent"]
+    Q -->|No| X["Error / Stop"]
+
+    DB --> C
+    C --> D["Risk Agent"]
+    DB --> D
+    D --> E["Strategy Agent"]
+    E --> F["Report Writer Agent"]
+    DB --> F
+
+    G["Google Gemini (optional)"] -.-> F
+
+    F --> H["Markdown Research Brief"]
+
+    C -.->|Failure| X
+    D -.->|Failure| X
+    E -.->|Failure| X
+    F -.->|Failure| X
 ```
 
-| Stage          | Implementation                  | Responsibility                                                                       |
-| -------------- | ------------------------------- | ------------------------------------------------------------------------------------ |
-| Market data    | `agents/market_data_agent.py`   | Downloads equity and macro data, validates records and writes them to DuckDB         |
-| Forecasting    | `agents/forecasting_agent.py`   | Engineers features, trains one Random Forest per ticker and predicts the next return |
-| Risk           | `agents/risk_agent.py`          | Calculates stock-level and watchlist-level risk measures                             |
-| Strategy       | `agents/strategy_agent.py`      | Converts forecasts and risk modifiers into BUY, HOLD or REDUCE recommendations       |
-| Report writing | `agents/report_writer_agent.py` | Supplies structured results to Gemini and saves a Markdown briefing                  |
-| Orchestration  | `orchestrator.py`               | Defines shared state, graph routing, execution and application-level scheduling      |
+### Workflow stages
 
-LangGraph is used for explicit state transitions and conditional routing. This is primarily a structured multi-stage workflow rather than a collection of autonomous agents.
+1. **Market Data:** Refresh the configured equity watchlist, market benchmark, macro series and company fundamentals.
+2. **Readiness Assessment:** Check that the observations required for forecasting are sufficiently fresh and date-aligned.
+3. **Forecasting:** Train and validate a model per eligible ticker, then estimate its next-session return.
+4. **Risk:** Evaluate market sensitivity, volatility, downside risk and watchlist composition.
+5. **Strategy:** Combine forecast signals with risk modifiers and confidence thresholds.
+6. **Reporting:** Save a deterministic research brief and, when enabled, add constrained Gemini commentary.
 
-## Data
+Readiness assessment is part of the market-data stage. The application contains five analytical agents, not six.
 
-### Equity watchlist
+A critical stage failure is routed through the workflow's error handling rather than silently producing an apparently successful report.
+
+## Market data
+
+### ASX equity watchlist
 
 The default watchlist contains ten ASX-listed securities.
 
-| Ticker   | Company           | Sector                 |
-| -------- | ----------------- | ---------------------- |
-| `BHP.AX` | BHP Group         | Materials              |
-| `CBA.AX` | Commonwealth Bank | Financials             |
-| `CSL.AX` | CSL Limited       | Healthcare             |
-| `WDS.AX` | Woodside Energy   | Energy                 |
-| `WES.AX` | Wesfarmers        | Consumer Discretionary |
-| `ANZ.AX` | ANZ Banking Group | Financials             |
-| `RIO.AX` | Rio Tinto         | Materials              |
-| `WBC.AX` | Westpac Banking   | Financials             |
-| `MQG.AX` | Macquarie Group   | Financials             |
-| `TLS.AX` | Telstra           | Telecommunications     |
+| Ticker | Company | Broad sector |
+|---|---|---|
+| `ANZ.AX` | ANZ Group | Financials |
+| `BHP.AX` | BHP Group | Materials |
+| `CBA.AX` | Commonwealth Bank | Financials |
+| `CSL.AX` | CSL | Healthcare |
+| `MQG.AX` | Macquarie Group | Financials |
+| `RIO.AX` | Rio Tinto | Materials |
+| `TLS.AX` | Telstra | Telecommunications |
+| `WBC.AX` | Westpac | Financials |
+| `WDS.AX` | Woodside Energy | Energy |
+| `WES.AX` | Wesfarmers | Consumer |
 
-### Macro series
+Sector names above are descriptive. The sector-concentration calculation uses metadata supplied by Yahoo Finance, which may use different labels.
 
-| Symbol     | Series                |
-| ---------- | --------------------- |
-| `^AXJO`    | ASX 200 Index         |
-| `AUDUSD=X` | AUD/USD exchange rate |
-| `GC=F`     | Gold futures          |
-| `CL=F`     | WTI crude oil futures |
+### Macroeconomic series
 
-Data is downloaded with `yfinance`. Equity prices use `auto_adjust=True`, so the stored OHLC values are adjusted for corporate actions handled by the provider.
+| Symbol | Series | Purpose |
+|---|---|---|
+| `^AXJO` | S&P/ASX 200 Index | Equity-market benchmark and forecasting feature |
+| `AUDUSD=X` | AUD/USD exchange rate | Report context |
+| `GC=F` | Gold futures | Report context |
+| `CL=F` | WTI crude oil futures | Report context |
 
-The default ingestion window is the previous 365 calendar days. Because market data contains non-trading days, the resulting number of observations is lower than 365.
+The ASX 200 is required for benchmark-aligned forecasting. The other macro series provide research context and may follow different market calendars.
 
-### Validation and storage
+### Validation and persistence
 
-Incoming equity records are validated with Pydantic before insertion:
+Market data is retrieved through `yfinance`, with `auto_adjust=True` for adjusted equity OHLC data.
 
-* open, high, low and close prices must be positive;
-* daily returns outside ±50% are rejected as suspicious;
-* records are keyed by ticker and date;
-* repeated runs use `INSERT OR REPLACE`.
+The ingestion layer:
 
-DuckDB contains three tables:
+- validates prices, volumes and daily returns;
+- obtains preceding closing prices to calculate in-window returns;
+- excludes incomplete current-session observations;
+- checks the age of the latest available data;
+- stores records using ticker/date uniqueness;
+- uses transactional database writes;
+- identifies equity observations that cannot be matched to benchmark dates;
+- retains otherwise valid equity observations even when forecasting is blocked;
+- records failures and warnings separately from successful ingestion.
 
-| Table          | Contents                                               |
-| -------------- | ------------------------------------------------------ |
-| `ohlcv`        | Adjusted equity OHLCV data and daily returns           |
-| `macro`        | Closing values and daily returns for macro series      |
+**Ingestion success does not automatically imply forecast readiness.**
+
+For example, equity data can be persisted even if the ASX 200 benchmark is missing a required session. The affected security is then excluded from forecasting for that run.
+
+The current readiness logic compares downloaded histories. A separate post-persistence integrity verification against fresh database reads remains a future improvement.
+
+### DuckDB schema
+
+The application stores information in three tables.
+
+| Table | Data |
+|---|---|
+| `ohlcv` | Equity prices, volume and daily returns |
+| `macro` | Benchmark and macro closing values and returns |
 | `fundamentals` | Timestamped company metadata and fundamental snapshots |
 
-The supplied database contains 2,630 equity OHLCV rows, with 263 observations for each watchlist ticker from 10 June 2025 to 22 June 2026.
+Local DuckDB files are development and runtime data, not credentials or source code. They are excluded from Git in the current repository configuration.
 
-## Forecasting approach
+## Forecasting methodology
 
-A separate `RandomForestRegressor` is trained for each stock. The prediction target is the following observation’s daily return:
+### Model
 
-```python
-target = daily_return.shift(-1)
-```
-
-### Features
-
-The model uses eleven engineered features.
-
-| Feature            | Definition                                                                     |
-| ------------------ | ------------------------------------------------------------------------------ |
-| `return_5d`        | Five-session percentage price change                                           |
-| `return_10d`       | Ten-session percentage price change                                            |
-| `return_20d`       | Twenty-session percentage price change                                         |
-| `volatility_20d`   | Rolling 20-session standard deviation of daily returns                         |
-| `rsi_14`           | Fourteen-session Relative Strength Index                                       |
-| `volume_ratio`     | Current volume divided by the 20-session average                               |
-| `dist_52w_high`    | Distance from the rolling 252-session high                                     |
-| `dist_52w_low`     | Distance from the rolling 252-session low                                      |
-| `ma_crossover`     | Ten-session moving average divided by the 50-session moving average, minus one |
-| `asx200_return`    | ASX 200 daily return                                                           |
-| `asx200_return_5d` | Five-session rolling mean of ASX 200 returns                                   |
-
-Rows with missing features or targets are excluded. At least 100 usable rows are required for a ticker to be modelled.
-
-### Model configuration
+Each eligible security receives a separate `RandomForestRegressor`.
 
 ```python
 RandomForestRegressor(
@@ -164,335 +174,549 @@ RandomForestRegressor(
 )
 ```
 
-Features are standardised before training. Scaling is not required for Random Forests, but the implementation applies the same fitted transformation to training and validation data.
+The model estimates the return associated with the next available trading observation.
 
-### Validation design
-
-The observations remain in chronological order:
-
-* the first 80% are used for training;
-* the final 20% are used for validation;
-* validation performance is measured with mean absolute error;
-* the model is then retrained on all available labelled rows before producing the latest forecast.
-
-This is a time-ordered holdout and avoids randomly mixing future observations into the training set. It is not a repeated walk-forward backtest, so the validation result should be treated as a limited diagnostic rather than evidence of stable out-of-sample performance.
-
-For the recorded 23 June 2026 run, the per-stock validation MAEs ranged from 0.85 to 1.86 percentage points, with an unweighted mean of approximately 1.37 percentage points.
-
-### Forecast confidence
-
-The displayed confidence value is derived from disagreement among the 200 individual trees:
+Conceptually:
 
 ```python
-confidence = clip(1 - tree_prediction_std / 0.02, 0, 1)
+target = daily_return.shift(-1)
 ```
 
-A smaller spread produces a higher value. This is a model-agreement heuristic, not a calibrated probability that a forecast or signal will be correct.
+The latest row does not have a known next-session return. It is retained for inference rather than incorrectly used as a labelled training example.
+
+### Engineered features
+
+Eleven explanatory features describe momentum, volatility, volume, price position and market context.
+
+| Feature | Meaning |
+|---|---|
+| `return_5d` | Five-observation price return |
+| `return_10d` | Ten-observation price return |
+| `return_20d` | Twenty-observation price return |
+| `volatility_20d` | Rolling 20-observation return volatility |
+| `rsi_14` | Fourteen-observation Relative Strength Index |
+| `volume_ratio` | Current volume relative to its 20-observation average |
+| `dist_52w_high` | Distance from the rolling 252-observation high |
+| `dist_52w_low` | Distance from the rolling 252-observation low |
+| `ma_crossover` | Relative difference between 10- and 50-observation moving averages |
+| `asx200_return` | Current ASX 200 return |
+| `asx200_return_5d` | Five-observation mean ASX 200 return |
+
+### Model validation
+
+The forecasting implementation uses chronological holdout validation:
+
+1. Engineer features and construct next-observation targets.
+2. Exclude incomplete training observations.
+3. Reserve approximately the last 20% of labelled observations for validation.
+4. Purge the observation at the training/validation target boundary to prevent label leakage.
+5. Fit preprocessing on the training partition and apply it to the validation partition.
+6. Evaluate model predictions using mean absolute error (MAE).
+7. Compare performance with a simple zero-return baseline.
+8. Refit on all eligible labelled observations before forecasting from the latest feature row.
+
+The chronological split is safer than randomly shuffling financial time-series observations.
+
+However, **one chronological holdout is not equivalent to a repeated rolling backtest**. Results remain sensitive to the selected period and market regime.
+
+### Confidence interpretation
+
+The displayed confidence score is derived from the spread of the individual Random Forest tree predictions.
+
+Conceptually:
+
+```python
+confidence = clip(
+    1 - tree_prediction_std / 0.02,
+    0,
+    1,
+)
+```
+
+This score measures **model agreement**, not the statistical probability that a prediction will be correct.
+
+It has not been calibrated against realised outcomes and must not be presented as a reliable success probability.
 
 ### Forecast signals
 
-Raw signals use fixed next-return thresholds:
+| Predicted next-session return | Raw signal |
+|---|---|
+| Greater than +0.5% | `BUY` |
+| Between -0.5% and +0.5%, inclusive | `HOLD` |
+| Less than -0.5% | `REDUCE` |
 
-|       Predicted next return | Raw signal |
-| --------------------------: | ---------- |
-|        Greater than `+0.5%` | `BUY`      |
-| Between `-0.5%` and `+0.5%` | `HOLD`     |
-|           Less than `-0.5%` | `REDUCE`   |
+These are intermediate model-derived signals. The final recommendations may change after risk and confidence checks.
 
-## Risk calculations
+## Risk analysis
 
-Risk measures use up to 252 stored observations per security.
+The risk agent evaluates each security using available historical observations.
 
-### Stock-level metrics
+| Metric | Method |
+|---|---|
+| Annualised volatility | Daily return standard deviation multiplied by the square root of 252 |
+| Historical VaR, 95% | Fifth percentile of daily returns |
+| Historical VaR, 99% | First percentile of daily returns |
+| Maximum drawdown | Worst historical peak-to-trough decline |
+| Beta | Covariance of date-aligned equity and ASX 200 returns divided by benchmark variance |
+| Risk-adjusted ranking score | Predicted daily return divided by daily volatility, multiplied by model-agreement confidence |
 
-| Metric                | Calculation                                                                |
-| --------------------- | -------------------------------------------------------------------------- |
-| Annualised volatility | Daily return standard deviation multiplied by `sqrt(252)`                  |
-| Historical VaR, 95%   | Fifth percentile of observed daily returns                                 |
-| Historical VaR, 99%   | First percentile of observed daily returns                                 |
-| Maximum drawdown      | Worst peak-to-trough decline in closing prices                             |
-| Beta                  | Covariance of stock and ASX 200 returns divided by ASX 200 return variance |
-| Risk level            | Classification based on annualised volatility                              |
-
-Risk classifications are:
+### Risk classifications
 
 | Annualised volatility | Risk level |
-| --------------------: | ---------- |
-|             Below 20% | `LOW`      |
-|      20% to below 35% | `MEDIUM`   |
-|          35% or above | `HIGH`     |
+|---|---|
+| Below 20% | `LOW` |
+| 20% to below 35% | `MEDIUM` |
+| 35% or above | `HIGH` |
 
-The code also calculates a custom ranking score:
+### Recommendation modifiers
 
-```text
-(predicted daily return / estimated daily volatility) × confidence
-```
+| Condition | Modifier |
+|---|---|
+| Historical 95% VaR below -5% | `BLOCK` |
+| High risk and model agreement below 40% | `DOWNGRADE` |
+| Medium risk and model agreement below 25% | `DOWNGRADE` |
+| Otherwise | `CONFIRM` |
 
-The source code names this value `sharpe_score`, but it is not a conventional Sharpe ratio because it does not use realised portfolio returns or a risk-free rate.
+The reported ranking score is called `sharpe_score` internally, but it is **not a conventional Sharpe ratio**. It does not use realised portfolio performance or a risk-free rate.
 
-### Risk modifiers
+### Watchlist-level assessment
 
-| Condition                                  | Modifier    |
-| ------------------------------------------ | ----------- |
-| Historical 95% VaR is below `-5%`          | `BLOCK`     |
-| Risk is high and confidence is below 40%   | `DOWNGRADE` |
-| Risk is medium and confidence is below 25% | `DOWNGRADE` |
-| Otherwise                                  | `CONFIRM`   |
+The application also reports:
 
-### Watchlist-level summary
+- mean security beta;
+- mean annualised security volatility;
+- mean historical 95% security VaR;
+- sector composition;
+- concentration classification.
 
-The project reports:
+These statistics describe the **watchlist**, not a funded portfolio with specified holdings.
 
-* average beta across assessed securities;
-* average annualised volatility;
-* average historical 95% VaR;
-* the most common sector in the watchlist;
-* sector concentration risk.
+In particular, the average security VaR is not a portfolio VaR. Portfolio weights, cross-security dependencies and diversification effects are not modelled in that statistic.
 
-Sector weights are calculated by counting securities, not by market value or invested capital. A 40% Financials figure means four of the ten watchlist companies are classified as Financials.
+## Strategy generation
 
-Concentration is classified as:
+Strategy decisions are deterministic. Gemini is not involved.
 
-|    Largest sector share | Classification |
-| ----------------------: | -------------- |
-|               Above 40% | `HIGH`         |
-| Above 25% and up to 40% | `MEDIUM`       |
-|            25% or below | `LOW`          |
+### Signal resolution
 
-## Strategy rules
+| Raw forecast | `CONFIRM` | `DOWNGRADE` | `BLOCK` |
+|---|---|---|---|
+| `BUY` | `BUY` | `HOLD` | `HOLD` |
+| `HOLD` | `HOLD` | `HOLD` | `HOLD` |
+| `REDUCE` | `REDUCE` | `HOLD` | `HOLD` |
 
-The strategy node combines the raw forecast signal with the risk modifier.
+A separate minimum model-agreement threshold of 30% also prevents low-confidence forecasts from becoming actionable recommendations.
 
-| Forecast | `CONFIRM` | `DOWNGRADE` | `BLOCK` |
-| -------- | --------- | ----------- | ------- |
-| `BUY`    | `BUY`     | `HOLD`      | `HOLD`  |
-| `HOLD`   | `HOLD`    | `HOLD`      | `HOLD`  |
-| `REDUCE` | `REDUCE`  | `HOLD`      | `HOLD`  |
+### Position-adjustment heuristic
 
-Forecasts with confidence below 30% default to `HOLD`, regardless of their raw signal.
+The default base adjustment is 10%.
 
-### Position adjustments
+Adjustments are scaled using model agreement and risk:
 
-Position sizes describe suggested adjustments rather than construction of a complete portfolio. `HOLD` recommendations receive a zero adjustment.
+- confidence of at least 60%: multiply by 1.5;
+- confidence from 45% to below 60%: multiply by 1.0;
+- confidence below 45%: multiply by 0.5;
+- medium risk: multiply by 0.75;
+- high risk: multiply by 0.5.
 
-The default base adjustment is 10%. It is scaled using forecast confidence and risk level:
+The adjustment is capped at 15% of the reference portfolio value.
 
-* confidence of at least 60%: multiply by 1.5;
-* confidence from 45% to below 60%: no confidence adjustment;
-* confidence below 45%: multiply by 0.5;
-* high risk: multiply by 0.5;
-* medium risk: multiply by 0.75;
-* final size capped at 15%.
+`HOLD` corresponds to no proposed adjustment. Labels such as `FULL`, `REDUCED` and `MINIMAL` describe heuristic adjustment sizes, not positions derived from a portfolio optimiser.
 
-The output is labelled `FULL`, `REDUCED`, `MINIMAL` or `NONE`.
+No capital-allocation optimisation or portfolio-wide position reconciliation is performed.
 
-No optimisation is performed across recommendations, and the suggested adjustments are not checked against a portfolio-level capital constraint.
+## Research report generation
 
-## LLM reporting
+The report writer produces a Markdown research brief containing:
 
-Gemini 2.5 Flash Lite is used only by the report-writing node.
+- forecast origin and report-generation dates;
+- macroeconomic context;
+- watchlist risk summary;
+- sector concentration;
+- actionable signals;
+- all final recommendations and rationales;
+- analytical limitations;
+- a financial-information disclaimer.
 
-The prompt supplies:
+### Optional Gemini commentary
 
-* latest stored macro values;
-* portfolio-risk context;
-* all final watchlist recommendations;
-* actionable BUY and REDUCE recommendations;
-* exact confidence, risk and position labels;
-* pre-generated rationales from the deterministic strategy code.
+Google Gemini 2.5 Flash Lite can provide supplementary qualitative commentary.
 
-The prompt instructs the model not to:
+The deterministic report contains the quantitative calculations. Gemini cannot authoritatively replace the application's stored forecasts, computed risk measures or final strategy signals.
 
-* invent market movements, prices, returns or explanations;
-* infer unsupported macro trends;
-* modify supplied numbers or percentages;
-* change recommendations, confidence values, risk levels or position labels.
+The application supports generating reports **without Gemini**, and this is the recommended mode for reproducible testing.
 
-These controls reduce the scope for unsupported output, but they do not provide a programmatic guarantee that every generated sentence will comply. The saved report should still be reviewed before operational use.
+The optional LLM path includes constraints on unsupported claims and numerical changes. Those safeguards do not establish complete factual reliability, and generated commentary should be reviewed.
 
-## Verified sample run
+## Verified execution example
 
-A recorded run on 23 June 2026 reached the `report_complete` state.
+A successful complete pipeline run was recorded on **18 November 2026**, using refreshed validation data through **17 November 2026**.
 
-| Pipeline output             |                          Result |
-| --------------------------- | ------------------------------: |
-| Watchlist tickers processed |                              10 |
-| Forecasts generated         |                              10 |
-| Risk assessments completed  |                              10 |
-| Final recommendations       |         1 BUY, 8 HOLD, 1 REDUCE |
-| Market bias                 |                       `NEUTRAL` |
-| Report                      | `reports/asx_brief_20260623.md` |
+| Item | Recorded result |
+|---|---|
+| Report generated | 18 November 2026 |
+| Forecast origin | 17 November 2026 |
+| Equity securities processed | 10 |
+| Forecast-ready securities | 10 |
+| Forecasts generated | 10 |
+| Risk assessments | 10 |
+| Final recommendations | 1 BUY, 9 HOLD, 0 REDUCE |
+| Market bias | `NEUTRAL` |
+| Generated file | `reports/asx_brief_20261117.md` |
+| Gemini | Disabled |
 
-### Portfolio-risk snapshot
+The recorded run completed the full LangGraph workflow and generated a Markdown report.
 
-| Metric                              |              Value |
-| ----------------------------------- | -----------------: |
-| Average beta                        |               0.84 |
-| Average annualised volatility       |              25.0% |
-| Average one-day historical VaR, 95% |             -2.28% |
-| Largest watchlist sector            | Financial Services |
-| Securities in largest sector        |                40% |
-| Concentration classification        |           `MEDIUM` |
+This is an **execution-validation example**, not a claim of predictive accuracy or profitability.
 
-### Actionable recommendations
+### Historical reproducibility
 
-| Ticker   | Signal   | Predicted return | Confidence heuristic | Risk     | Position label |
-| -------- | -------- | ---------------: | -------------------: | -------- | -------------- |
-| `CBA.AX` | `BUY`    |           +0.54% |                  60% | `MEDIUM` | `REDUCED`      |
-| `MQG.AX` | `REDUCE` |           -0.68% |                  64% | `MEDIUM` | `REDUCED`      |
+The original development database ended on **22 June 2026**.
 
-These results confirm that the pipeline executed and produced internally consistent outputs. They do not establish forecast accuracy, profitability or risk-adjusted investment performance.
+Historical reports and earlier validation results therefore use a June forecast origin. The refreshed November validation database contains more recent observations.
 
-![Pipeline execution](screenshots/pipeline_execution.png)
+The distinction is intentional:
 
-![Forecasting output](screenshots/forecasting_agent.png)
+- **Historical database:** Useful for reproducing the original analytical experiments.
+- **Refreshed database:** Useful for validating ingestion and generating reports from subsequently available observations.
 
-![Generated report](screenshots/final_report.png)
+A report's **forecast origin** is the latest market observation used for inference. Its **generation date** is when the report was written. They need not be the same date.
 
-## Repository structure
-
-```text
-.
-├── agents/
-│   ├── forecasting_agent.py
-│   ├── market_data_agent.py
-│   ├── report_writer_agent.py
-│   ├── risk_agent.py
-│   └── strategy_agent.py
-├── reports/
-│   └── asx_brief_YYYYMMDD.md
-├── screenshots/
-├── .env.example
-├── asx_market_data.db
-├── orchestrator.py
-├── requirements.txt
-├── LICENSE
-└── README.md
-```
+The forecasting models have not shown consistent superiority over the zero-return baseline across all securities. A comprehensive historical backtest is still required before making claims about forecasting skill.
 
 ## Installation
 
 ### Requirements
 
-* Python 3.10 or later
-* internet access for Yahoo Finance and Gemini
-* a Gemini API key for report generation
+- Python 3.11 or 3.12.
+- An internet connection for live Yahoo Finance ingestion.
+- A Gemini API key only when optional AI commentary is enabled.
 
-Create and activate a virtual environment:
+The automated test suite has been validated locally on Python 3.12 and is configured to run on Python 3.11 and 3.12 in GitHub Actions.
+
+### 1. Navigate to the project
+
+This application currently resides inside the `projects` GitHub repository:
+
+```text
+projects/
+  asx-equity-intelligence-agent/
+```
+
+From a clone of the repository:
+
+```bash
+cd asx-equity-intelligence-agent
+```
+
+### 2. Create a virtual environment
 
 ```bash
 python -m venv .venv
 ```
 
-On macOS or Linux:
+Windows Command Prompt:
+
+```cmd
+.venv\Scripts\activate
+```
+
+macOS or Linux:
 
 ```bash
 source .venv/bin/activate
 ```
 
-On Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-Install the dependencies:
+### 3. Install dependencies
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
-Copy the environment template:
+For development and testing:
+
+```bash
+python -m pip install -r requirements-dev.txt
+```
+
+The dependency configuration includes `tzdata` to support timezone handling on systems that do not provide the required IANA timezone database.
+
+### 4. Configure Gemini if required
+
+Create a local `.env` file from `.env.example`.
+
+Windows Command Prompt:
+
+```cmd
+copy .env.example .env
+```
+
+macOS or Linux:
 
 ```bash
 cp .env.example .env
 ```
 
-On Windows PowerShell:
+To enable Gemini commentary, set:
 
-```powershell
-Copy-Item .env.example .env
-```
-
-Add the API key:
-
-```env
+```dotenv
 GEMINI_API_KEY=your_api_key_here
 ```
 
-Do not commit the populated `.env` file.
+Do not commit populated `.env` files or API credentials.
 
-## Running the project
+The API key is not needed when running with `--no-llm`.
 
-Run the full pipeline once:
+## Running the application
+
+All commands below assume the current directory is `asx-equity-intelligence-agent`.
+
+### Run the full pipeline
+
+For a deterministic report without Gemini:
+
+```bash
+python orchestrator.py --mode run --no-llm
+```
+
+To specify a database:
+
+```bash
+python orchestrator.py --mode run --db data/asx_market_data.db --no-llm
+```
+
+The database path is configurable. The application creates or updates the database required by its ingestion stage.
+
+### Run with optional Gemini commentary
+
+After configuring `GEMINI_API_KEY`:
 
 ```bash
 python orchestrator.py --mode run
 ```
 
-Use a different DuckDB path:
+### Run the market-data agent independently
 
 ```bash
-python orchestrator.py --mode run --db data/asx_market_data.db
+python -m agents.market_data_agent --db data/asx_market_data.db
 ```
 
-Run the application-level scheduler:
+The ingestion command can report a non-success exit status when data is stored successfully but forecast-readiness conditions are not met. Check the detailed logs rather than interpreting every non-zero exit code as a complete ingestion failure.
+
+### Run the application scheduler
 
 ```bash
-python orchestrator.py --mode schedule
+python orchestrator.py --mode schedule --no-llm
 ```
 
-The scheduler calls the pipeline at 07:00 according to the host machine’s local clock. The process must remain running. The current implementation schedules every calendar day, including weekends, and does not explicitly handle AEST/AEDT, exchange holidays or daylight-saving transitions.
+The scheduler targets **07:00 Australia/Sydney time, Monday to Friday**.
 
-For unattended operation, use an operating-system or cloud scheduler and configure its timezone and trading-day rules explicitly.
+Important operational limitations:
 
-## Outputs
+- The scheduling process must remain running.
+- Weekdays do not necessarily correspond to ASX trading days.
+- The application does not yet implement an exchange-holiday calendar.
+- An operating-system or cloud scheduler is preferable for robust unattended execution.
 
-| Output              | Default location                       |
-| ------------------- | -------------------------------------- |
-| DuckDB database     | `asx_market_data.db`                   |
-| Generated report    | `reports/asx_brief_YYYYMMDD.md`        |
-| Runtime diagnostics | Standard output through Python logging |
+### Run the report writer independently
 
-The pipeline accumulates error messages in shared state. It halts through an explicit error node when a critical stage cannot provide the data required by the next stage.
+The report writer also supports standalone operation with an existing database:
+
+```bash
+python -m agents.report_writer_agent --db asx_market_data.db --output-dir reports --no-llm
+```
+
+Standalone historical execution may use stale data already in the database. It is useful for testing and reproducibility but is not equivalent to a new ingestion-and-readiness-validated run.
+
+## Automated testing
+
+The project includes unit and integration tests for the analytical workflow.
+
+### Run the complete suite
+
+```bash
+python -m pytest tests -v
+```
+
+### Run with statement coverage
+
+```bash
+python -m pytest tests -q --cov=agents --cov=orchestrator --cov-report=term-missing
+```
+
+### Latest verified local results
+
+Test environment: **Windows, Python 3.12.0**.
+
+| Metric | Result |
+|---|---:|
+| Tests collected | 70 |
+| Tests passed | 70 |
+| Tests failed | 0 |
+| Total executable statements | 1,409 |
+| Statements exercised | 997 |
+| Overall statement coverage | 71% |
+
+### Coverage by component
+
+| Component | Statement coverage |
+|---|---:|
+| Forecasting | 82% |
+| Market data | 77% |
+| Strategy | 75% |
+| LangGraph orchestrator | 74% |
+| Risk | 60% |
+| Report writer | 57% |
+| **Overall** | **71%** |
+
+Coverage represents executed statements, not proof that every behaviour is correct.
+
+### Test design
+
+The suite includes:
+
+- numerical unit tests for signals, beta, VaR and drawdown;
+- validation tests for malformed financial observations;
+- database transaction and repeated-upsert tests;
+- real Random Forest training against synthetic observations;
+- DuckDB-backed forecasting, risk and strategy integration;
+- mocked LangGraph success and failure paths;
+- report file creation and filename-collision tests;
+- offline Yahoo Finance response simulation;
+- benchmark-gap and forecast-readiness tests.
+
+Tests run without a Gemini key or a live market-data provider.
+
+### Continuous integration
+
+GitHub Actions is configured to run the ASX test suite on Python 3.11 and 3.12.
+
+Because this application lives inside the `projects` repository, its workflow is defined at the repository root:
+
+```text
+projects/.github/workflows/asx-tests.yml
+```
+
+The workflow runs from the `asx-equity-intelligence-agent` subdirectory.
+
+[View repository Actions](https://github.com/khalili-samani/projects/actions)
+
+## Repository structure
+
+The ASX application is a subproject of the `projects` repository.
+
+```text
+projects/
+|-- .github/
+|   `-- workflows/
+|       `-- asx-tests.yml
+|
+`-- asx-equity-intelligence-agent/
+    |-- agents/
+    |   |-- __init__.py
+    |   |-- market_data_agent.py
+    |   |-- forecasting_agent.py
+    |   |-- risk_agent.py
+    |   |-- strategy_agent.py
+    |   `-- report_writer_agent.py
+    |
+    |-- tests/
+    |   |-- test_analytics.py
+    |   |-- test_market_data.py
+    |   |-- test_orchestrator.py
+    |   |-- test_reporting.py
+    |   |-- test_agent_integration.py
+    |   |-- test_workflow_integration.py
+    |   |-- test_report_integration.py
+    |   `-- test_market_data_integration.py
+    |
+    |-- screenshots/
+    |-- reports/
+    |-- .env.example
+    |-- .gitignore
+    |-- orchestrator.py
+    |-- requirements.txt
+    |-- requirements-dev.txt
+    |-- LICENSE
+    `-- README.md
+```
+
+Runtime DuckDB files and newly generated research reports are excluded from Git by the current ignore rules. The workflow creates the data it needs when run in a properly configured environment.
+
+## Screenshots
+
+The repository includes screenshots from earlier development and validation runs. They illustrate the execution and reporting workflow, not current market predictions.
+
+### Pipeline execution
+
+![Pipeline execution](screenshots/pipeline_execution.png)
+
+### Forecasting
+
+![Forecasting output](screenshots/forecasting_agent.png)
+
+### Research brief
+
+![Generated report](screenshots/final_report.png)
 
 ## Limitations
 
-* Yahoo Finance is a convenient public source, not an institutional market-data feed.
-* Data availability, revisions, adjusted prices and metadata depend on the upstream provider.
-* Validation uses one chronological holdout rather than rolling or nested backtesting.
-* The project does not report directional accuracy, hit rate, benchmark-relative performance or trading returns.
-* The confidence score is not statistically calibrated.
-* Feature importance is global Random Forest impurity importance, not a local explanation of a particular prediction.
-* Risk estimates use historical observations and may not represent future tail behaviour.
-* VaR is calculated independently for each security and averaged for the watchlist. It is not a portfolio VaR based on positions and correlations.
-* Sector concentration is based on security counts rather than capital weights.
-* The custom risk-adjusted ranking score is not a standard Sharpe ratio.
-* Position-size suggestions are heuristic and are not produced by a portfolio optimiser.
-* Transaction costs, bid-ask spreads, liquidity constraints, slippage and taxes are not modelled.
-* There is no order-management, brokerage or live-execution integration.
-* The generated narrative is constrained by prompting but is not automatically validated against the structured inputs.
-* Automated scheduling depends on the local process remaining active.
+This project is deliberately conservative about the claims supported by its results.
 
-## Next development priorities
+### Forecasting and validation
 
-The most useful extensions would be:
+- The model uses a chronological holdout, not repeated rolling or nested backtesting.
+- Forecasting performance is not consistently better than the zero-return baseline.
+- No validated trading return, hit rate or risk-adjusted profitability claim is made.
+- Tree-agreement confidence is not statistically calibrated.
+- Global feature importance does not establish a causal or local explanation of an individual prediction.
+- Synthetic integration data validates software behaviour, not investment performance.
 
-1. a rolling backtest with untouched test periods and benchmark comparisons;
-2. directional accuracy, MAE stability and signal-level precision reporting;
-3. transaction-cost and turnover modelling;
-4. calibrated uncertainty estimates;
-5. portfolio-level VaR using weights and cross-asset correlations;
-6. tests for feature timing, database writes, decision thresholds and prompt formatting;
-7. machine-readable run artefacts for forecasts, validation metrics and recommendations;
-8. schema validation of the LLM output against supplied values;
-9. timezone-aware scheduling with ASX trading calendars;
-10. model-drift and data-quality monitoring.
+### Market data
 
-## Disclaimer
+- Yahoo Finance is not an institutional-grade or guaranteed-complete feed.
+- Data quality, adjusted values, revisions and metadata depend on the provider.
+- The current readiness check uses downloaded historical observations, not an independent persisted-database reconciliation.
+- The application does not implement a complete ASX trading-session calendar.
+- Provider outages and incomplete or delayed market histories can prevent forecasting.
 
-This repository is an educational portfolio project. It is not financial advice, an investment recommendation, or a production trading system.
+### Risk and strategy
+
+- Historical VaR and volatility may not represent future tail events.
+- Mean security VaR is not portfolio VaR.
+- Sector concentration is based on counts, not capital allocation.
+- Position adjustments are heuristic rather than optimised.
+- Transaction costs, spreads, slippage, liquidity constraints and tax are not incorporated.
+- The application does not trade or connect to a brokerage account.
+
+### Reporting and operations
+
+- Gemini commentary is supplementary and not fully fact-verified.
+- The scheduled process must remain active.
+- Automated tests do not eliminate operational or modelling risk.
+- No production monitoring, alerting or model-drift system is implemented.
+
+## Development roadmap
+
+Priority improvements include:
+
+1. **Rolling historical backtesting:** Evaluate forecasts at multiple historical cut-off dates without look-ahead leakage.
+2. **Forecast performance diagnostics:** Report directional accuracy, MAE stability, baseline-relative results and performance by market regime.
+3. **Database reconciliation:** Recheck persisted observations and benchmark alignment before forecasting.
+4. **ASX trading calendar:** Handle public holidays and exchange-specific session schedules.
+5. **Portfolio-level risk:** Incorporate position weights, covariance and portfolio VaR.
+6. **Uncertainty calibration:** Compare model-agreement scores with realised forecast accuracy.
+7. **Execution-aware research:** Model turnover, transaction costs and liquidity constraints.
+8. **Machine-readable outputs:** Persist forecasts, model metrics, strategy decisions and run metadata for further analysis.
+9. **Operational monitoring:** Add run health, data freshness and model-drift alerts.
+10. **LLM evaluation:** Strengthen factual validation of optional narrative commentary.
+
+## Responsible use
+
+The ASX Equity Intelligence Agent is a portfolio engineering and quantitative research demonstration.
+
+All outputs should be treated as experimental analytical information. They are not personalised financial advice, guaranteed predictions or instructions to trade.
 
 ## Licence
 
-This project is licensed under the MIT License. See [`LICENSE`](LICENSE).
+Licensed under the MIT License. See [LICENSE](LICENSE).
